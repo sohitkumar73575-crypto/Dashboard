@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Dadri Dashboard</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#007bff">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background-color: #f0f2f5; font-family: 'Segoe UI', sans-serif; }
+    .stat-card { background: white; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.05); cursor: pointer; border-top: 5px solid #ddd; }
+    .active-filter { border-top-width: 10px !important; }
+    .work-card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; border-left: 6px solid #007bff; cursor: pointer; }
+    .loader { border: 5px solid #f3f3f3; border-top: 5px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; display: none; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<div class="container py-4">
+  <h4 class="text-center fw-bold mb-4">MC Dadri Dashboard</h4>
+  
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3" onclick="handleFilter('All', this)"><div class="stat-card" style="border-top-color:#28a745"><h3 id="count-all">0</h3><small>Total</small></div></div>
+    <div class="col-6 col-md-3" onclick="handleFilter('In Progress', this)"><div class="stat-card" style="border-top-color:#007bff"><h3 id="count-progress">0</h3><small>Active</small></div></div>
+    <div class="col-6 col-md-3" onclick="handleFilter('Under DLP', this)"><div class="stat-card" style="border-top-color:#6f42c1"><h3 id="count-dlp">0</h3><small>DLP</small></div></div>
+    <div class="col-6 col-md-3" onclick="handleFilter('To Be Opened', this)"><div class="stat-card" style="border-top-color:#fd7e14"><h3 id="count-open">0</h3><small>Pending</small></div></div>
+  </div>
+
+  <div class="mb-3 d-flex gap-2">
+    <input type="text" id="searchInput" class="form-control" placeholder="Search..." onkeyup="handleSearch()">
+    <button class="btn btn-success" onclick="openAddWorkModal()">Add</button>
+  </div>
+
+  <div id="loading" class="loader"></div>
+  <div id="content" class="row"></div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="workModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 id="modalTitle">Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body"><form id="workForm" class="row"></form></div>
+      <div class="modal-footer">
+        <button id="saveBtn" class="btn btn-primary w-100" onclick="saveData()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+<script>
+  // 1. APNA URL YAHAN DAALEIN
+  const apiURL = "YAHAN_APNA_APPS_SCRIPT_URL_PASTE_KARO"; 
+  
+  let allData = [], sheetHeaders = [];
+
+  window.onload = refreshAll;
+
+  function refreshAll() {
+    document.getElementById('loading').style.display = 'block';
+    fetch(apiURL).then(r => r.json()).then(res => {
+      allData = res.data; sheetHeaders = res.headers;
+      document.getElementById('loading').style.display = 'none';
+      updateStats();
+      renderCards(allData);
+    });
+  }
+
+  function updateStats() {
+    document.getElementById('count-all').innerText = allData.length;
+    document.getElementById('count-progress').innerText = allData.filter(d => d.computedStatus === "In Progress").length;
+    document.getElementById('count-dlp').innerText = allData.filter(d => d.computedStatus === "Under DLP").length;
+    document.getElementById('count-open').innerText = allData.filter(d => d.computedStatus === "To Be Opened").length;
+  }
+
+  function renderCards(data) {
+    let html = data.map(item => `
+      <div class="col-12" onclick="openDetails(${item.rowIndex})">
+        <div class="work-card" style="border-left-color:${getStatusColor(item.computedStatus)}">
+          <div class="fw-bold">${item['WORK_NAME'] || 'No Name'}</div>
+          <small class="text-muted">${item['E_TENDERID'] || '-'}</small>
+        </div>
+      </div>`).join('');
+    document.getElementById('content').innerHTML = html;
+  }
+
+  function getStatusColor(s) { return s==="In Progress"?"#007bff":s==="Under DLP"?"#6f42c1":s==="To Be Opened"?"#fd7e14":"#ddd"; }
+
+  function openDetails(idx) {
+    let item = allData.find(d => d.rowIndex === idx);
+    let html = sheetHeaders.map((h, i) => `
+      <div class="col-md-6 mb-2">
+        <label class="small fw-bold">${h}</label>
+        <input class="form-control field-input" data-index="${i}" value="${item[h] || ''}">
+      </div>`).join('');
+    document.getElementById('workForm').innerHTML = html + `<input type="hidden" id="editRowIndex" value="${idx}">`;
+    new bootstrap.Modal(document.getElementById('workModal')).show();
+  }
+
+  function saveData() {
+    const btn = document.getElementById('saveBtn');
+    btn.disabled = true; btn.innerText = "Saving...";
+    
+    let rowData = new Array(sheetHeaders.length).fill("");
+    document.querySelectorAll('.field-input').forEach(inp => {
+      rowData[parseInt(inp.dataset.index)] = inp.value;
+    });
+
+    fetch(apiURL, {
+      method: 'POST',
+      body: JSON.stringify({
+        method: 'update',
+        rowIndex: parseInt(document.getElementById('editRowIndex').value),
+        rowData: rowArray
+      })
+    }).then(() => {
+      bootstrap.Modal.getInstance(document.getElementById('workModal')).hide();
+      refreshAll();
+      btn.disabled = false; btn.innerText = "Save Changes";
+    });
+  }
+  
+  // Service Worker for PWA
+  if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
+</script>
+</body>
+</html>
