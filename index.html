@@ -267,18 +267,48 @@
     }).join('');
   }
 
-  function saveData() {
+  ffunction saveData() {
     const btn = document.getElementById('saveBtn');
+    const isNew = document.getElementById('isNewEntry').value === "true";
+    const rowIndex = document.getElementById('editRowIndex').value;
+    
+    // Saare input fields se data nikalna
+    const inputs = document.querySelectorAll('#dynamicFields input');
+    let rowData = [];
+    inputs.forEach(input => {
+      rowData.push(input.value);
+    });
+
     btn.disabled = true;
     btn.innerText = "Saving...";
-    
-    // Yahan fetch call karke data save karein
-    setTimeout(() => { 
+
+    // Apps Script ko data bhejna[cite: 1, 2]
+    fetch(apiURL, {
+      method: "POST",
+      body: JSON.stringify({
+        method: isNew ? 'add' : 'update',
+        rowIndex: rowIndex,
+        rowData: rowData
+      })
+    })
+    .then(res => res.json())
+    .then(response => {
+      if(response.result === "success") {
+        alert("Data successfully saved in Sheet!");
         bootstrap.Modal.getInstance(document.getElementById('workModal')).hide();
-        refreshAll();
-        btn.disabled = false;
-        btn.innerText = "Save Changes";
-    }, 1500);
+        refreshAll(); // Dashboard refresh karega naya data dikhane ke liye
+      } else {
+        alert("Error: " + response.error);
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      alert("Failed to connect to Google Sheets.");
+    })
+    .finally(() => {
+      btn.disabled = false;
+      btn.innerText = "Save Changes";
+    });
   }
 </script>
 </body>
