@@ -39,7 +39,6 @@
     
     .locked-input { background-color: #e9ecef !important; cursor: not-allowed; color: #495057; }
     .view-only-mode input { border: none !important; background: transparent !important; pointer-events: none; font-weight: 600; padding: 0; }
-    .view-only-mode label { font-size: 0.75rem; color: #888; text-transform: uppercase; font-weight: bold; }
     
     #list-container { display: none; margin-top: 20px; }
   </style>
@@ -51,7 +50,7 @@
   
   <div class="row g-3 mb-4">
     <div class="col-6 col-md-3" onclick="handleFilter('All', this)">
-      <div class="stat-card total-card">
+      <div class="stat-card total-card active-filter">
         <div class="stat-number text-success" id="count-all">0</div>
         <div class="stat-label">Total Works</div>
       </div>
@@ -121,6 +120,16 @@
   let allData = [];
   let sheetHeaders = [];
 
+  const formatINR = (amount) => {
+    if (!amount || isNaN(amount.toString().replace(/,/g, ''))) return "—";
+    const num = parseFloat(amount.toString().replace(/,/g, ''));
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0
+    }).format(num);
+  };
+
   window.onload = () => { refreshAll(); };
 
   function refreshAll() {
@@ -156,7 +165,7 @@
         return; 
     }
     const filtered = allData.filter(d => 
-      ['WORK_NAME', 'E_TENDERID', 'AGENCY_NAME'].some(k => (d[k] || "").toString().toLowerCase().includes(val))
+      sheetHeaders.some(k => (d[k] || "").toString().toLowerCase().includes(val))
     );
     renderList(filtered, "Search Results");
   }
@@ -174,18 +183,16 @@
       const findVal = (possibleNames) => {
         for (let header of sheetHeaders) {
           let hNormal = header.toUpperCase().replace(/\s/g, '_');
-          if (possibleNames.includes(hNormal)) {
-            return item[header] || "—";
-          }
+          if (possibleNames.includes(hNormal)) return item[header];
         }
-        return "—";
+        return null;
       };
 
-      const workName = findVal(['WORK_NAME', 'NAME_OF_WORK', 'WORKNAME']);
-      const tenderId = findVal(['E_TENDERID', 'TENDER_ID', 'ID', 'SR_NO']);
-      const agency = findVal(['AGENCY_NAME', 'NAME_OF_AGENCY', 'AGENCY']);
-      const estimate = findVal(['ESTIMATE_COST', 'ESTIMATED_COST', 'ESTIMATE']);
-      const agreement = findVal(['AGREEMENT_AMT', 'AGREEMENT_AMOUNT', 'AGREEMENT_COST']);
+      const workName = findVal(['WORK_NAME', 'NAME_OF_WORK', 'WORKNAME']) || "Untitled Work";
+      const tenderId = findVal(['E_TENDERID', 'TENDER_ID', 'ID']) || "—";
+      const agency = findVal(['AGENCY_NAME', 'AGENCY']) || "—";
+      const estimate = formatINR(findVal(['ESTIMATE_COST', 'ESTIMATE']));
+      const agreement = formatINR(findVal(['AGREEMENT_AMT', 'AGREEMENT_AMOUNT']));
 
       return `
         <div class="work-card" onclick="openViewMode(${item.rowIndex})" style="border-left-color:${getStatusColor(item.computedStatus)}">
@@ -218,7 +225,6 @@
     document.getElementById('modalTitle').innerText = "Work Details (View)";
     document.getElementById('editModeBtn').classList.remove('d-none');
     document.getElementById('saveBtn').classList.add('d-none');
-    
     generateFields(currentItem, true);
     new bootstrap.Modal(document.getElementById('workModal')).show();
   }
@@ -246,65 +252,63 @@
     
     container.innerHTML = sheetHeaders.map((h, i) => {
       if(!h) return "";
-      const val = data ? (data[h] || "") : "";
-      let lockAttr = "";
-      if(!isView && val !== "" && val !== "-" && val !== "0") {
+      let val = data ? (data[h] || "") : "";
+      let inputType = "text";
+      const headerName = h.toUpperCase();
+
+      if (headerName.includes("DATE")) {
+        inputType = "date";
+        if(val && !isNaN(Date.parse(val))) {
+          val = new Date(val).toISOString().split('T')[0];
+        }
+      } else if (headerName.includes("AMOUNT") || headerName.includes("COST") || headerName.includes("AMT")) {
+        if(isView) {
+           val = formatINR(val);
+        } else {
+           inputType = "number";
+        }
+      }
+
+      let lockAttr = `class='form-control' type='${inputType}'`;
+      if(!isView && val !== "" && val !== "-" && val !== "0" && val !== "₹0") {
           lockAttr = "readonly class='form-control locked-input'";
-      } else {
-          lockAttr = "class='form-control'";
       }
 
       return `
         <div class="col-12 mb-3">
           <label class="fw-bold d-block mb-1 text-dark" style="font-size: 0.9rem;">${h}</label>
-          <input type="text" 
-                 data-index="${i}" 
-                 value="${val}" 
-                 ${isView ? 'class="form-control-plaintext p-0"' : lockAttr} 
-                 style="${isView ? 'font-weight: 400; color: #333; border:none;' : ''}">
+          <input data-index="${i}" value="${val}" ${isView ? 'class="form-control-plaintext p-0" border:none;' : lockAttr}>
           ${isView ? '<hr class="my-1" style="opacity: 0.1;">' : ''}
         </div>`;
     }).join('');
   }
 
-  ffunction saveData() {
+  function saveData() {
     const btn = document.getElementById('saveBtn');
     const isNew = document.getElementById('isNewEntry').value === "true";
     const rowIndex = document.getElementById('editRowIndex').value;
-    
-    // Saare input fields se data nikalna
     const inputs = document.querySelectorAll('#dynamicFields input');
     let rowData = [];
-    inputs.forEach(input => {
-      rowData.push(input.value);
-    });
+    inputs.forEach(input => rowData.push(input.value));
 
     btn.disabled = true;
     btn.innerText = "Saving...";
 
-    // Apps Script ko data bhejna[cite: 1, 2]
     fetch(apiURL, {
       method: "POST",
-      body: JSON.stringify({
-        method: isNew ? 'add' : 'update',
-        rowIndex: rowIndex,
-        rowData: rowData
-      })
+      body: JSON.stringify({ method: isNew ? 'add' : 'update', rowIndex: rowIndex, rowData: rowData })
     })
     .then(res => res.json())
     .then(response => {
       if(response.result === "success") {
         alert("Data successfully saved in Sheet!");
         bootstrap.Modal.getInstance(document.getElementById('workModal')).hide();
-        refreshAll(); // Dashboard refresh karega naya data dikhane ke liye
+        refreshAll();
       } else {
         alert("Error: " + response.error);
       }
     })
-    .catch(err => {
-      console.error(err);
-      alert("Failed to connect to Google Sheets.");
-    })
+    .catch(err => alert("Failed to connect to Google Sheets."))
     .finally(() => {
       btn.disabled = false;
       btn.innerText = "Save Changes";
