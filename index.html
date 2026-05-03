@@ -169,10 +169,51 @@
   }
 
   function renderList(data, title) {
-    const container = document.getElementById('list-container');
     const content = document.getElementById('content');
+    const container = document.getElementById('list-container');
     container.style.display = 'block';
     document.getElementById('results-header').innerText = `${title} (${data.length})`;
+
+    content.innerHTML = data.map(item => {
+      const showBadge = item.computedStatus && item.computedStatus !== "Other";
+      const badgeHtml = showBadge ? `<span class="badge" style="background:${getStatusColor(item.computedStatus)}">${item.computedStatus}</span>` : "";
+
+      // Modal ki tarah dynamic value nikalne ka logic
+      const findVal = (possibleNames) => {
+        // Sheet ke headers check karo aur match karo
+        for (let header of sheetHeaders) {
+          let hNormal = header.toUpperCase().replace(/\s/g, '_');
+          if (possibleNames.includes(hNormal)) {
+            return item[header] || "—";
+          }
+        }
+        return "—";
+      };
+
+      // Yahan hum multiple spelling variations check kar rahe hain
+      const workName = findVal(['WORK_NAME', 'NAME_OF_WORK', 'WORKNAME']);
+      const tenderId = findVal(['E_TENDERID', 'TENDER_ID', 'ID', 'SR_NO']);
+      const agency = findVal(['AGENCY_NAME', 'NAME_OF_AGENCY', 'AGENCY']);
+      const estimate = findVal(['ESTIMATE_COST', 'ESTIMATED_COST', 'ESTIMATE']);
+      const agreement = findVal(['AGREEMENT_AMT', 'AGREEMENT_AMOUNT', 'AGREEMENT_COST']);
+
+      return `
+        <div class="work-card" onclick="openViewMode(${item.rowIndex})" style="border-left-color:${getStatusColor(item.computedStatus)}">
+          <div class="card-title">${workName}</div>
+          <div class="row card-info">
+            <div class="col-7">
+              <div><b>ID:</b> ${tenderId}</div>
+              <div><b>Agency:</b> ${agency}</div>
+            </div>
+            <div class="col-5 text-end">
+              <div>Est: ${estimate}</div>
+              <div>Agg: ${agreement}</div>
+              <div class="mt-2">${badgeHtml}</div>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+  }
 
     content.innerHTML = data.map(item => {
       // Logic: Other wala tag na dikhe
@@ -233,16 +274,18 @@
     new bootstrap.Modal(document.getElementById('workModal')).show();
   }
 
-  function generateFields(data, isView) {
+  ffunction generateFields(data, isView) {
     const container = document.getElementById('dynamicFields');
     const form = document.getElementById('workForm');
+    
+    // View mode mein styling thodi saaf rakhte hain
     form.className = isView ? "view-only-mode row" : "row";
     
     container.innerHTML = sheetHeaders.map((h, i) => {
       if(!h) return "";
       const val = data ? (data[h] || "") : "";
       
-      // Logic: Agar edit mode hai aur data already hai, toh disable kardo
+      // Edit mode ke liye locking logic
       let lockAttr = "";
       if(!isView && val !== "" && val !== "-" && val !== "0") {
           lockAttr = "readonly class='form-control locked-input'";
@@ -250,10 +293,16 @@
           lockAttr = "class='form-control'";
       }
 
+      // Bootstrap 'col-12' use kiya hai taaki upar niche aaye (Vertical Stack)
       return `
-        <div class="col-md-6 mb-3">
-          <label>${h}</label>
-          <input type="text" data-index="${i}" value="${val}" ${isView ? "" : lockAttr}>
+        <div class="col-12 mb-3">
+          <label class="fw-bold d-block mb-1 text-dark" style="font-size: 0.9rem;">${h}</label>
+          <input type="text" 
+                 data-index="${i}" 
+                 value="${val}" 
+                 ${isView ? 'class="form-control-plaintext p-0"' : lockAttr} 
+                 style="${isView ? 'font-weight: 400; color: #333; border:none;' : ''}">
+          ${isView ? '<hr class="my-1" style="opacity: 0.1;">' : ''}
         </div>`;
     }).join('');
   }
