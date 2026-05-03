@@ -22,12 +22,9 @@
     .stat-number { font-size: 2.2rem; font-weight: 800; }
     .stat-label { font-size: 0.8rem; color: #6c757d; font-weight: 700; text-transform: uppercase; }
 
-    .search-input-lg { 
-      padding: 12px 25px; border-radius: 50px; border: 2px solid #007bff;
-    }
+    .search-input-lg { padding: 12px 25px; border-radius: 50px; border: 2px solid #007bff; }
     .btn-add-main { border-radius: 50px; padding: 12px 25px; font-weight: 700; }
 
-    /* Work Card Styling - Clean Look */
     .work-card {
       background: white; border-radius: 12px; padding: 20px; margin-bottom: 15px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 6px solid #007bff;
@@ -40,7 +37,6 @@
     .loader { border: 5px solid #f3f3f3; border-top: 5px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; display: none; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     
-    /* View/Edit Modes */
     .locked-input { background-color: #e9ecef !important; cursor: not-allowed; color: #495057; }
     .view-only-mode input { border: none !important; background: transparent !important; pointer-events: none; font-weight: 600; padding: 0; }
     .view-only-mode label { font-size: 0.75rem; color: #888; text-transform: uppercase; font-weight: bold; }
@@ -53,7 +49,6 @@
 <div class="container py-4">
   <h3 class="text-center fw-bold mb-4">MC Ch. Dadri Dashboard</h3>
   
-  <!-- Step 1: Stats & Search -->
   <div class="row g-3 mb-4">
     <div class="col-6 col-md-3" onclick="handleFilter('All', this)">
       <div class="stat-card total-card">
@@ -92,14 +87,12 @@
 
   <div id="loading" class="loader"></div>
 
-  <!-- Step 2: Hidden List Container -->
   <div id="list-container">
     <div id="results-header" class="mb-3 fw-bold text-secondary px-1"></div>
     <div id="content"></div>
   </div>
 </div>
 
-<!-- Modal Structure -->
 <div class="modal fade" id="workModal" tabindex="-1">
   <div class="modal-dialog modal-lg">
     <div class="modal-content shadow">
@@ -124,7 +117,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 <script>
-  const apiURL = "https://script.google.com/macros/s/AKfycbxOKN15Szd7A3OGEM1-Xg_Jnwhg4QUibhQ4zAaFHuQBmJiUhtoyeAHFzUtEwdDrUtEFeg/exec"; // Apna URL yahan dalein
+  const apiURL = "https://script.google.com/macros/s/AKfycbxOKN15Szd7A3OGEM1-Xg_Jnwhg4QUibhQ4zAaFHuQBmJiUhtoyeAHFzUtEwdDrUtEFeg/exec"; 
   let allData = [];
   let sheetHeaders = [];
 
@@ -178,9 +171,7 @@
       const showBadge = item.computedStatus && item.computedStatus !== "Other";
       const badgeHtml = showBadge ? `<span class="badge" style="background:${getStatusColor(item.computedStatus)}">${item.computedStatus}</span>` : "";
 
-      // Modal ki tarah dynamic value nikalne ka logic
       const findVal = (possibleNames) => {
-        // Sheet ke headers check karo aur match karo
         for (let header of sheetHeaders) {
           let hNormal = header.toUpperCase().replace(/\s/g, '_');
           if (possibleNames.includes(hNormal)) {
@@ -190,7 +181,6 @@
         return "—";
       };
 
-      // Yahan hum multiple spelling variations check kar rahe hain
       const workName = findVal(['WORK_NAME', 'NAME_OF_WORK', 'WORKNAME']);
       const tenderId = findVal(['E_TENDERID', 'TENDER_ID', 'ID', 'SR_NO']);
       const agency = findVal(['AGENCY_NAME', 'NAME_OF_AGENCY', 'AGENCY']);
@@ -215,34 +205,9 @@
     }).join('');
   }
 
-    content.innerHTML = data.map(item => {
-      // Logic: Other wala tag na dikhe
-      const showBadge = item.computedStatus && item.computedStatus !== "Other";
-      const badgeHtml = showBadge ? `<span class="badge" style="background:${getStatusColor(item.computedStatus)}">${item.computedStatus}</span>` : "";
-
-      return `
-        <div class="work-card" onclick="openViewMode(${item.rowIndex})" style="border-left-color:${getStatusColor(item.computedStatus)}">
-          <div class="card-title">${item.WORK_NAME || 'Untitled Work'}</div>
-          <div class="row card-info">
-            <div class="col-7">
-              <div><b>ID:</b> ${item.E_TENDERID || '—'}</div>
-              <div><b>Agency:</b> ${item.AGENCY_NAME || '—'}</div>
-            </div>
-            <div class="col-5 text-end">
-              <div>Est: ${item.ESTIMATE_COST || '—'}</div>
-              <div>Agg: ${item.AGREEMENT_AMT || '—'}</div>
-              <div class="mt-2">${badgeHtml}</div>
-            </div>
-          </div>
-        </div>`;
-    }).join('');
-  }
-
   function getStatusColor(s) {
     return s === "In Progress" ? "#007bff" : s === "Under DLP" ? "#6f42c1" : s === "To Be Opened" ? "#fd7e14" : "#ddd";
   }
-
-  // --- Modal Logic ---
 
   let currentItem = null;
 
@@ -254,7 +219,7 @@
     document.getElementById('editModeBtn').classList.remove('d-none');
     document.getElementById('saveBtn').classList.add('d-none');
     
-    generateFields(currentItem, true); // true = viewMode
+    generateFields(currentItem, true);
     new bootstrap.Modal(document.getElementById('workModal')).show();
   }
 
@@ -262,7 +227,7 @@
     document.getElementById('modalTitle').innerText = "Edit Details (Locked fields contain data)";
     document.getElementById('editModeBtn').classList.add('d-none');
     document.getElementById('saveBtn').classList.remove('d-none');
-    generateFields(currentItem, false); // false = editMode
+    generateFields(currentItem, false);
   }
 
   function openAddWorkModal() {
@@ -274,18 +239,14 @@
     new bootstrap.Modal(document.getElementById('workModal')).show();
   }
 
-  ffunction generateFields(data, isView) {
+  function generateFields(data, isView) {
     const container = document.getElementById('dynamicFields');
     const form = document.getElementById('workForm');
-    
-    // View mode mein styling thodi saaf rakhte hain
     form.className = isView ? "view-only-mode row" : "row";
     
     container.innerHTML = sheetHeaders.map((h, i) => {
       if(!h) return "";
       const val = data ? (data[h] || "") : "";
-      
-      // Edit mode ke liye locking logic
       let lockAttr = "";
       if(!isView && val !== "" && val !== "-" && val !== "0") {
           lockAttr = "readonly class='form-control locked-input'";
@@ -293,7 +254,6 @@
           lockAttr = "class='form-control'";
       }
 
-      // Bootstrap 'col-12' use kiya hai taaki upar niche aaye (Vertical Stack)
       return `
         <div class="col-12 mb-3">
           <label class="fw-bold d-block mb-1 text-dark" style="font-size: 0.9rem;">${h}</label>
@@ -308,14 +268,12 @@
   }
 
   function saveData() {
-    // Standard fetch logic to save back to Google Sheets
     const btn = document.getElementById('saveBtn');
     btn.disabled = true;
     btn.innerText = "Saving...";
     
-    // Yahan fetch call karke data save karein (same as previous script)
-    // ... logic for saving ...
-    setTimeout(() => { // Dummy delay
+    // Yahan fetch call karke data save karein
+    setTimeout(() => { 
         bootstrap.Modal.getInstance(document.getElementById('workModal')).hide();
         refreshAll();
         btn.disabled = false;
