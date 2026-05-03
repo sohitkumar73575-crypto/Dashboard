@@ -1,53 +1,105 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Dadri Dashboard</title>
+  <title>MC Dadri Dashboard</title>
+  
+  <!-- PWA Settings -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#007bff">
+  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/1087/1087080.png">
+
   <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
   <style>
     body { background-color: #f0f2f5; font-family: 'Segoe UI', sans-serif; }
-    .stat-card { background: white; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.05); cursor: pointer; border-top: 5px solid #ddd; }
-    .active-filter { border-top-width: 10px !important; }
-    .work-card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; border-left: 6px solid #007bff; cursor: pointer; }
-    .loader { border: 5px solid #f3f3f3; border-top: 5px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; display: none; }
+    .stat-card {
+      background: white; border-radius: 12px; padding: 15px; text-align: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05); cursor: pointer; transition: 0.3s;
+      border-top: 5px solid #ddd; height: 100%;
+    }
+    .stat-card:hover { transform: translateY(-3px); }
+    .active-filter { border-top-width: 10px !important; box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
+    .work-card {
+      background: white; border-radius: 12px; padding: 15px; margin-bottom: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 6px solid #007bff;
+      cursor: pointer; transition: 0.2s;
+    }
+    .work-card:active { transform: scale(0.98); }
+    .loader { 
+      border: 5px solid #f3f3f3; border-top: 5px solid #3498db; border-radius: 50%; 
+      width: 45px; height: 45px; animation: spin 1s linear infinite; 
+      margin: 40px auto; display: none; 
+    }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
 
 <div class="container py-4">
-  <h4 class="text-center fw-bold mb-4">MC Dadri Dashboard</h4>
+  <h4 class="text-center fw-bold mb-4 text-primary">MC Dadri Works Dashboard</h4>
   
+  <!-- Stats Row -->
   <div class="row g-3 mb-4">
-    <div class="col-6 col-md-3" onclick="handleFilter('All', this)"><div class="stat-card" style="border-top-color:#28a745"><h3 id="count-all">0</h3><small>Total</small></div></div>
-    <div class="col-6 col-md-3" onclick="handleFilter('In Progress', this)"><div class="stat-card" style="border-top-color:#007bff"><h3 id="count-progress">0</h3><small>Active</small></div></div>
-    <div class="col-6 col-md-3" onclick="handleFilter('Under DLP', this)"><div class="stat-card" style="border-top-color:#6f42c1"><h3 id="count-dlp">0</h3><small>DLP</small></div></div>
-    <div class="col-6 col-md-3" onclick="handleFilter('To Be Opened', this)"><div class="stat-card" style="border-top-color:#fd7e14"><h3 id="count-open">0</h3><small>Pending</small></div></div>
+    <div class="col-6 col-md-3" onclick="handleFilter('All', this)">
+      <div class="stat-card active-filter" style="border-top-color: #28a745">
+        <h3 class="mb-0 text-success" id="count-all">0</h3>
+        <div class="small text-muted fw-bold">TOTAL</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3" onclick="handleFilter('In Progress', this)">
+      <div class="stat-card" style="border-top-color: #007bff">
+        <h3 class="mb-0 text-primary" id="count-progress">0</h3>
+        <div class="small text-muted fw-bold">ACTIVE</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3" onclick="handleFilter('Under DLP', this)">
+      <div class="stat-card" style="border-top-color: #6f42c1">
+        <h3 class="mb-0" style="color:#6f42c1" id="count-dlp">0</h3>
+        <div class="small text-muted fw-bold">DLP</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3" onclick="handleFilter('To Be Opened', this)">
+      <div class="stat-card" style="border-top-color: #fd7e14">
+        <h3 class="mb-0 text-warning" id="count-open">0</h3>
+        <div class="small text-muted fw-bold">PENDING</div>
+      </div>
+    </div>
   </div>
 
-  <div class="mb-3 d-flex gap-2">
-    <input type="text" id="searchInput" class="form-control" placeholder="Search..." onkeyup="handleSearch()">
-    <button class="btn btn-success" onclick="openAddWorkModal()">Add</button>
+  <!-- Search & Add -->
+  <div class="row g-2 mb-4">
+    <div class="col-9">
+      <input type="text" id="searchInput" class="form-control py-2 shadow-sm" placeholder="Search work, ID or agency..." onkeyup="handleSearch()">
+    </div>
+    <div class="col-3">
+      <button class="btn btn-success w-100 py-2 fw-bold shadow-sm" onclick="openAddWorkModal()">+ ADD</button>
+    </div>
   </div>
 
+  <!-- Loading & Content -->
   <div id="loading" class="loader"></div>
   <div id="content" class="row"></div>
 </div>
 
-<!-- Modal -->
+<!-- Details Modal -->
 <div class="modal fade" id="workModal" tabindex="-1">
   <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 id="modalTitle">Details</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    <div class="modal-content border-0">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="fw-bold mb-0" id="modalTitle">Work Details</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
-      <div class="modal-body"><form id="workForm" class="row"></form></div>
+      <div class="modal-body bg-light">
+        <form id="workForm" class="row g-3">
+          <!-- Hidden inputs for row tracking -->
+          <input type="hidden" id="editRowIndex">
+          <input type="hidden" id="isNewEntry">
+          <div id="dynamicFields" class="row g-3"></div>
+        </form>
+      </div>
       <div class="modal-footer">
-        <button id="saveBtn" class="btn btn-primary w-100" onclick="saveData()">Save Changes</button>
+        <button id="saveBtn" class="btn btn-primary w-100 py-2 fw-bold" onclick="saveData()">SAVE CHANGES</button>
       </div>
     </div>
   </div>
@@ -55,23 +107,35 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 <script>
-  // 1. APNA URL YAHAN DAALEIN
+  // Google Apps Script URL[cite: 1]
   const apiURL = "https://script.google.com/macros/s/AKfycbzZGLdxVYPpaAvAvwcNdWIGH6Nudg6Ftwp3byyXpz5Ties3q1uOZDhtjYAfjeOr4NEH/exec"; 
   
   let allData = [], sheetHeaders = [];
 
   window.onload = refreshAll;
 
+  // Data Fetch Karne ka function[cite: 1]
   function refreshAll() {
-    document.getElementById('loading').style.display = 'block';
-    fetch(apiURL).then(r => r.json()).then(res => {
-      allData = res.data; sheetHeaders = res.headers;
-      document.getElementById('loading').style.display = 'none';
-      updateStats();
-      renderCards(allData);
-    });
+    const loader = document.getElementById('loading');
+    loader.style.display = 'block';
+    
+    fetch(apiURL)
+      .then(r => r.json())
+      .then(res => {
+        allData = res.data; 
+        sheetHeaders = res.headers;
+        loader.style.display = 'none';
+        updateStats();
+        renderCards(allData);
+      })
+      .catch(err => {
+        console.error("Error:", err);
+        loader.style.display = 'none';
+        alert("Data load nahi ho saka. Connection check karein.");
+      });
   }
 
+  // Stats Update karne ke liye
   function updateStats() {
     document.getElementById('count-all').innerText = allData.length;
     document.getElementById('count-progress').innerText = allData.filter(d => d.computedStatus === "In Progress").length;
@@ -79,33 +143,74 @@
     document.getElementById('count-open').innerText = allData.filter(d => d.computedStatus === "To Be Opened").length;
   }
 
+  // Cards Render karne ke liye
   function renderCards(data) {
     let html = data.map(item => `
       <div class="col-12" onclick="openDetails(${item.rowIndex})">
         <div class="work-card" style="border-left-color:${getStatusColor(item.computedStatus)}">
-          <div class="fw-bold">${item['WORK_NAME'] || 'No Name'}</div>
-          <small class="text-muted">${item['E_TENDERID'] || '-'}</small>
+          <div class="fw-bold text-dark mb-1">${item['Work_Name'] || 'Untitled Work'}</div>
+          <div class="d-flex justify-content-between align-items-center">
+            <small class="text-muted">${item['E_TENDERID'] || 'No ID'}</small>
+            <span class="badge bg-light text-dark border-0" style="font-size:0.7rem">${item.computedStatus}</span>
+          </div>
         </div>
       </div>`).join('');
-    document.getElementById('content').innerHTML = html;
+    document.getElementById('content').innerHTML = html || '<p class="text-center mt-4">No records found.</p>';
   }
 
-  function getStatusColor(s) { return s==="In Progress"?"#007bff":s==="Under DLP"?"#6f42c1":s==="To Be Opened"?"#fd7e14":"#ddd"; }
+  function getStatusColor(s) { 
+    return s==="In Progress"?"#007bff":s==="Under DLP"?"#6f42c1":s==="To Be Opened"?"#fd7e14":"#ddd"; 
+  }
 
+  // Search Function
+  function handleSearch() {
+    const val = document.getElementById('searchInput').value.toLowerCase();
+    const filtered = allData.filter(d => 
+      Object.values(d).some(v => v.toString().toLowerCase().includes(val))
+    );
+    renderCards(filtered);
+  }
+
+  // Filter Function
+  function handleFilter(status, el) {
+    document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('active-filter'));
+    el.classList.add('active-filter');
+    renderCards(status === 'All' ? allData : allData.filter(d => d.computedStatus === status));
+  }
+
+  // Edit/View Modal open karne ke liye
   function openDetails(idx) {
     let item = allData.find(d => d.rowIndex === idx);
+    setupForm(item, idx, false);
+  }
+
+  // Add New Modal open karne ke liye
+  function openAddWorkModal() {
+    setupForm(null, null, true);
+  }
+
+  // Form Setup logic
+  function setupForm(item, idx, isNew) {
+    document.getElementById('modalTitle').innerText = isNew ? "Add New Work" : "Edit Work Details";
+    document.getElementById('isNewEntry').value = isNew;
+    document.getElementById('editRowIndex').value = idx || "";
+    
     let html = sheetHeaders.map((h, i) => `
-      <div class="col-md-6 mb-2">
-        <label class="small fw-bold">${h}</label>
-        <input class="form-control field-input" data-index="${i}" value="${item[h] || ''}">
+      <div class="col-md-6">
+        <label class="form-label small fw-bold mb-1">${h}</label>
+        <input class="form-control field-input" data-index="${i}" value="${item ? (item[h] || '') : ''}">
       </div>`).join('');
-    document.getElementById('workForm').innerHTML = html + `<input type="hidden" id="editRowIndex" value="${idx}">`;
+    
+    document.getElementById('dynamicFields').innerHTML = html;
     new bootstrap.Modal(document.getElementById('workModal')).show();
   }
 
+  // Data Save karne ka function[cite: 1]
   function saveData() {
     const btn = document.getElementById('saveBtn');
-    btn.disabled = true; btn.innerText = "Saving...";
+    const isNew = document.getElementById('isNewEntry').value === "true";
+    btn.disabled = true; 
+    btn.innerText = "Saving to Sheets...";
     
     let rowData = new Array(sheetHeaders.length).fill("");
     document.querySelectorAll('.field-input').forEach(inp => {
@@ -115,19 +220,28 @@
     fetch(apiURL, {
       method: 'POST',
       body: JSON.stringify({
-        method: 'update',
+        method: isNew ? 'add' : 'update',
         rowIndex: parseInt(document.getElementById('editRowIndex').value),
-        rowData: rowArray
+        rowData: rowData // Fixed name[cite: 1]
       })
-    }).then(() => {
+    })
+    .then(r => r.json())
+    .then(res => {
       bootstrap.Modal.getInstance(document.getElementById('workModal')).hide();
       refreshAll();
-      btn.disabled = false; btn.innerText = "Save Changes";
+      btn.disabled = false; 
+      btn.innerText = "SAVE CHANGES";
+    })
+    .catch(err => {
+      alert("Error saving data!");
+      btn.disabled = false;
+      btn.innerText = "SAVE CHANGES";
     });
   }
   
-  // Service Worker for PWA
-  if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
+  if ('serviceWorker' in navigator) { 
+    navigator.serviceWorker.register('sw.js').catch(err => console.log("SW error", err)); 
+  }
 </script>
 </body>
 </html>
