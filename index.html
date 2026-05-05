@@ -3,52 +3,55 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MC Dadri Dashboard</title>
+  <title>MC Dadri Pro Dashboard</title>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    body { background-color: #f0f2f5; font-family: 'Segoe UI', sans-serif; }
+    body { background-color: #f0f2f5; font-family: 'Segoe UI', sans-serif; padding-bottom: 80px; }
     .stat-card {
-      background: white; border-radius: 12px; padding: 20px; text-align: center;
+      background: white; border-radius: 12px; padding: 15px; text-align: center;
       box-shadow: 0 4px 12px rgba(0,0,0,0.05); cursor: pointer; transition: 0.3s;
       border-top: 5px solid #ddd; height: 100%;
     }
-    .stat-card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
-    .active-filter { border-top-width: 10px !important; }
+    .stat-card:hover { transform: translateY(-3px); box-shadow: 0 6px 15px rgba(0,0,0,0.1); }
+    .active-filter { border-top-width: 10px !important; transform: scale(1.05); }
     .total-card { border-top-color: #28a745; }
     .progress-card { border-top-color: #007bff; }
     .dlp-card { border-top-color: #6f42c1; }
     .open-card { border-top-color: #fd7e14; }
 
-    .stat-number { font-size: 2.2rem; font-weight: 800; }
-    .stat-label { font-size: 0.8rem; color: #6c757d; font-weight: 700; text-transform: uppercase; }
+    .stat-number { font-size: 1.8rem; font-weight: 800; }
+    .stat-label { font-size: 0.7rem; color: #6c757d; font-weight: 700; text-transform: uppercase; }
 
-    .search-input-lg { padding: 12px 25px; border-radius: 50px; border: 2px solid #007bff; }
-    .btn-add-main { border-radius: 50px; padding: 12px 25px; font-weight: 700; }
-
+    .search-input-lg { padding: 12px 25px; border-radius: 50px; border: 2px solid #007bff; box-shadow: 0 4px 10px rgba(0,123,255,0.1); }
+    
     .work-card {
-      background: white; border-radius: 12px; padding: 20px; margin-bottom: 15px;
+      background: white; border-radius: 12px; padding: 18px; margin-bottom: 12px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 6px solid #007bff;
       cursor: pointer; transition: 0.2s;
     }
-    .work-card:hover { background-color: #f8f9fa; }
-    .card-title { font-size: 1.1rem; font-weight: 700; color: #1a1a1a; margin-bottom: 8px; }
-    .card-info { font-size: 0.9rem; color: #555; }
+    .work-card:hover { background-color: #f8f9fa; border-left-width: 10px; }
     
-    .loader { border: 5px solid #f3f3f3; border-top: 5px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; display: none; }
+    .footer-summary {
+      position: fixed; bottom: 0; left: 0; right: 0; 
+      background: #212529; color: white; padding: 15px;
+      box-shadow: 0 -4px 15px rgba(0,0,0,0.2); z-index: 1000;
+      display: none;
+    }
+
+    .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; display: none; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     
-    .locked-input { background-color: #e9ecef !important; cursor: not-allowed; color: #495057; }
+    .locked-input { background-color: #e9ecef !important; cursor: not-allowed; }
     .view-only-mode input { border: none !important; background: transparent !important; pointer-events: none; font-weight: 600; padding: 0; }
-    
-    #list-container { display: none; margin-top: 20px; }
   </style>
 </head>
 <body>
 
 <div class="container py-4">
-  <h3 class="text-center fw-bold mb-4">MC Ch. Dadri Dashboard</h3>
+  <h3 class="text-center fw-bold mb-4">Muncipal Council Ch. Dadri</h3>
   
-  <div class="row g-3 mb-4">
+  <!-- Stats Section -->
+  <div class="row g-2 mb-4">
     <div class="col-6 col-md-3" onclick="handleFilter('All', this)">
       <div class="stat-card total-card active-filter">
         <div class="stat-number text-success" id="count-all">0</div>
@@ -75,40 +78,54 @@
     </div>
   </div>
 
-  <div class="row g-2 mb-4">
-    <div class="col-9">
-      <input type="text" id="searchInput" class="form-control search-input-lg" placeholder="🔍 Search Work, ID, or Agency..." onkeyup="handleSearch()">
+  <!-- Search & Add -->
+  <div class="row g-2 mb-4 align-items-center">
+    <div class="col-8">
+      <input type="text" id="searchInput" class="form-control search-input-lg" placeholder="🔍 Search by ID, Work Name, Agency..." onkeyup="handleSearch()">
     </div>
-    <div class="col-3">
-      <button class="btn btn-success btn-add-main w-100" onclick="openAddWorkModal()">➕ Add</button>
+    <div class="col-4">
+      <button class="btn btn-success rounded-pill w-100 py-2 fw-bold" onclick="openAddWorkModal()">➕ NEW</button>
     </div>
   </div>
 
   <div id="loading" class="loader"></div>
 
-  <div id="list-container">
-    <div id="results-header" class="mb-3 fw-bold text-secondary px-1"></div>
+  <!-- Results List -->
+  <div id="list-container" style="display:none;">
+    <div id="results-header" class="mb-3 fw-bold text-secondary d-flex justify-content-between">
+      <span id="list-title">Works</span>
+      <span id="list-count" class="badge bg-secondary">0</span>
+    </div>
     <div id="content"></div>
   </div>
 </div>
 
+<!-- Sticky Footer for Totals -->
+<div id="totalSummary" class="footer-summary">
+  <div class="container d-flex justify-content-between align-items-center">
+    <span class="small text-uppercase fw-bold text-info" id="footerLabel">Agreement Total</span>
+    <span class="fs-5 fw-bold" id="footerAmount">₹ 0</span>
+  </div>
+</div>
+
+<!-- Modal -->
 <div class="modal fade" id="workModal" tabindex="-1">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content shadow">
-      <div class="modal-header border-0">
-        <h5 class="fw-bold" id="modalTitle">Details</h5>
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-white">
+        <h5 class="fw-bold m-0" id="modalTitle">Work Details</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <div class="modal-body bg-light mx-2 rounded" style="max-height: 70vh; overflow-y: auto;">
+      <div class="modal-body bg-light">
         <form id="workForm">
           <input type="hidden" id="editRowIndex">
           <input type="hidden" id="isNewEntry">
           <div id="dynamicFields" class="row"></div>
         </form>
       </div>
-      <div class="modal-footer border-0">
-        <button type="button" id="editModeBtn" class="btn btn-warning" onclick="enableEditMode()">Edit Details</button>
-        <button type="button" id="saveBtn" class="btn btn-primary d-none" onclick="saveData()">Save Changes</button>
+      <div class="modal-footer bg-white">
+        <button type="button" id="editModeBtn" class="btn btn-warning fw-bold" onclick="enableEditMode()">EDIT DATA</button>
+        <button type="button" id="saveBtn" class="btn btn-primary d-none fw-bold" onclick="saveData()">SAVE TO CLOUD</button>
       </div>
     </div>
   </div>
@@ -121,26 +138,34 @@
   let sheetHeaders = [];
 
   const formatINR = (amount) => {
-    if (!amount || isNaN(amount.toString().replace(/,/g, ''))) return "—";
-    const num = parseFloat(amount.toString().replace(/,/g, ''));
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0
-    }).format(num);
+    if (!amount) return "—";
+    let val = amount.toString().replace(/[₹,]/g, '').trim();
+    if (isNaN(val) || val === "") return "—";
+    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(parseFloat(val));
   };
 
-  window.onload = () => { refreshAll(); };
+  const getCleanNum = (amount) => {
+    if (!amount) return 0;
+    let val = amount.toString().replace(/[₹,]/g, '').trim();
+    return isNaN(val) ? 0 : parseFloat(val);
+  };
+
+  window.onload = () => refreshAll();
 
   function refreshAll() {
     document.getElementById('loading').style.display = 'block';
     fetch(apiURL)
       .then(res => res.json())
       .then(data => {
-        allData = data.data;
+        // Sirf wahi rows rakhein jisme kam se kam Work Name ya Tender ID ho (Empty rows delete maane)
+        allData = data.data.filter(d => {
+            const name = d['WORK_NAME'] || d['NAME_OF_WORK'] || d['WORKNAME'];
+            return name && name.toString().trim() !== "" && name !== "—";
+        });
         sheetHeaders = data.headers;
         document.getElementById('loading').style.display = 'none';
         updateStats();
+        handleFilter('All', document.querySelector('.total-card'));
       });
   }
 
@@ -152,16 +177,18 @@
   }
 
   function handleFilter(status, el) {
-    document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('active-filter'));
-    el.classList.add('active-filter');
+    if(el) {
+      document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('active-filter'));
+      el.classList.add('active-filter');
+    }
     const filtered = status === 'All' ? allData : allData.filter(d => d.computedStatus === status);
-    renderList(filtered, status + " Works");
+    renderList(filtered, status);
   }
 
   function handleSearch() {
     const val = document.getElementById('searchInput').value.toLowerCase();
     if(val.length < 2) { 
-        document.getElementById('list-container').style.display = 'none';
+        handleFilter('All', document.querySelector('.total-card'));
         return; 
     }
     const filtered = allData.filter(d => 
@@ -173,72 +200,76 @@
   function renderList(data, title) {
     const content = document.getElementById('content');
     const container = document.getElementById('list-container');
+    const footer = document.getElementById('totalSummary');
     container.style.display = 'block';
-    document.getElementById('results-header').innerText = `${title} (${data.length})`;
+    footer.style.display = 'block';
+
+    document.getElementById('list-title').innerText = title + " Works";
+    document.getElementById('list-count').innerText = data.length;
+
+    let totalAgreement = 0;
 
     content.innerHTML = data.map(item => {
-      const showBadge = item.computedStatus && item.computedStatus !== "Other";
-      const badgeHtml = showBadge ? `<span class="badge" style="background:${getStatusColor(item.computedStatus)}">${item.computedStatus}</span>` : "";
-
-      const findVal = (possibleNames) => {
-        for (let header of sheetHeaders) {
-          let hNormal = header.toUpperCase().replace(/\s/g, '_');
-          if (possibleNames.includes(hNormal)) return item[header];
-        }
-        return null;
+      const findVal = (keys) => {
+        const found = sheetHeaders.find(h => keys.some(k => h.toUpperCase().replace(/\s/g, '_').includes(k)));
+        return found ? item[found] : null;
       };
 
-      const workName = findVal(['WORK_NAME', 'NAME_OF_WORK', 'WORKNAME']) || "Untitled Work";
+      const workName = findVal(['WORK_NAME', 'NAME_OF_WORK', 'WORKNAME']) || "Work Details Missing";
       const tenderId = findVal(['E_TENDERID', 'TENDER_ID', 'ID']) || "—";
-      const agency = findVal(['AGENCY_NAME', 'AGENCY']) || "—";
-      const estimate = formatINR(findVal(['ESTIMATE_COST', 'ESTIMATE']));
-      const agreement = formatINR(findVal(['AGREEMENT_AMT', 'AGREEMENT_AMOUNT']));
+      const agency = findVal(['AGENCY_NAME', 'AGENCY', 'CONTRACTOR']) || "—";
+      const aggVal = findVal(['AGREEMENT_AMT', 'AGREEMENT_AMOUNT', 'AG_AMT']);
+      
+      totalAgreement += getCleanNum(aggVal);
 
       return `
         <div class="work-card" onclick="openViewMode(${item.rowIndex})" style="border-left-color:${getStatusColor(item.computedStatus)}">
-          <div class="card-title">${workName}</div>
-          <div class="row card-info">
+          <div class="card-title text-truncate">${workName}</div>
+          <div class="row card-info g-0">
             <div class="col-7">
-              <div><b>ID:</b> ${tenderId}</div>
-              <div><b>Agency:</b> ${agency}</div>
+              <div class="small"><b>ID:</b> ${tenderId}</div>
+              <div class="small text-truncate"><b>Agency:</b> ${agency}</div>
             </div>
             <div class="col-5 text-end">
-              <div>Est: ${estimate}</div>
-              <div>Agg: ${agreement}</div>
-              <div class="mt-2">${badgeHtml}</div>
+              <div class="fw-bold text-dark">${formatINR(aggVal)}</div>
+              <span class="badge mt-1" style="background:${getStatusColor(item.computedStatus)}">${item.computedStatus || 'Other'}</span>
             </div>
           </div>
         </div>`;
     }).join('');
+
+    document.getElementById('footerAmount').innerText = formatINR(totalAgreement);
+    document.getElementById('footerLabel').innerText = `${title} Total`;
   }
 
   function getStatusColor(s) {
-    return s === "In Progress" ? "#007bff" : s === "Under DLP" ? "#6f42c1" : s === "To Be Opened" ? "#fd7e14" : "#ddd";
+    const colors = {"In Progress": "#007bff", "Under DLP": "#6f42c1", "To Be Opened": "#fd7e14"};
+    return colors[s] || "#adb5bd";
   }
 
-  let currentItem = null;
-
   function openViewMode(rowIndex) {
-    currentItem = allData.find(d => d.rowIndex === rowIndex);
+    const item = allData.find(d => d.rowIndex === rowIndex);
+    if(!item) return;
     document.getElementById('editRowIndex').value = rowIndex;
     document.getElementById('isNewEntry').value = "false";
-    document.getElementById('modalTitle').innerText = "Work Details (View)";
+    document.getElementById('modalTitle').innerText = "Work Summary";
     document.getElementById('editModeBtn').classList.remove('d-none');
     document.getElementById('saveBtn').classList.add('d-none');
-    generateFields(currentItem, true);
+    generateFields(item, true);
     new bootstrap.Modal(document.getElementById('workModal')).show();
   }
 
   function enableEditMode() {
-    document.getElementById('modalTitle').innerText = "Edit Details (Locked fields contain data)";
+    const item = allData.find(d => d.rowIndex == document.getElementById('editRowIndex').value);
+    document.getElementById('modalTitle').innerText = "Updating Records...";
     document.getElementById('editModeBtn').classList.add('d-none');
     document.getElementById('saveBtn').classList.remove('d-none');
-    generateFields(currentItem, false);
+    generateFields(item, false);
   }
 
   function openAddWorkModal() {
     document.getElementById('isNewEntry').value = "true";
-    document.getElementById('modalTitle').innerText = "Add New Work";
+    document.getElementById('modalTitle').innerText = "Register New Work";
     document.getElementById('editModeBtn').classList.add('d-none');
     document.getElementById('saveBtn').classList.remove('d-none');
     generateFields(null, false);
@@ -247,38 +278,28 @@
 
   function generateFields(data, isView) {
     const container = document.getElementById('dynamicFields');
-    const form = document.getElementById('workForm');
-    form.className = isView ? "view-only-mode row" : "row";
+    document.getElementById('workForm').className = isView ? "view-only-mode row" : "row";
     
     container.innerHTML = sheetHeaders.map((h, i) => {
-      if(!h) return "";
       let val = data ? (data[h] || "") : "";
-      let inputType = "text";
-      const headerName = h.toUpperCase();
+      let type = "text";
+      const upH = h.toUpperCase();
 
-      if (headerName.includes("DATE")) {
-        inputType = "date";
-        if(val && !isNaN(Date.parse(val))) {
-          val = new Date(val).toISOString().split('T')[0];
-        }
-      } else if (headerName.includes("AMOUNT") || headerName.includes("COST") || headerName.includes("AMT")) {
-        if(isView) {
-           val = formatINR(val);
-        } else {
-           inputType = "number";
-        }
+      if (upH.includes("DATE")) {
+        type = "date";
+        if(val && !isNaN(Date.parse(val))) val = new Date(val).toISOString().split('T')[0];
+      } else if (upH.includes("AMOUNT") || upH.includes("COST") || upH.includes("AMT")) {
+        if(isView) val = formatINR(val);
+        else { type = "number"; val = val.toString().replace(/[₹,]/g, '').trim(); }
       }
 
-      let lockAttr = `class='form-control' type='${inputType}'`;
-      if(!isView && val !== "" && val !== "-" && val !== "0" && val !== "₹0") {
-          lockAttr = "readonly class='form-control locked-input'";
-      }
+      let attr = `class='form-control shadow-sm' type='${type}'`;
+      if(!isView && val !== "" && val !== "—" && val !== "0") attr = "readonly class='form-control locked-input'";
 
       return `
         <div class="col-12 mb-3">
-          <label class="fw-bold d-block mb-1 text-dark" style="font-size: 0.9rem;">${h}</label>
-          <input data-index="${i}" value="${val}" ${isView ? 'class="form-control-plaintext p-0" border:none;' : lockAttr}>
-          ${isView ? '<hr class="my-1" style="opacity: 0.1;">' : ''}
+          <label class="small fw-bold text-uppercase text-muted mb-1">${h}</label>
+          <input data-index="${i}" value="${val}" ${isView ? 'class="form-control-plaintext p-0 fw-bold border-0"' : attr}>
         </div>`;
     }).join('');
   }
@@ -286,32 +307,31 @@
   function saveData() {
     const btn = document.getElementById('saveBtn');
     const isNew = document.getElementById('isNewEntry').value === "true";
-    const rowIndex = document.getElementById('editRowIndex').value;
     const inputs = document.querySelectorAll('#dynamicFields input');
     let rowData = [];
     inputs.forEach(input => rowData.push(input.value));
 
     btn.disabled = true;
-    btn.innerText = "Saving...";
+    btn.innerText = "UPDATING SHEETS...";
 
     fetch(apiURL, {
       method: "POST",
-      body: JSON.stringify({ method: isNew ? 'add' : 'update', rowIndex: rowIndex, rowData: rowData })
+      body: JSON.stringify({ 
+        method: isNew ? 'add' : 'update', 
+        rowIndex: document.getElementById('editRowIndex').value, 
+        rowData: rowData 
+      })
     })
     .then(res => res.json())
-    .then(response => {
-      if(response.result === "success") {
-        alert("Data successfully saved in Sheet!");
+    .then(res => {
+      if(res.result === "success") {
         bootstrap.Modal.getInstance(document.getElementById('workModal')).hide();
         refreshAll();
-      } else {
-        alert("Error: " + response.error);
-      }
+      } else alert("Error: " + res.error);
     })
-    .catch(err => alert("Failed to connect to Google Sheets."))
     .finally(() => {
       btn.disabled = false;
-      btn.innerText = "Save Changes";
+      btn.innerText = "SAVE TO CLOUD";
     });
   }
 </script>
