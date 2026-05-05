@@ -3,21 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MC Charkhi Dadri | Works Management</title>
+    <title>MC Charkhi Dadri | Work Management System</title>
     <!-- CSS Links -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { background-color: #f4f7f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .navbar { background: #2c3e50; color: white; shadow: 0 2px 4px rgba(0,0,0,.1); }
-        .card-stats { cursor: pointer; transition: transform 0.2s; border: none; border-radius: 10px; }
-        .card-stats:hover { transform: translateY(-5px); }
-        .bg-live { background: #e3f2fd; border-left: 5px solid #2196f3; }
-        .bg-pending { background: #fff3e0; border-left: 5px solid #ff9800; }
-        .bg-progress { background: #e8f5e9; border-left: 5px solid #4caf50; }
-        .bg-dlp { background: #fce4ec; border-left: 5px solid #e91e63; }
+        body { background-color: #f0f2f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .navbar { background: #1a2a3a; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        
+        /* Stats Cards */
+        .card-stats { cursor: pointer; transition: 0.3s; border: none; border-radius: 15px; }
+        .card-stats:hover { transform: translateY(-5px); box-shadow: 0 8px 15px rgba(0,0,0,0.1); }
+        
+        /* Work Deck Style */
+        .work-card { 
+            background: white; border-radius: 12px; border: none; 
+            transition: 0.3s; height: 100%; border-top: 5px solid #ccc;
+            display: flex; flex-direction: column;
+        }
+        .work-card:hover { box-shadow: 0 10px 20px rgba(0,0,0,0.12); transform: translateY(-3px); }
+        .status-badge { font-size: 0.75rem; padding: 5px 12px; border-radius: 20px; font-weight: 600; }
+        
+        /* Search Bar */
+        .search-container { position: relative; margin-bottom: 20px; }
+        .search-container i { position: absolute; left: 15px; top: 12px; color: #aaa; }
+        .search-box { border-radius: 25px; padding-left: 45px; height: 45px; border: 1px solid #ddd; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+
         .hidden { display: none; }
-        .table-container { background: white; border-radius: 10px; padding: 20px; margin-top: 20px; box-shadow: 0 4px 6px rgba(0,0,0,.05); }
         #loadingOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 9999; display: flex; justify-content: center; align-items: center; }
     </style>
 </head>
@@ -25,106 +37,109 @@
 
 <div id="loadingOverlay">
     <div class="spinner-border text-primary" role="status"></div>
-    <span class="ms-2">Fetching Data...</span>
+    <span class="ms-3 fw-bold">Loading Work Data...</span>
 </div>
 
 <!-- Navbar -->
-<nav class="navbar navbar-dark px-4 py-2">
-    <span class="navbar-brand mb-0 h1"><i class="fa-solid fa-city me-2"></i> Municipal Council Charkhi Dadri</span>
-    <button class="btn btn-outline-light btn-sm" onclick="fetchData()"><i class="fa-solid fa-sync"></i> Refresh</button>
+<nav class="navbar navbar-dark px-4 py-3">
+    <span class="navbar-brand fw-bold"><i class="fa-solid fa-city me-2"></i> Municipal Council Charkhi Dadri</span>
+    <button class="btn btn-primary btn-sm rounded-pill px-4" onclick="fetchData()"><i class="fa-solid fa-sync me-1"></i> Sync Data</button>
 </nav>
 
 <div class="container-fluid py-4">
     
-    <!-- Dashboard Stats -->
-    <div class="row g-3 mb-4">
-        <div class="col-md-3" onclick="filterTable('All')">
-            <div class="card card-stats shadow-sm p-3 border-left-primary">
-                <div class="d-flex justify-content-between">
-                    <div><h6 class="text-muted">Total Works</h6><h3 id="count-all">0</h3></div>
-                    <i class="fa-solid fa-list-check fa-2x text-primary opacity-50"></i>
-                </div>
+    <!-- Stats Row (In Progress is 2nd Card) -->
+    <div class="row g-3 mb-5">
+        <div class="col-6 col-md-3" onclick="filterData('All')">
+            <div class="card card-stats p-3 bg-white border-start border-primary border-5 text-center shadow-sm">
+                <small class="text-muted fw-bold">TOTAL WORKS</small>
+                <h2 id="count-all" class="m-0 text-primary">0</h2>
             </div>
         </div>
-        <div class="col-md-3" onclick="filterTable('Live Tender')">
-            <div class="card card-stats shadow-sm p-3 bg-live">
-                <div class="d-flex justify-content-between">
-                    <div><h6 class="text-primary">Live Tenders</h6><h3 id="count-live">0</h3></div>
-                    <i class="fa-solid fa-bullhorn fa-2x text-primary"></i>
-                </div>
+        <div class="col-6 col-md-3" onclick="filterData('In Progress')">
+            <div class="card card-stats p-3 bg-white border-start border-success border-5 text-center shadow-sm">
+                <small class="text-success fw-bold">IN PROGRESS</small>
+                <h2 id="count-progress" class="m-0 text-success">0</h2>
             </div>
         </div>
-        <div class="col-md-3" onclick="filterTable('Yet to be Allotted')">
-            <div class="card card-stats shadow-sm p-3 bg-pending">
-                <div class="d-flex justify-content-between">
-                    <div><h6 class="text-warning">Pending Allotment</h6><h3 id="count-pending">0</h3></div>
-                    <i class="fa-solid fa-hourglass-half fa-2x text-warning"></i>
-                </div>
+        <div class="col-6 col-md-3" onclick="filterData('Live Tender')">
+            <div class="card card-stats p-3 bg-white border-start border-info border-5 text-center shadow-sm">
+                <small class="text-info fw-bold">LIVE TENDERS</small>
+                <h2 id="count-live" class="m-0 text-info">0</h2>
             </div>
         </div>
-        <div class="col-md-3" onclick="filterTable('In Progress')">
-            <div class="card card-stats shadow-sm p-3 bg-progress">
-                <div class="d-flex justify-content-between">
-                    <div><h6 class="text-success">In Progress</h6><h3 id="count-progress">0</h3></div>
-                    <i class="fa-solid fa-person-digging fa-2x text-success"></i>
-                </div>
+        <div class="col-6 col-md-3" onclick="filterData('Yet to be Allotted')">
+            <div class="card card-stats p-3 bg-white border-start border-warning border-5 text-center shadow-sm">
+                <small class="text-warning fw-bold">PENDING ALLOT.</small>
+                <h2 id="count-pending" class="m-0 text-warning">0</h2>
             </div>
         </div>
     </div>
 
-    <!-- Main Data Table -->
-    <div class="table-container">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="fw-bold m-0" id="tableTitle">Work Details (All)</h5>
-            <input type="text" id="searchInput" class="form-control w-25" placeholder="Search Tender ID or Agency..." onkeyup="searchTable()">
+    <!-- Search and View Title -->
+    <div class="row mb-3 align-items-center">
+        <div class="col-md-6"><h4 id="viewTitle" class="fw-bold text-dark">All Works</h4></div>
+        <div class="col-md-6">
+            <div class="search-container">
+                <i class="fa fa-search"></i>
+                <input type="text" id="searchInput" class="form-control search-box" placeholder="Search Tender ID, Work Name, or Agency..." onkeyup="searchWorks()">
+            </div>
         </div>
-        <div class="table-responsive">
-            <table class="table table-hover align-middle">
-                <thead class="table-light">
-                    <tr>
-                        <th>Tender ID</th>
-                        <th>Work Name</th>
-                        <th>Agency</th>
-                        <th>DNIT Amt</th>
-                        <th>Status</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody id="workTableBody">
-                    <!-- Data will be injected here -->
-                </tbody>
-            </table>
-        </div>
+    </div>
+
+    <!-- Work Cards Deck -->
+    <div class="row g-4" id="workDeck">
+        <!-- Cards injected dynamically -->
     </div>
 </div>
 
-<!-- Detailed Modal -->
+<!-- Modal for Management -->
 <div class="modal fade" id="workModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
-        <div class="modal-content">
+        <div class="modal-content border-0 shadow-lg">
             <div class="modal-header bg-dark text-white">
-                <h5 class="modal-title" id="modalTitle">Work Details</h5>
+                <h5 class="modal-title fw-bold" id="modalTitle">Management Console</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <div id="modalContent"></div>
+                <!-- Detailed Info -->
+                <div id="modalContent" class="mb-4 p-3 bg-white rounded border"></div>
                 
-                <hr>
-                <div class="d-flex gap-2">
-                    <button class="btn btn-primary w-50" onclick="handlePBGCalc()"><i class="fa-solid fa-calculator me-1"></i> Calculate & Store (F/G)</button>
-                    <button class="btn btn-warning w-50" onclick="toggleUploadForm()"><i class="fa-solid fa-upload me-1"></i> Upload BG Details</button>
+                <!-- Action Buttons -->
+                <div class="btn-group w-100 shadow-sm rounded mb-4">
+                    <button class="btn btn-primary py-2" onclick="handlePBGCalc()"><i class="fa fa-calculator me-2"></i>Calculate PBG (Col F/G)</button>
+                    <button class="btn btn-warning py-2" onclick="toggleUploadForm()"><i class="fa fa-upload me-2"></i>Register BG (Col B-N)</button>
                 </div>
 
-                <!-- Upload to BG_Register Form (Hidden) -->
-                <div id="uploadFormArea" class="hidden mt-3 p-3 bg-light border rounded shadow-sm">
-                    <h6 class="fw-bold mb-3 border-bottom pb-2">Final BG Registration (Sheet: BG_Register)</h6>
-                    <div class="row g-2">
-                        <div class="col-12"><label class="small fw-bold">Bank Name & Branch</label><input type="text" id="reg_bank" class="form-control" placeholder="HDFC, Rohtak Road Branch"></div>
-                        <div class="col-md-6"><label class="small fw-bold">Base PBG No.</label><input type="text" id="reg_pbg_no" class="form-control"></div>
-                        <div class="col-md-6"><label class="small fw-bold">Valid Upto (Base)</label><input type="date" id="reg_pbg_valid" class="form-control"></div>
-                        <div class="col-md-6"><label class="small fw-bold text-danger">Addl. PBG No.</label><input type="text" id="reg_add_no" class="form-control"></div>
-                        <div class="col-md-6"><label class="small fw-bold text-danger">Valid Upto (Addl)</label><input type="date" id="reg_add_valid" class="form-control"></div>
-                        <div class="col-12 mt-3"><button class="btn btn-success w-100" onclick="finalSubmitToRegister()">🚀 Submit to Register</button></div>
+                <!-- Registration Form (Hidden by default) -->
+                <div id="uploadFormArea" class="hidden p-4 border bg-light rounded-3 shadow-inner">
+                    <h6 class="fw-bold border-bottom pb-2 mb-3 text-primary"><i class="fa-solid fa-file-signature me-2"></i>BG Register Form (Sheet: BG_Register)</h6>
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="small fw-bold">Bank Name & Branch</label>
+                            <input type="text" id="reg_bank" class="form-control" placeholder="e.g. PNB Charkhi Dadri">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="small fw-bold">Base PBG No.</label>
+                            <input type="text" id="reg_pbg_no" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="small fw-bold">PBG Valid Upto</label>
+                            <input type="date" id="reg_pbg_valid" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="small fw-bold text-danger">Addl. PBG No. (if any)</label>
+                            <input type="text" id="reg_add_no" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="small fw-bold text-danger">Addl. Valid Upto</label>
+                            <input type="date" id="reg_add_valid" class="form-control">
+                        </div>
+                        <div class="col-12 mt-4">
+                            <button class="btn btn-success w-100 fw-bold py-2" onclick="finalSubmitToRegister()">
+                                <i class="fa-solid fa-cloud-arrow-up me-2"></i>SAVE TO BG_REGISTER SHEET
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -134,104 +149,150 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // Replace with your Web App URL
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxOKN15Szd7A3OGEM1-Xg_Jnwhg4QUibhQ4zAaFHuQBmJiUhtoyeAHFzUtEwdDrUtEFeg/exec';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxOKN15Szd7A3OGEM1-Xg_Jnwhg4QUibhQ4zAaFHuQBmJiUhtoyeAHFzUtEwdDrUtEFeg/exec'; // Replace with your actual Web App URL
     let masterData = [];
     let currentWork = null;
+    let currentFilter = 'All';
 
     window.onload = fetchData;
 
     async function fetchData() {
         document.getElementById('loadingOverlay').style.display = 'flex';
         try {
-            const response = await fetch(SCRIPT_URL);
-            const result = await response.json();
+            const res = await fetch(SCRIPT_URL);
+            const result = await res.json();
             masterData = result.data;
-            updateCounts();
-            renderTable(masterData);
+            updateUI();
         } catch (e) {
-            alert("Error fetching data: " + e.message);
+            alert("Error syncing data: " + e.message);
         }
         document.getElementById('loadingOverlay').style.display = 'none';
     }
 
-    function updateCounts() {
+    function updateUI() {
+        // Update Stats Counters
         document.getElementById('count-all').innerText = masterData.length;
+        document.getElementById('count-progress').innerText = masterData.filter(d => d.computedStatus === 'In Progress').length;
         document.getElementById('count-live').innerText = masterData.filter(d => d.computedStatus === 'Live Tender').length;
         document.getElementById('count-pending').innerText = masterData.filter(d => d.computedStatus === 'Yet to be Allotted').length;
-        document.getElementById('count-progress').innerText = masterData.filter(d => d.computedStatus === 'In Progress').length;
+        
+        renderDeck(masterData);
     }
 
-    function renderTable(data) {
-        const tbody = document.getElementById('workTableBody');
-        tbody.innerHTML = '';
-        data.forEach(item => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td><small class="fw-bold text-secondary">${item.E_TENDERID || '-'}</small></td>
-                <td><div style="max-width:300px; font-size: 0.9rem;">${item.Work_Name || '-'}</div></td>
-                <td><small>${item.Agency_Name || '-'}</small></td>
-                <td>₹${item.DNIT_Cost || '0'}</td>
-                <td><span class="badge ${getStatusClass(item.computedStatus)}">${item.computedStatus}</span></td>
-                <td><button class="btn btn-sm btn-outline-dark" onclick="showDetails('${item.E_TENDERID}')">View</button></td>
+    function renderDeck(data) {
+        const deck = document.getElementById('workDeck');
+        deck.innerHTML = '';
+        
+        const filtered = currentFilter === 'All' ? data : data.filter(d => d.computedStatus === currentFilter);
+        
+        if(filtered.length === 0) {
+            deck.innerHTML = `<div class="col-12 text-center py-5 text-muted"><h5>No works found in this category.</h5></div>`;
+            return;
+        }
+
+        filtered.forEach(item => {
+            const col = document.createElement('div');
+            col.className = 'col-md-6 col-lg-4';
+            const color = getStatusColor(item.computedStatus);
+            
+            col.innerHTML = `
+                <div class="card work-card shadow-sm" style="border-top-color: ${color}">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <span class="badge bg-light text-dark border"><i class="fa-solid fa-hashtag me-1"></i>${item.E_TENDERID}</span>
+                            <span class="badge status-badge" style="background-color: ${color}20; color: ${color}">${item.computedStatus}</span>
+                        </div>
+                        <h6 class="card-title fw-bold text-dark mb-3" style="height: 40px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
+                            ${item.Work_Name}
+                        </h6>
+                        <div class="mb-3 small">
+                            <div class="text-secondary"><i class="fa fa-user-tie me-2"></i>${item.Agency_Name || 'Not Allotted'}</div>
+                            <div class="text-secondary mt-1"><i class="fa fa-calendar-days me-2"></i>${item.TENDER_PUBLISHED_DATE || '-'}</div>
+                        </div>
+                        <div class="mt-auto d-flex justify-content-between align-items-center pt-2 border-top">
+                            <div><small class="text-muted d-block" style="font-size:0.7rem">DNIT COST</small><span class="fw-bold text-primary">₹${item.DNIT_Cost}</span></div>
+                            <button class="btn btn-sm btn-dark rounded-pill px-3" onclick="showDetails('${item.E_TENDERID}')">Manage</button>
+                        </div>
+                    </div>
+                </div>
             `;
-            tbody.appendChild(tr);
+            deck.appendChild(col);
         });
     }
 
-    function getStatusClass(status) {
-        if(status === 'Live Tender') return 'bg-primary';
-        if(status === 'Yet to be Allotted') return 'bg-warning text-dark';
-        if(status === 'In Progress') return 'bg-success';
-        if(status === 'Under DLP') return 'bg-danger';
-        return 'bg-secondary';
+    function getStatusColor(s) {
+        switch(s) {
+            case 'Live Tender': return '#0dcaf0';
+            case 'In Progress': return '#198754';
+            case 'Yet to be Allotted': return '#ffc107';
+            case 'Under DLP': return '#d63384';
+            default: return '#6c757d';
+        }
     }
 
-    function filterTable(status) {
-        document.getElementById('tableTitle').innerText = `Work Details (${status})`;
-        const filtered = status === 'All' ? masterData : masterData.filter(d => d.computedStatus === status);
-        renderTable(filtered);
+    function filterData(status) {
+        currentFilter = status;
+        document.getElementById('viewTitle').innerText = status + (status === 'All' ? " Works" : " Projects");
+        renderDeck(masterData);
+    }
+
+    function searchWorks() {
+        const val = document.getElementById('searchInput').value.toLowerCase();
+        const filteredResults = masterData.filter(d => 
+            d.E_TENDERID.toLowerCase().includes(val) || 
+            d.Work_Name.toLowerCase().includes(val) || 
+            d.Agency_Name.toLowerCase().includes(val)
+        );
+        renderDeck(filteredResults);
     }
 
     function showDetails(tenderId) {
         currentWork = masterData.find(d => d.E_TENDERID == tenderId);
-        document.getElementById('modalTitle').innerText = "Tender: " + tenderId;
         document.getElementById('modalContent').innerHTML = `
-            <table class="table table-sm borderless">
-                <tr><th>Work:</th><td>${currentWork.Work_Name}</td></tr>
-                <tr><th>Agency:</th><td>${currentWork.Agency_Name}</td></tr>
-                <tr><th>DNIT Amt:</th><td>₹${currentWork.DNIT_Cost}</td></tr>
-                <tr><th>Agreement:</th><td>₹${currentWork.Agreement_Amount || 'N/A'}</td></tr>
-                <tr><th>Publish Date:</th><td>${currentWork.TENDER_PUBLISHED_DATE || '-'}</td></tr>
-            </table>
+            <div class="row g-3">
+                <div class="col-12"><h6 class="fw-bold text-primary mb-1">Work Description</h6><p class="small mb-0">${currentWork.Work_Name}</p></div>
+                <div class="col-md-6 border-end"><h6 class="fw-bold mb-1 small">Agency Name</h6><p class="mb-0 text-muted">${currentWork.Agency_Name || '-'}</p></div>
+                <div class="col-md-6"><h6 class="fw-bold mb-1 small">Current Status</h6><span class="badge" style="background-color: ${getStatusColor(currentWork.computedStatus)}">${currentWork.computedStatus}</span></div>
+                <div class="col-md-4 border-top pt-2"><h6 class="fw-bold mb-0 small">DNIT Amt</h6><p class="text-dark">₹${currentWork.DNIT_Cost}</p></div>
+                <div class="col-md-4 border-top pt-2"><h6 class="fw-bold mb-0 small">Agreement Amt</h6><p class="text-dark">₹${currentWork.Agreement_Amount || '-'}</p></div>
+                <div class="col-md-4 border-top pt-2"><h6 class="fw-bold mb-0 small">Publish Date</h6><p class="text-dark">${currentWork.TENDER_PUBLISHED_DATE || '-'}</p></div>
+            </div>
         `;
         document.getElementById('uploadFormArea').classList.add('hidden');
         new bootstrap.Modal(document.getElementById('workModal')).show();
     }
 
     async function handlePBGCalc() {
+        // LOGIC: Parse numeric values
         const dnit = parseFloat(currentWork.DNIT_Cost.replace(/,/g, '')) || 0;
         const aggAmt = parseFloat(currentWork.Agreement_Amount.replace(/,/g, '')) || 0;
         
-        // Logical Calculation
+        // LOGIC: Determine rate (2.5% for Co-op, 5% Others)
         let rate = currentWork.Agency_Name.toLowerCase().includes("coop") ? 0.025 : 0.05;
+        
+        // LOGIC: Final calculations (Round to nearest 10)
         const pbg = Math.ceil((aggAmt * rate) / 10) * 10;
         const diffPercent = ((dnit - aggAmt) / dnit) * 100;
         const addPbg = (diffPercent > 10) ? Math.ceil((aggAmt * (diffPercent - 10) / 100) / 10) * 10 : 0;
 
-        const res = await fetch(SCRIPT_URL, {
-            method: 'POST',
-            body: JSON.stringify({
-                method: 'calculateAndStore',
-                tenderId: currentWork.E_TENDERID,
-                calcData: { pbg: pbg, addPbg: addPbg }
-            })
-        });
-        alert(`Calculated:\nPBG: ₹${pbg}\nAddl PBG: ₹${addPbg}\nValues stored in BG_Calculator (Col F/G)`);
+        // POST to Backend
+        try {
+            const res = await fetch(SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({
+                    method: 'calculateAndStore',
+                    tenderId: currentWork.E_TENDERID,
+                    calcData: { pbg: pbg, addPbg: addPbg }
+                })
+            });
+            alert(`SUCCESS!\nPBG: ₹${pbg}\nAddl. PBG: ₹${addPbg}\nValues stored in BG_Calculator (Col F/G).`);
+        } catch (e) {
+            alert("Storage Error: " + e.message);
+        }
     }
 
-    function toggleUploadForm() {
-        document.getElementById('uploadFormArea').classList.toggle('hidden');
+    function toggleUploadForm() { 
+        document.getElementById('uploadFormArea').classList.toggle('hidden'); 
     }
 
     async function finalSubmitToRegister() {
@@ -239,39 +300,34 @@
             tenderId: currentWork.E_TENDERID,
             workName: currentWork.Work_Name,
             agencyName: currentWork.Agency_Name,
-            pbgAmt: currentWork.Agreement_Amount, // Mapping as needed
+            pbgAmt: currentWork.Agreement_Amount || "0",
             pbgNo: document.getElementById('reg_pbg_no').value,
             pbgSubDate: new Date().toLocaleDateString('en-IN'),
             pbgValid: document.getElementById('reg_pbg_valid').value,
-            addAmt: "Auto", // Logic can be added
+            addAmt: "As Per Calc",
             addNo: document.getElementById('reg_add_no').value,
             addSubDate: new Date().toLocaleDateString('en-IN'),
             addValid: document.getElementById('reg_add_valid').value,
             bankName: document.getElementById('reg_bank').value,
-            fileName: "Uploaded_via_Dashboard"
+            fileName: "Dashboard_Portal"
         };
 
-        const res = await fetch(SCRIPT_URL, {
-            method: 'POST',
-            body: JSON.stringify({
-                method: 'uploadToRegister',
-                formData: formData
-            })
-        });
-        alert("Success! Details updated in BG_Register Sheet (Col B to N)");
-        bootstrap.Modal.getInstance(document.getElementById('workModal')).hide();
-    }
+        if(!formData.bankName || !formData.pbgNo) {
+            alert("Please fill Bank Name and PBG Number!");
+            return;
+        }
 
-    function searchTable() {
-        const val = document.getElementById('searchInput').value.toLowerCase();
-        const filtered = masterData.filter(d => 
-            d.E_TENDERID.toLowerCase().includes(val) || 
-            d.Agency_Name.toLowerCase().includes(val) ||
-            d.Work_Name.toLowerCase().includes(val)
-        );
-        renderTable(filtered);
+        try {
+            await fetch(SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({ method: 'uploadToRegister', formData: formData })
+            });
+            alert("Entry successfully added to BG_Register Sheet (Col B-N)!");
+            bootstrap.Modal.getInstance(document.getElementById('workModal')).hide();
+        } catch (e) {
+            alert("Submission Failed: " + e.message);
+        }
     }
 </script>
-
 </body>
 </html>
