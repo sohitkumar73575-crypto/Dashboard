@@ -1,174 +1,277 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
-
-<style>
-body{background:#f4f7f6;padding-top:70px;font-family:sans-serif;}
-.header{position:fixed;top:0;width:100%;background:#fff;padding:15px;box-shadow:0 2px 10px #ccc;z-index:1000;}
-.card-box{padding:20px;border-radius:12px;color:#fff;cursor:pointer;font-weight:bold;text-align:center;}
-.work-card{background:#fff;padding:15px;margin-bottom:10px;border-radius:12px;cursor:pointer;box-shadow:0 2px 5px #ddd;}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MC Charkhi Dadri | Works Management</title>
+    <!-- CSS Links -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #f4f7f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .navbar { background: #2c3e50; color: white; shadow: 0 2px 4px rgba(0,0,0,.1); }
+        .card-stats { cursor: pointer; transition: transform 0.2s; border: none; border-radius: 10px; }
+        .card-stats:hover { transform: translateY(-5px); }
+        .bg-live { background: #e3f2fd; border-left: 5px solid #2196f3; }
+        .bg-pending { background: #fff3e0; border-left: 5px solid #ff9800; }
+        .bg-progress { background: #e8f5e9; border-left: 5px solid #4caf50; }
+        .bg-dlp { background: #fce4ec; border-left: 5px solid #e91e63; }
+        .hidden { display: none; }
+        .table-container { background: white; border-radius: 10px; padding: 20px; margin-top: 20px; box-shadow: 0 4px 6px rgba(0,0,0,.05); }
+        #loadingOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 9999; display: flex; justify-content: center; align-items: center; }
+    </style>
 </head>
-
 <body>
 
-<div class="header d-flex justify-content-between">
-<h5>Municipal Council Charkhi Dadri<br><small>Works Management System</small></h5>
+<div id="loadingOverlay">
+    <div class="spinner-border text-primary" role="status"></div>
+    <span class="ms-2">Fetching Data...</span>
 </div>
 
-<div class="container">
+<!-- Navbar -->
+<nav class="navbar navbar-dark px-4 py-2">
+    <span class="navbar-brand mb-0 h1"><i class="fa-solid fa-city me-2"></i> Municipal Council Charkhi Dadri</span>
+    <button class="btn btn-outline-light btn-sm" onclick="fetchData()"><i class="fa-solid fa-sync"></i> Refresh</button>
+</nav>
 
-<!-- DASHBOARD -->
-<div id="dashboard">
-<div class="row g-3" id="cards"></div>
+<div class="container-fluid py-4">
+    
+    <!-- Dashboard Stats -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3" onclick="filterTable('All')">
+            <div class="card card-stats shadow-sm p-3 border-left-primary">
+                <div class="d-flex justify-content-between">
+                    <div><h6 class="text-muted">Total Works</h6><h3 id="count-all">0</h3></div>
+                    <i class="fa-solid fa-list-check fa-2x text-primary opacity-50"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3" onclick="filterTable('Live Tender')">
+            <div class="card card-stats shadow-sm p-3 bg-live">
+                <div class="d-flex justify-content-between">
+                    <div><h6 class="text-primary">Live Tenders</h6><h3 id="count-live">0</h3></div>
+                    <i class="fa-solid fa-bullhorn fa-2x text-primary"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3" onclick="filterTable('Yet to be Allotted')">
+            <div class="card card-stats shadow-sm p-3 bg-pending">
+                <div class="d-flex justify-content-between">
+                    <div><h6 class="text-warning">Pending Allotment</h6><h3 id="count-pending">0</h3></div>
+                    <i class="fa-solid fa-hourglass-half fa-2x text-warning"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3" onclick="filterTable('In Progress')">
+            <div class="card card-stats shadow-sm p-3 bg-progress">
+                <div class="d-flex justify-content-between">
+                    <div><h6 class="text-success">In Progress</h6><h3 id="count-progress">0</h3></div>
+                    <i class="fa-solid fa-person-digging fa-2x text-success"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Data Table -->
+    <div class="table-container">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="fw-bold m-0" id="tableTitle">Work Details (All)</h5>
+            <input type="text" id="searchInput" class="form-control w-25" placeholder="Search Tender ID or Agency..." onkeyup="searchTable()">
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Tender ID</th>
+                        <th>Work Name</th>
+                        <th>Agency</th>
+                        <th>DNIT Amt</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="workTableBody">
+                    <!-- Data will be injected here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
-<!-- WORK LIST -->
-<div id="works" style="display:none;">
-<div class="d-flex mb-3">
-<input type="text" id="search" class="form-control me-2" placeholder="Search by name or tender" onkeyup="filterData()">
-<button class="btn btn-success" onclick="addWork()">+ Add</button>
-</div>
-<div id="list"></div>
+<!-- Detailed Modal -->
+<div class="modal fade" id="workModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title" id="modalTitle">Work Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="modalContent"></div>
+                
+                <hr>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-primary w-50" onclick="handlePBGCalc()"><i class="fa-solid fa-calculator me-1"></i> Calculate & Store (F/G)</button>
+                    <button class="btn btn-warning w-50" onclick="toggleUploadForm()"><i class="fa-solid fa-upload me-1"></i> Upload BG Details</button>
+                </div>
+
+                <!-- Upload to BG_Register Form (Hidden) -->
+                <div id="uploadFormArea" class="hidden mt-3 p-3 bg-light border rounded shadow-sm">
+                    <h6 class="fw-bold mb-3 border-bottom pb-2">Final BG Registration (Sheet: BG_Register)</h6>
+                    <div class="row g-2">
+                        <div class="col-12"><label class="small fw-bold">Bank Name & Branch</label><input type="text" id="reg_bank" class="form-control" placeholder="HDFC, Rohtak Road Branch"></div>
+                        <div class="col-md-6"><label class="small fw-bold">Base PBG No.</label><input type="text" id="reg_pbg_no" class="form-control"></div>
+                        <div class="col-md-6"><label class="small fw-bold">Valid Upto (Base)</label><input type="date" id="reg_pbg_valid" class="form-control"></div>
+                        <div class="col-md-6"><label class="small fw-bold text-danger">Addl. PBG No.</label><input type="text" id="reg_add_no" class="form-control"></div>
+                        <div class="col-md-6"><label class="small fw-bold text-danger">Valid Upto (Addl)</label><input type="date" id="reg_add_valid" class="form-control"></div>
+                        <div class="col-12 mt-3"><button class="btn btn-success w-100" onclick="finalSubmitToRegister()">🚀 Submit to Register</button></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
-</div>
-
-<!-- MODAL -->
-<div class="modal fade" id="detailModal">
-<div class="modal-dialog modal-lg">
-<div class="modal-content">
-
-<div class="modal-header">
-<h5>Work Details</h5>
-<button class="btn-close" data-bs-dismiss="modal"></button>
-</div>
-
-<div class="modal-body">
-<div class="row" id="detailFields"></div>
-
-<hr>
-
-<button class="btn btn-warning w-100 mb-2" onclick="enableEdit()">✏️ Edit</button>
-<button class="btn btn-success w-100 d-none" id="saveBtn" onclick="saveWork()">💾 Save</button>
-</div>
-
-</div>
-</div>
-</div>
-
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-const URL = "https://script.google.com/macros/s/AKfycbxOKN15Szd7A3OGEM1-Xg_Jnwhg4QUibhQ4zAaFHuQBmJiUhtoyeAHFzUtEwdDrUtEFeg/exec";
+    // Replace with your Web App URL
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxOKN15Szd7A3OGEM1-Xg_Jnwhg4QUibhQ4zAaFHuQBmJiUhtoyeAHFzUtEwdDrUtEFeg/exec';
+    let masterData = [];
+    let currentWork = null;
 
-let allData=[],headers=[],currentItem=null,currentCategory="all";
+    window.onload = fetchData;
 
-// LOAD
-async function load(){
-  let r = await fetch(URL);
-  let d = await r.json();
-  allData = d.data;
-  headers = d.headers;
-  renderDashboard(d.counts);
-}
+    async function fetchData() {
+        document.getElementById('loadingOverlay').style.display = 'flex';
+        try {
+            const response = await fetch(SCRIPT_URL);
+            const result = await response.json();
+            masterData = result.data;
+            updateCounts();
+            renderTable(masterData);
+        } catch (e) {
+            alert("Error fetching data: " + e.message);
+        }
+        document.getElementById('loadingOverlay').style.display = 'none';
+    }
 
-// DASHBOARD
-function renderDashboard(c){
-  document.getElementById("cards").innerHTML=`
-  <div class="col-6"><div class="card-box bg-primary" onclick="openCategory('all')">All (${c.all})</div></div>
-  <div class="col-6"><div class="card-box bg-success" onclick="openCategory('In Progress')">In Progress (${c.inProgress})</div></div>
-  <div class="col-6"><div class="card-box bg-warning" onclick="openCategory('Yet')">Yet (${c.yet})</div></div>
-  <div class="col-6"><div class="card-box bg-info" onclick="openCategory('Live')">Live (${c.live})</div></div>
-  `;
-}
+    function updateCounts() {
+        document.getElementById('count-all').innerText = masterData.length;
+        document.getElementById('count-live').innerText = masterData.filter(d => d.computedStatus === 'Live Tender').length;
+        document.getElementById('count-pending').innerText = masterData.filter(d => d.computedStatus === 'Yet to be Allotted').length;
+        document.getElementById('count-progress').innerText = masterData.filter(d => d.computedStatus === 'In Progress').length;
+    }
 
-// OPEN CATEGORY
-function openCategory(cat){
-  currentCategory=cat;
-  document.getElementById("dashboard").style.display="none";
-  document.getElementById("works").style.display="block";
+    function renderTable(data) {
+        const tbody = document.getElementById('workTableBody');
+        tbody.innerHTML = '';
+        data.forEach(item => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><small class="fw-bold text-secondary">${item.E_TENDERID || '-'}</small></td>
+                <td><div style="max-width:300px; font-size: 0.9rem;">${item.Work_Name || '-'}</div></td>
+                <td><small>${item.Agency_Name || '-'}</small></td>
+                <td>₹${item.DNIT_Cost || '0'}</td>
+                <td><span class="badge ${getStatusClass(item.computedStatus)}">${item.computedStatus}</span></td>
+                <td><button class="btn btn-sm btn-outline-dark" onclick="showDetails('${item.E_TENDERID}')">View</button></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
 
-  let f = allData.filter(x=>cat==="all" || x.category===cat);
-  renderList(f);
-}
+    function getStatusClass(status) {
+        if(status === 'Live Tender') return 'bg-primary';
+        if(status === 'Yet to be Allotted') return 'bg-warning text-dark';
+        if(status === 'In Progress') return 'bg-success';
+        if(status === 'Under DLP') return 'bg-danger';
+        return 'bg-secondary';
+    }
 
-// LIST
-function renderList(data){
-  document.getElementById("list").innerHTML=data.map(d=>`
-  <div class="work-card" onclick="openDetail(${d.rowIndex})">
-  <b>${d.Work_Name||"-"}</b><br>
-  ID: ${d.E_TENDERID||"-"}<br>
-  Agency: ${d.Agency_Name||"-"}<br>
-  Estimate: ₹${d.Estimate_Cost||"-"}<br>
-  Agreement: ₹${d.Agreement_Amount||"-"}
-  </div>
-  `).join("");
-}
+    function filterTable(status) {
+        document.getElementById('tableTitle').innerText = `Work Details (${status})`;
+        const filtered = status === 'All' ? masterData : masterData.filter(d => d.computedStatus === status);
+        renderTable(filtered);
+    }
 
-// SEARCH
-function filterData(){
-  let t=document.getElementById("search").value.toLowerCase();
-  renderList(allData.filter(x=>JSON.stringify(x).toLowerCase().includes(t)));
-}
+    function showDetails(tenderId) {
+        currentWork = masterData.find(d => d.E_TENDERID == tenderId);
+        document.getElementById('modalTitle').innerText = "Tender: " + tenderId;
+        document.getElementById('modalContent').innerHTML = `
+            <table class="table table-sm borderless">
+                <tr><th>Work:</th><td>${currentWork.Work_Name}</td></tr>
+                <tr><th>Agency:</th><td>${currentWork.Agency_Name}</td></tr>
+                <tr><th>DNIT Amt:</th><td>₹${currentWork.DNIT_Cost}</td></tr>
+                <tr><th>Agreement:</th><td>₹${currentWork.Agreement_Amount || 'N/A'}</td></tr>
+                <tr><th>Publish Date:</th><td>${currentWork.TENDER_PUBLISHED_DATE || '-'}</td></tr>
+            </table>
+        `;
+        document.getElementById('uploadFormArea').classList.add('hidden');
+        new bootstrap.Modal(document.getElementById('workModal')).show();
+    }
 
-// ADD
-async function addWork(){
-  await fetch(URL,{method:"POST",body:JSON.stringify({method:"add"})});
-  alert("Added");
-  location.reload();
-}
+    async function handlePBGCalc() {
+        const dnit = parseFloat(currentWork.DNIT_Cost.replace(/,/g, '')) || 0;
+        const aggAmt = parseFloat(currentWork.Agreement_Amount.replace(/,/g, '')) || 0;
+        
+        // Logical Calculation
+        let rate = currentWork.Agency_Name.toLowerCase().includes("coop") ? 0.025 : 0.05;
+        const pbg = Math.ceil((aggAmt * rate) / 10) * 10;
+        const diffPercent = ((dnit - aggAmt) / dnit) * 100;
+        const addPbg = (diffPercent > 10) ? Math.ceil((aggAmt * (diffPercent - 10) / 100) / 10) * 10 : 0;
 
-// DETAIL VIEW (READ MODE)
-function openDetail(i){
-  currentItem=allData.find(x=>x.rowIndex===i);
+        const res = await fetch(SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                method: 'calculateAndStore',
+                tenderId: currentWork.E_TENDERID,
+                calcData: { pbg: pbg, addPbg: addPbg }
+            })
+        });
+        alert(`Calculated:\nPBG: ₹${pbg}\nAddl PBG: ₹${addPbg}\nValues stored in BG_Calculator (Col F/G)`);
+    }
 
-  document.getElementById("detailFields").innerHTML=
-  headers.map(h=>{
-    let v=currentItem[h]||"";
-    let type=h.toLowerCase().includes("date")?"date":"text";
-    return `
-    <div class="col-md-6 mb-2">
-      <label>${h}</label>
-      <input type="${type}" id="f_${h}" class="form-control" value="${v}" disabled>
-    </div>`;
-  }).join("");
+    function toggleUploadForm() {
+        document.getElementById('uploadFormArea').classList.toggle('hidden');
+    }
 
-  document.getElementById("saveBtn").classList.add("d-none");
+    async function finalSubmitToRegister() {
+        const formData = {
+            tenderId: currentWork.E_TENDERID,
+            workName: currentWork.Work_Name,
+            agencyName: currentWork.Agency_Name,
+            pbgAmt: currentWork.Agreement_Amount, // Mapping as needed
+            pbgNo: document.getElementById('reg_pbg_no').value,
+            pbgSubDate: new Date().toLocaleDateString('en-IN'),
+            pbgValid: document.getElementById('reg_pbg_valid').value,
+            addAmt: "Auto", // Logic can be added
+            addNo: document.getElementById('reg_add_no').value,
+            addSubDate: new Date().toLocaleDateString('en-IN'),
+            addValid: document.getElementById('reg_add_valid').value,
+            bankName: document.getElementById('reg_bank').value,
+            fileName: "Uploaded_via_Dashboard"
+        };
 
-  new bootstrap.Modal(document.getElementById("detailModal")).show();
-}
+        const res = await fetch(SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                method: 'uploadToRegister',
+                formData: formData
+            })
+        });
+        alert("Success! Details updated in BG_Register Sheet (Col B to N)");
+        bootstrap.Modal.getInstance(document.getElementById('workModal')).hide();
+    }
 
-// ENABLE EDIT
-function enableEdit(){
-  document.querySelectorAll("#detailFields input").forEach(i=>i.disabled=false);
-  document.getElementById("saveBtn").classList.remove("d-none");
-}
-
-// SAVE
-async function saveWork(){
-  let row=[];
-  headers.forEach(h=>{
-    row.push(document.getElementById("f_"+h)?.value||"");
-  });
-
-  await fetch(URL,{
-    method:"POST",
-    body:JSON.stringify({
-      method:"update",
-      rowIndex:currentItem.rowIndex,
-      rowData:row
-    })
-  });
-
-  alert("Saved");
-  location.reload();
-}
-
-window.onload=load;
+    function searchTable() {
+        const val = document.getElementById('searchInput').value.toLowerCase();
+        const filtered = masterData.filter(d => 
+            d.E_TENDERID.toLowerCase().includes(val) || 
+            d.Agency_Name.toLowerCase().includes(val) ||
+            d.Work_Name.toLowerCase().includes(val)
+        );
+        renderTable(filtered);
+    }
 </script>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 
 </body>
 </html>
