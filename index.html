@@ -34,13 +34,11 @@
     <span class="ms-3 fw-bold">Loading Work Records...</span>
 </div>
 
-<!-- Navbar -->
 <nav class="navbar navbar-dark px-4 py-3">
     <span class="navbar-brand fw-bold m-0"><i class="fa-solid fa-city me-2"></i> Municipal Council Charkhi Dadri</span>
 </nav>
 
 <div class="container-fluid py-4">
-    <!-- Stats Row -->
     <div class="row g-3 mb-5">
         <div class="col-6 col-md-3" onclick="filterData('All')">
             <div class="card card-stats p-3 bg-white border-start border-primary border-5 text-center shadow-sm">
@@ -68,7 +66,6 @@
         </div>
     </div>
 
-    <!-- Search Section -->
     <div class="row mb-3 align-items-center">
         <div class="col-md-6"><h4 id="viewTitle" class="fw-bold text-dark">All Works</h4></div>
         <div class="col-md-6">
@@ -79,33 +76,30 @@
         </div>
     </div>
 
-    <div class="row g-4" id="workDeck"></div>
+    <div id="workDeck" class="row g-4"></div>
 </div>
 
-<!-- Modal -->
 <div class="modal fade" id="workModal" tabindex="-1">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content border-0 shadow-lg">
             <div class="modal-header bg-dark text-white">
-                <h5 class="modal-title fw-bold">Management Console</h5>
+                <h5 class="modal-title fw-bold">Project Management View</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body bg-light">
                 <div id="modalContent" class="row g-2"></div>
-                
                 <hr>
                 <div class="btn-group w-100 shadow-sm rounded mb-4">
-                    <button class="btn btn-primary py-2" onclick="handlePBGCalc()"><i class="fa fa-calculator me-2"></i>Calculate PBG</button>
-                    <button class="btn btn-warning py-2" onclick="toggleUploadForm()"><i class="fa fa-upload me-2"></i>Register BG</button>
+                    <button class="btn btn-primary py-2" onclick="handlePBGCalc()">Calculate PBG</button>
+                    <button class="btn btn-warning py-2" onclick="toggleUploadForm()">Register BG</button>
                 </div>
-
                 <div id="uploadFormArea" class="hidden p-4 border bg-white rounded-3 shadow-sm">
-                    <h6 class="fw-bold border-bottom pb-2 mb-3 text-primary">BG Register Form</h6>
+                    <h6 class="fw-bold border-bottom pb-2 mb-3 text-primary">Add to BG Register</h6>
                     <div class="row g-3">
                         <div class="col-12"><label class="small fw-bold">Bank Name</label><input type="text" id="reg_bank" class="form-control"></div>
                         <div class="col-md-6"><label class="small fw-bold">PBG No.</label><input type="text" id="reg_pbg_no" class="form-control"></div>
-                        <div class="col-md-6"><label class="small fw-bold">Valid Upto</label><input type="date" id="reg_pbg_valid" class="form-control"></div>
-                        <div class="col-12 mt-4"><button class="btn btn-success w-100 fw-bold py-2" onclick="finalSubmitToRegister()">SAVE TO SHEET</button></div>
+                        <div class="col-md-6"><label class="small fw-bold">Expiry Date</label><input type="date" id="reg_pbg_valid" class="form-control"></div>
+                        <div class="col-12 mt-4"><button class="btn btn-success w-100 fw-bold py-2" onclick="finalSubmitToRegister()">SAVE ENTRY</button></div>
                     </div>
                 </div>
             </div>
@@ -117,7 +111,6 @@
 <script>
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxOKN15Szd7A3OGEM1-Xg_Jnwhg4QUibhQ4zAaFHuQBmJiUhtoyeAHFzUtEwdDrUtEFeg/exec'; 
     let masterData = [];
-    let currentWork = null;
     let currentFilter = 'All';
 
     window.onload = fetchData;
@@ -129,8 +122,22 @@
             const result = await res.json();
             masterData = result.data;
             updateUI();
-        } catch (e) { console.error("Data fetch failed", e); }
+        } catch (e) { console.error(e); }
         document.getElementById('loadingOverlay').style.display = 'none';
+    }
+
+    // Indian Currency Formatter Function
+    function formatIndianCurrency(num) {
+        if (!num || isNaN(parseFloat(num.toString().replace(/,/g, '')))) return num;
+        let x = parseFloat(num.toString().replace(/,/g, '')).toFixed(2);
+        let afterPoint = '';
+        if(x.indexOf('.') > 0) afterPoint = x.substring(x.indexOf('.'), x.length);
+        x = Math.floor(x).toString();
+        let lastThree = x.substring(x.length-3);
+        let otherNumbers = x.substring(0, x.length-3);
+        if(otherNumbers != '') lastThree = ',' + lastThree;
+        let res = otherNumbers.replace(/\B(?=(\d{2})+(?!\d))/g, ",") + lastThree + afterPoint;
+        return "₹" + res;
     }
 
     function updateUI() {
@@ -148,18 +155,9 @@
         
         filtered.forEach(item => {
             const color = getStatusColor(item.computedStatus);
-            
-            // Logic: Calendar Display based on status
-            let dateDisplay = "";
-            if (item.computedStatus === 'Yet to be Allotted' || item.computedStatus === 'Live Tender') {
-                dateDisplay = "Work not allotted";
-            } else {
-                const start = item.Agreement_Start_Date || "-";
-                const end = item.Agreement_End_Date || "-";
-                dateDisplay = (start === "-" && end === "-") ? "-" : `${start} to ${end}`;
-            }
-
-            const badgeHtml = (item.computedStatus === 'Other') ? '' : `<span class="badge status-badge" style="background-color: ${color}20; color: ${color}">${item.computedStatus}</span>`;
+            let dateDisplay = (item.computedStatus === 'Yet to be Allotted' || item.computedStatus === 'Live Tender') 
+                ? "Work not allotted" 
+                : `${item.Agreement_Start_Date || '-'} to ${item.Agreement_End_Date || '-'}`;
 
             const col = document.createElement('div');
             col.className = 'col-md-6 col-lg-4';
@@ -167,8 +165,8 @@
                 <div class="card work-card shadow-sm" style="border-top-color: ${color}">
                     <div class="card-body d-flex flex-column">
                         <div class="d-flex justify-content-between mb-2">
-                            <span class="badge bg-light text-dark border small">ID: ${item.E_TENDERID}</span>
-                            ${badgeHtml}
+                            <span class="badge bg-light text-dark border small"># ${item.E_TENDERID}</span>
+                            <span class="badge status-badge" style="background-color: ${color}20; color: ${color}">${item.computedStatus}</span>
                         </div>
                         <h6 class="card-title fw-bold text-dark mb-3" style="min-height: 45px;">${item.Work_Name}</h6>
                         <div class="mb-3 small">
@@ -176,7 +174,7 @@
                             <div class="text-secondary mt-1"><i class="fa fa-calendar-days me-2"></i>${dateDisplay}</div>
                         </div>
                         <div class="mt-auto d-flex justify-content-between align-items-center pt-2 border-top">
-                            <div><small class="text-muted d-block" style="font-size:0.7rem">DNIT COST</small><span class="fw-bold text-primary">₹${item.DNIT_Cost}</span></div>
+                            <div><small class="text-muted d-block" style="font-size:0.7rem">DNIT COST</small><span class="fw-bold text-primary">${formatIndianCurrency(item.DNIT_Cost)}</span></div>
                             <button class="btn btn-sm btn-dark rounded-pill px-3" onclick="showDetails('${item.E_TENDERID}')">View Details</button>
                         </div>
                     </div>
@@ -186,26 +184,32 @@
     }
 
     function showDetails(tenderId) {
-        currentWork = masterData.find(d => d.E_TENDERID == tenderId);
+        const item = masterData.find(d => d.E_TENDERID == tenderId);
         const container = document.getElementById('modalContent');
         
         let html = `
             <div class="col-12 bg-white p-3 rounded shadow-sm mb-3 border-start border-primary border-4">
                 <div class="detail-label text-primary">Work Name</div>
-                <div class="detail-value fw-bold" style="font-size:1.1rem">${currentWork.Work_Name || 'N/A'}</div>
+                <div class="detail-value fw-bold" style="font-size:1.1rem">${item.Work_Name || 'N/A'}</div>
             </div>
             <div class="row g-2 px-2">`;
 
-        // FULL FIELDS LOOP
-        for (let key in currentWork) {
-            if (key === 'Work_Name') continue; 
+        for (let key in item) {
+            // Hiding row_index and computedStatus
+            if (key === 'Work_Name' || key === 'row_index' || key === 'computedStatus') continue; 
+
             let friendlyKey = key.replace(/_/g, ' '); 
-            let value = currentWork[key] || '-';
+            let val = item[key];
+            
+            // Format if it's a cost/amount field
+            if (key.toLowerCase().includes('cost') || key.toLowerCase().includes('amount')) {
+                val = formatIndianCurrency(val);
+            }
 
             html += `
                 <div class="col-md-6 col-lg-4 border-bottom py-2">
                     <div class="detail-label">${friendlyKey}</div>
-                    <div class="detail-value mb-0" style="word-break: break-word;">${value}</div>
+                    <div class="detail-value mb-0" style="word-break: break-word;">${val || '-'}</div>
                 </div>`;
         }
 
@@ -219,7 +223,6 @@
         if(s === 'Live Tender') return '#0dcaf0';
         if(s === 'In Progress') return '#198754';
         if(s === 'Yet to be Allotted') return '#ffc107';
-        if(s === 'Under DLP') return '#d63384';
         return '#6c757d';
     }
 
@@ -233,22 +236,13 @@
         const val = document.getElementById('searchInput').value.toLowerCase();
         renderDeck(masterData.filter(d => 
             d.E_TENDERID.toString().toLowerCase().includes(val) || 
-            d.Work_Name.toLowerCase().includes(val) || 
-            (d.Agency_Name && d.Agency_Name.toLowerCase().includes(val))
+            d.Work_Name.toLowerCase().includes(val)
         ));
     }
 
     function toggleUploadForm() { document.getElementById('uploadFormArea').classList.toggle('hidden'); }
-
-    async function handlePBGCalc() {
-        alert("Calculating PBG for ID: " + currentWork.E_TENDERID);
-        // Your existing POST logic here
-    }
-
-    async function finalSubmitToRegister() {
-        alert("Submitting to Register...");
-        // Your existing POST logic here
-    }
+    function handlePBGCalc() { alert("Processing PBG..."); }
+    function finalSubmitToRegister() { alert("Submitting Data..."); }
 </script>
 </body>
 </html>
