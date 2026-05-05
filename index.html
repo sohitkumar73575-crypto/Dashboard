@@ -7,63 +7,34 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
   <style>
     :root { --primary: #2c3e50; --success: #27ae60; --accent: #3498db; }
-    body { background: #f4f7f6; padding-top: 70px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    
-    /* Navigation & Sidebar */
+    body { background: #f4f7f6; padding-top: 70px; font-family: 'Segoe UI', sans-serif; }
     .nav-header { position: fixed; top: 0; width: 100%; background: white; height: 65px; display: flex; align-items: center; padding: 0 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 1000; }
-    .sidebar { height: 100%; width: 0; position: fixed; z-index: 1100; top: 0; left: 0; background: var(--primary); overflow-x: hidden; transition: 0.3s; padding-top: 60px; }
-    .sidebar a { padding: 15px 25px; text-decoration: none; font-size: 1.1rem; color: #bdc3c7; display: block; transition: 0.2s; }
-    .sidebar a:hover { color: white; background: #34495e; }
-
-    /* Search & Cards */
-    .search-box { border-radius: 30px; padding: 12px 25px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 20px; }
-    .work-card { background: white; border-radius: 12px; padding: 18px; margin-bottom: 15px; border-left: 6px solid var(--accent); cursor: pointer; transition: 0.3s; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-    .work-card:hover { transform: translateY(-3px); box-shadow: 0 6px 15px rgba(0,0,0,0.1); }
+    .search-box { border-radius: 30px; padding: 12px 25px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 20px; width: 100%; }
+    .work-card { background: white; border-radius: 12px; padding: 18px; margin-bottom: 15px; border-left: 6px solid var(--accent); cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
     .amt-tag { color: var(--success); font-weight: 800; font-size: 0.95rem; display: block; margin-top: 10px; border-top: 1px solid #eee; padding-top: 8px; }
-    
-    /* Status Badges */
-    .badge-status { font-size: 0.75rem; padding: 5px 12px; border-radius: 20px; float: right; }
-    .bg-in-progress { background: #e8f5e9; color: #2e7d32; }
-    .bg-dlp { background: #fff3e0; color: #ef6c00; }
-    .bg-tbo { background: #e3f2fd; color: #1565c0; }
-
-    /* Modal Styling */
+    .badge-status { font-size: 0.75rem; padding: 5px 12px; border-radius: 20px; float: right; background: #eee; }
     .btn-action { width: 100%; margin-bottom: 10px; padding: 12px; font-weight: 600; border-radius: 10px; text-align: left; }
-    input[type="number"] { font-weight: bold; color: var(--primary); }
-    label { font-size: 0.8rem; font-weight: 700; color: #7f8c8d; text-transform: uppercase; }
+    label { font-size: 0.75rem; font-weight: 700; color: #7f8c8d; text-transform: uppercase; margin-bottom: 2px; display: block; }
   </style>
 </head>
 <body>
 
 <div class="nav-header">
-  <button class="btn btn-dark btn-sm me-3" onclick="toggleNav()">☰</button>
-  <h5 class="m-0 fw-bold text-dark">MC Charkhi Dadri Dashboard</h5>
-</div>
-
-<div id="mySidebar" class="sidebar">
-  <a href="javascript:void(0)" onclick="toggleNav()" class="text-end pe-4 mb-4" style="font-size: 2rem;">&times;</a>
-  <a href="#" onclick="generateReport('Summary')">📊 Dashboard Summary</a>
-  <a href="#" onclick="generateReport('DLP')">🛡️ DLP Pending Works</a>
-  <a href="#" onclick="generateReport('Finance')">💰 Financial Overview</a>
-  <hr class="mx-3 text-secondary">
-  <a href="#" class="text-danger" onclick="location.reload()">🔄 Refresh Data</a>
+  <h5 class="m-0 fw-bold">MC Charkhi Dadri Dashboard</h5>
 </div>
 
 <div class="container">
-  <input type="text" id="searchInput" class="form-control search-box" placeholder="Search by Agency, Work Name or Tender ID..." onkeyup="filterData()">
-  <div id="loading" class="text-center py-5">
-    <div class="spinner-border text-primary" role="status"></div>
-    <p class="mt-2 text-muted">Fetching latest data from Google Sheets...</p>
-  </div>
+  <input type="text" id="searchInput" class="form-control search-box" placeholder="Search Agency or Work Name..." onkeyup="filterData()">
+  <div id="loading" class="text-center py-5"><div class="spinner-border text-primary"></div></div>
   <div id="card-list"></div>
 </div>
 
-<!-- Details Modal -->
+<!-- Modal -->
 <div class="modal fade" id="workModal" tabindex="-1">
   <div class="modal-dialog modal-lg">
-    <div class="modal-content border-0 shadow">
+    <div class="modal-content border-0">
       <div class="modal-header bg-light">
-        <h5 class="modal-title fw-bold">Work Management Interface</h5>
+        <h5 class="modal-title fw-bold">Work Details</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body p-4">
@@ -71,63 +42,53 @@
         <hr class="my-4">
         <div class="row">
           <div class="col-md-6">
-            <button class="btn btn-primary btn-action" onclick="calculatePBG()">🧮 Calculate PBG (Next 10 Round)</button>
-            <button class="btn btn-warning btn-action text-dark" onclick="openCamera()">📸 Capture Photo (Direct Camera)</button>
+            <button class="btn btn-primary btn-action" onclick="calculatePBG()">🧮 Calculate/Check PBG</button>
+            <button class="btn btn-warning btn-action" onclick="openCamera()">📸 Capture Site Photo</button>
+            <button class="btn btn-info btn-action text-white" onclick="document.getElementById('cameraTrigger').click()">📤 Upload PBG Document</button>
           </div>
           <div class="col-md-6">
-            <button class="btn btn-outline-dark btn-action" onclick="window.print()">📄 Generate Detailed Report</button>
             <button class="btn btn-success btn-action" onclick="saveCurrentWork()">💾 Save Changes to Sheet</button>
+            <button class="btn btn-outline-dark btn-action" onclick="window.print()">📄 Print Report</button>
           </div>
         </div>
-        <input type="file" id="cameraTrigger" accept="image/*" capture="environment" style="display:none" onchange="processImage(this)">
+        <input type="file" id="cameraTrigger" accept="image/*" style="display:none" onchange="alert('File Selected Ready to Upload')">
       </div>
     </div>
   </div>
 </div>
 
 <script>
-  // STEP 1: Paste your Web App URL here
+  // UPDATE THIS WITH YOUR URL
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxOKN15Szd7A3OGEM1-Xg_Jnwhg4QUibhQ4zAaFHuQBmJiUhtoyeAHFzUtEwdDrUtEFeg/exec"; 
 
   let allData = [];
   let currentItem = null;
-  const ceil10 = (v) => Math.ceil(v / 10) * 10;
 
-  function toggleNav() {
-    const s = document.getElementById("mySidebar");
-    s.style.width = (s.style.width === "250px") ? "0" : "250px";
+  async function loadData() {
+    const res = await fetch(SCRIPT_URL);
+    const result = await res.json();
+    allData = result.data;
+    document.getElementById('loading').style.display = 'none';
+    renderList(allData);
   }
 
-  // Load Data from Google Sheet
-  async function loadData() {
-    try {
-      const response = await fetch(SCRIPT_URL);
-      const result = await response.json();
-      allData = result.data;
-      document.getElementById('loading').style.display = 'none';
-      renderList(allData);
-    } catch (e) {
-      alert("Error linking to Google Sheet. Check SCRIPT_URL.");
-    }
+  function findVal(obj, searchKey) {
+    const key = Object.keys(obj).find(k => k.toLowerCase().replace(/_/g, '') === searchKey.toLowerCase().replace(/_/g, ''));
+    return key ? obj[key] : '0';
   }
 
   function renderList(data) {
     const list = document.getElementById('card-list');
-    list.innerHTML = data.map(item => `
+    list.innerHTML = data.map(item => {
+      const amt = findVal(item, "AGREEMENT_AMOUNT");
+      return `
       <div class="work-card" onclick="openWorkModal(${item.rowIndex})">
-        <span class="badge-status ${getStatusClass(item.computedStatus)}">${item.computedStatus}</span>
-        <div class="fw-bold text-dark pe-5">${item.Work_Name || 'No Name'}</div>
-        <div class="small text-muted mt-1">ID: ${item.E_TENDERID || 'N/A'}</div>
-        <span class="amt-tag">Agreement: ₹ ${item.Agreement_Amount || '0'}</span>
-      </div>
-    `).join('');
-  }
-
-  function getStatusClass(status) {
-    if(status === 'In Progress') return 'bg-in-progress';
-    if(status === 'Under DLP') return 'bg-dlp';
-    if(status === 'To Be Opened') return 'bg-tbo';
-    return 'bg-secondary text-white';
+        <span class="badge-status">${item.computedStatus}</span>
+        <div class="fw-bold">${findVal(item, "WORK_NAME")}</div>
+        <div class="small text-muted">ID: ${findVal(item, "E_TENDERID")}</div>
+        <span class="amt-tag">Agreement: ₹ ${amt}</span>
+      </div>`;
+    }).join('');
   }
 
   function openWorkModal(rowIndex) {
@@ -135,66 +96,46 @@
     const container = document.getElementById('modalFields');
     container.innerHTML = Object.keys(currentItem).map(key => {
       if(key === 'rowIndex' || key === 'computedStatus') return '';
-      
-      let type = "text";
-      if(key.toLowerCase().includes('date')) type = "date";
-      if(key.toLowerCase().includes('amount') || key.toLowerCase().includes('cost')) type = "number";
-      
-      return `
-        <div class="col-md-6">
-          <label>${key.replace(/_/g, ' ')}</label>
-          <input type="${type}" class="form-control" data-key="${key}" value="${currentItem[key]}">
-        </div>`;
+      let type = "text", val = currentItem[key];
+      if(key.toLowerCase().includes('date')) {
+        type = "date";
+        // Convert DD/MM/YYYY to YYYY-MM-DD for HTML input
+        if(val.includes('/')) {
+          const p = val.split('/');
+          val = `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
+        }
+      }
+      return `<div class="col-md-6"><label>${key}</label><input type="${type}" class="form-control" id="inp_${key}" value="${val}"></div>`;
     }).join('');
     new bootstrap.Modal(document.getElementById('workModal')).show();
   }
 
   function calculatePBG() {
-    const dnit = parseFloat(document.querySelector('[data-key="DNIT_Cost"]').value) || 0;
-    const quoted = parseFloat(document.querySelector('[data-key="Agreement_Amount"]').value) || 0;
-    const agency = document.querySelector('[data-key="Agency_Name"]').value.toLowerCase();
+    const dnit = parseFloat(document.getElementById('inp_DNIT_Cost')?.value) || 0;
+    const quoted = parseFloat(document.getElementById('inp_Agreement_Amount')?.value) || 0;
+    const agency = document.getElementById('inp_Agency_Name')?.value || "";
     
-    // 2.5% for Co-op/Society, 5% for others
-    let rate = (agency.includes("coop") || agency.includes("society") || agency.includes("co op")) ? 0.025 : 0.05;
-    let pbg = ceil10(quoted * rate);
+    // Check if already in sheet (Assuming PBG is Col O and Add_PBG is Col P)
+    const existingPBG = currentItem["PBG_Amount"] || "0";
     
-    // Additional PBG if DNIT - Quoted > 10%
-    let diffPercent = ((dnit - quoted) / dnit) * 100;
-    let additional = (diffPercent > 10) ? ceil10(quoted * (diffPercent - 10) / 100) : 0;
+    if(parseFloat(existingPBG) > 0) {
+      alert(`⚠️ ALREADY CALCULATED\n\nPBG Amount: ₹${currentItem["PBG_Amount"]}\nAdditional PBG: ₹${currentItem["Additional_PBG"] || '0'}`);
+      return;
+    }
 
-    alert(`PBG Calculation (Next 10 Round):\n------------------------\nBase PBG: ₹${pbg}\nAdditional PBG: ₹${additional}\nTotal: ₹${pbg + additional}`);
+    let rate = (agency.toLowerCase().includes("coop") || agency.toLowerCase().includes("society")) ? 0.025 : 0.05;
+    let pbg = Math.ceil((quoted * rate) / 10) * 10;
+    let diff = ((dnit - quoted) / dnit) * 100;
+    let addPbg = (diff > 10) ? Math.ceil((quoted * (diff - 10) / 100) / 10) * 10 : 0;
+
+    alert(`✅ NEW CALCULATION\n\nBase PBG (Next 10): ₹${pbg}\nAdditional PBG: ₹${addPbg}\nTotal: ₹${pbg + addPbg}`);
   }
 
-  function openCamera() {
-    document.getElementById('cameraTrigger').click();
-  }
-
-  async function processImage(input) {
-    if(!input.files[0]) return;
-    alert("Photo Captured! Uploading to Drive...");
-    // Future Base64 upload logic can be added here
-  }
-
-  async function saveCurrentWork() {
-    const inputs = document.querySelectorAll('#modalFields input');
-    const updatedData = Array.from(inputs).map(i => i.value);
-    
-    // Code to send POST request to SCRIPT_URL
-    alert("Saving changes to Google Sheet...");
-  }
+  function openCamera() { document.getElementById('cameraTrigger').click(); }
 
   function filterData() {
     const term = document.getElementById('searchInput').value.toLowerCase();
-    const filtered = allData.filter(item => 
-      item.Work_Name.toLowerCase().includes(term) || 
-      item.Agency_Name.toLowerCase().includes(term) ||
-      item.E_TENDERID.toLowerCase().includes(term)
-    );
-    renderList(filtered);
-  }
-
-  function generateReport(type) {
-    window.print();
+    renderList(allData.filter(i => JSON.stringify(i).toLowerCase().includes(term)));
   }
 
   window.onload = loadData;
