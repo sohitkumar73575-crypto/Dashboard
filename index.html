@@ -5,29 +5,30 @@
 <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
 
 <style>
-body{background:#f4f7f6;padding-top:70px;}
-.header{position:fixed;top:0;width:100%;background:#fff;padding:15px;box-shadow:0 2px 5px #ccc;z-index:1000;}
-.card-box{padding:20px;border-radius:10px;color:#fff;cursor:pointer;}
-.work-card{background:#fff;padding:15px;margin-bottom:10px;border-radius:10px;cursor:pointer;}
+body{background:#f4f7f6;padding-top:70px;font-family:sans-serif;}
+.header{position:fixed;top:0;width:100%;background:#fff;padding:15px;box-shadow:0 2px 10px #ccc;z-index:1000;}
+.card-box{padding:20px;border-radius:12px;color:#fff;cursor:pointer;font-weight:bold;text-align:center;}
+.work-card{background:#fff;padding:15px;margin-bottom:10px;border-radius:12px;cursor:pointer;box-shadow:0 2px 5px #ddd;}
 </style>
 </head>
 
 <body>
 
 <div class="header d-flex justify-content-between">
-<h5>MC Charkhi Dadri Works Management</h5>
-<button onclick="toggleMenu()">☰</button>
+<h5>Municipal Council Charkhi Dadri<br><small>Works Management System</small></h5>
 </div>
 
 <div class="container">
 
+<!-- DASHBOARD -->
 <div id="dashboard">
 <div class="row g-3" id="cards"></div>
 </div>
 
+<!-- WORK LIST -->
 <div id="works" style="display:none;">
 <div class="d-flex mb-3">
-<input type="text" id="search" class="form-control me-2" placeholder="Search..." onkeyup="filterData()">
+<input type="text" id="search" class="form-control me-2" placeholder="Search by name or tender" onkeyup="filterData()">
 <button class="btn btn-success" onclick="addWork()">+ Add</button>
 </div>
 <div id="list"></div>
@@ -35,72 +36,139 @@ body{background:#f4f7f6;padding-top:70px;}
 
 </div>
 
+<!-- MODAL -->
+<div class="modal fade" id="detailModal">
+<div class="modal-dialog modal-lg">
+<div class="modal-content">
+
+<div class="modal-header">
+<h5>Work Details</h5>
+<button class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+
+<div class="modal-body">
+<div class="row" id="detailFields"></div>
+
+<hr>
+
+<button class="btn btn-warning w-100 mb-2" onclick="enableEdit()">✏️ Edit</button>
+<button class="btn btn-success w-100 d-none" id="saveBtn" onclick="saveWork()">💾 Save</button>
+</div>
+
+</div>
+</div>
+</div>
+
 <script>
 const URL = "https://script.google.com/macros/s/AKfycbxOKN15Szd7A3OGEM1-Xg_Jnwhg4QUibhQ4zAaFHuQBmJiUhtoyeAHFzUtEwdDrUtEFeg/exec";
 
-let allData = [];
-let currentCategory = "all";
+let allData=[],headers=[],currentItem=null,currentCategory="all";
 
-async function load() {
-  let res = await fetch(URL);
-  let data = await res.json();
-
-  allData = data.data;
-  renderDashboard(data.counts);
+// LOAD
+async function load(){
+  let r = await fetch(URL);
+  let d = await r.json();
+  allData = d.data;
+  headers = d.headers;
+  renderDashboard(d.counts);
 }
 
-function renderDashboard(c) {
-  document.getElementById("cards").innerHTML = `
-  <div class="col-6"><div class="card-box bg-primary" onclick="openCategory('all')">All Works (${c.all})</div></div>
+// DASHBOARD
+function renderDashboard(c){
+  document.getElementById("cards").innerHTML=`
+  <div class="col-6"><div class="card-box bg-primary" onclick="openCategory('all')">All (${c.all})</div></div>
   <div class="col-6"><div class="card-box bg-success" onclick="openCategory('In Progress')">In Progress (${c.inProgress})</div></div>
-  <div class="col-6"><div class="card-box bg-warning" onclick="openCategory('Yet to be Allotted')">Yet (${c.yet})</div></div>
-  <div class="col-6"><div class="card-box bg-info" onclick="openCategory('Live Tender')">Live (${c.live})</div></div>
+  <div class="col-6"><div class="card-box bg-warning" onclick="openCategory('Yet')">Yet (${c.yet})</div></div>
+  <div class="col-6"><div class="card-box bg-info" onclick="openCategory('Live')">Live (${c.live})</div></div>
   `;
 }
 
-function openCategory(cat) {
-  currentCategory = cat;
+// OPEN CATEGORY
+function openCategory(cat){
+  currentCategory=cat;
   document.getElementById("dashboard").style.display="none";
   document.getElementById("works").style.display="block";
 
-  let filtered = allData.filter(x => cat==="all" || x.category===cat);
-  renderList(filtered);
+  let f = allData.filter(x=>cat==="all" || x.category===cat);
+  renderList(f);
 }
 
-function renderList(data) {
-  document.getElementById("list").innerHTML = data.map(d=>`
+// LIST
+function renderList(data){
+  document.getElementById("list").innerHTML=data.map(d=>`
   <div class="work-card" onclick="openDetail(${d.rowIndex})">
-    <b>${d.Work_Name || "-"}</b><br>
-    ID: ${d.E_TENDERID || "-"}<br>
-    Agency: ${d.Agency_Name || "-"}<br>
-    Estimate: ₹${d.Estimate_Cost || "-"}<br>
-    Agreement: ₹${d.Agreement_Amount || "-"}
+  <b>${d.Work_Name||"-"}</b><br>
+  ID: ${d.E_TENDERID||"-"}<br>
+  Agency: ${d.Agency_Name||"-"}<br>
+  Estimate: ₹${d.Estimate_Cost||"-"}<br>
+  Agreement: ₹${d.Agreement_Amount||"-"}
   </div>
   `).join("");
 }
 
-function filterData() {
-  let t = document.getElementById("search").value.toLowerCase();
-  renderList(allData.filter(d =>
-    JSON.stringify(d).toLowerCase().includes(t)
-  ));
+// SEARCH
+function filterData(){
+  let t=document.getElementById("search").value.toLowerCase();
+  renderList(allData.filter(x=>JSON.stringify(x).toLowerCase().includes(t)));
 }
 
-async function addWork() {
+// ADD
+async function addWork(){
+  await fetch(URL,{method:"POST",body:JSON.stringify({method:"add"})});
+  alert("Added");
+  location.reload();
+}
+
+// DETAIL VIEW (READ MODE)
+function openDetail(i){
+  currentItem=allData.find(x=>x.rowIndex===i);
+
+  document.getElementById("detailFields").innerHTML=
+  headers.map(h=>{
+    let v=currentItem[h]||"";
+    let type=h.toLowerCase().includes("date")?"date":"text";
+    return `
+    <div class="col-md-6 mb-2">
+      <label>${h}</label>
+      <input type="${type}" id="f_${h}" class="form-control" value="${v}" disabled>
+    </div>`;
+  }).join("");
+
+  document.getElementById("saveBtn").classList.add("d-none");
+
+  new bootstrap.Modal(document.getElementById("detailModal")).show();
+}
+
+// ENABLE EDIT
+function enableEdit(){
+  document.querySelectorAll("#detailFields input").forEach(i=>i.disabled=false);
+  document.getElementById("saveBtn").classList.remove("d-none");
+}
+
+// SAVE
+async function saveWork(){
+  let row=[];
+  headers.forEach(h=>{
+    row.push(document.getElementById("f_"+h)?.value||"");
+  });
+
   await fetch(URL,{
     method:"POST",
-    body:JSON.stringify({method:"add"})
+    body:JSON.stringify({
+      method:"update",
+      rowIndex:currentItem.rowIndex,
+      rowData:row
+    })
   });
-  alert("Added");
+
+  alert("Saved");
+  location.reload();
 }
 
-function openDetail(i) {
-  let d = allData.find(x=>x.rowIndex===i);
-  alert("Work: "+d.Work_Name);
-}
-
-window.onload = load;
+window.onload=load;
 </script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 
 </body>
 </html>
