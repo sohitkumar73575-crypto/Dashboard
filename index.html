@@ -276,144 +276,85 @@
     }
 
     function showModal(id) {
-    currentTenderId = id;
-    const item = masterData.find(d => (d.E_TENDERID || d.E_TenderID) == id);
+        currentTenderId = id;
+        const item = masterData.find(d => (d.E_TENDERID || d.E_TenderID) == id);
+        document.getElementById('modalWorkName').innerText = item["Work_Name"] || item["WORK NAME"];
+        document.getElementById('modalHeaderTitle').innerText = "Work Details";
+        
+        const container = document.getElementById('modalContent');
+        container.innerHTML = '';
+        
+        const skip = ['work_name', 'work name', 'rowindex', 'computedstatus'];
 
-    document.getElementById('modalWorkName').innerText =
-        item["Work_Name"] || item["WORK NAME"];
+        for (let key in item) {
+            if (skip.includes(key.toLowerCase())) continue;
+            
+            let val = item[key] !== undefined && item[key] !== null ? item[key] : "";
+            const keyLower = key.toLowerCase();
+            
+            const isCost = keyLower.includes('cost') || keyLower.includes('amount');
+            const isDate = keyLower.includes('date');
+            
+            // Logic: Agar value blank, 0, ya "-" hai toh hi edit karne do, varna lock (Readonly) rakho
+            const isLocked = (val !== "" && val !== "-" && val !== "0" && val !== "0.00") ? "readonly" : "";
 
-    document.getElementById('modalHeaderTitle').innerText = "Work Details";
+            let inputType = "text";
+            let inputMode = "";
+            let step = "";
+            
+            if (isDate) {
+    inputType = "date";
 
-    const container = document.getElementById('modalContent');
-    container.innerHTML = '';
+    // Convert date into YYYY-MM-DD for input type="date"
+    if (val) {
+        let d = new Date(val);
 
-    const skip = ['work_name', 'work name', 'rowindex', 'computedstatus'];
-
-    for (let key in item) {
-
-        if (skip.includes(key.toLowerCase())) continue;
-
-        let val = item[key] !== undefined && item[key] !== null
-            ? item[key]
-            : "";
-
-        const keyLower = key.toLowerCase();
-
-        const isCost =
-            keyLower.includes('cost') ||
-            keyLower.includes('amount');
-
-        const isDate =
-            keyLower.includes('date');
-
-        // Lock filled fields
-        const isLocked =
-            (val !== "" &&
-             val !== "-" &&
-             val !== "0" &&
-             val !== "0.00")
-             ? "readonly"
-             : "";
-
-        let inputType = "text";
-        let inputMode = "";
-        let step = "";
-
-        // DATE FIX
-        if (isDate) {
-
-            inputType = "date";
-
-            if (val && val !== "-") {
-
-                let d = new Date(val);
-
-                // Handle DD/MM/YYYY format
-                if (
-                    isNaN(d.getTime()) &&
-                    typeof val === "string" &&
-                    val.includes('/')
-                ) {
-
-                    const parts = val.split('/');
-
-                    if (parts.length === 3) {
-                        d = new Date(
-                            `${parts[2]}-${parts[1]}-${parts[0]}`
-                        );
-                    }
-                }
-
-                // Final formatted value
-                if (!isNaN(d.getTime())) {
-                    val = d.toISOString().split('T')[0];
-                } else {
-                    val = "";
-                }
+        // Agar normal parse fail ho aur format DD/MM/YYYY ho
+        if (isNaN(d.getTime()) && typeof val === "string" && val.includes('/')) {
+            const parts = val.split('/');
+            if (parts.length === 3) {
+                d = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
             }
         }
 
-        // COST FIX
-        else if (isCost) {
-
-            inputType = "number";
-            inputMode = 'inputmode="decimal"';
-            step = 'step="0.01"';
-
-            if (typeof val === 'string') {
-                val = val.replace(/[^0-9.]/g, '');
-            }
+        if (!isNaN(d.getTime())) {
+            val = d.toISOString().split('T')[0];
         }
+    }
+}
+            } else if (isCost) {
+                inputType = "number";
+                inputMode = 'inputmode="decimal"'; 
+                step = 'step="0.01"';
+                // Input field ke liye numeric value extract karna agar currency format mein ho
+                if(typeof val === 'string') val = val.replace(/[^0-9.]/g, '');
+            }
 
-        container.innerHTML += `
-            <div class="col-md-4 col-6">
-                <div class="p-2">
-
-                    <div class="detail-label">
-                        ${key.replace(/_/g, ' ')}
+            container.innerHTML += `
+                <div class="col-md-4 col-6">
+                    <div class="p-2">
+                        <div class="detail-label">${key.replace(/_/g, ' ')}</div>
+                        <!-- View Mode -->
+                        <div class="detail-value field-view">${isCost ? formatCurrency(item[key]) : item[key]}</div>
+                        <!-- Edit Mode -->
+                        <input type="${inputType}" 
+                               name="${key}" 
+                               ${inputMode} 
+                               ${step}
+                               class="edit-input hidden field-edit" 
+                               value="${val}" 
+                               ${isLocked}>
                     </div>
-
-                    <!-- VIEW MODE -->
-                    <div class="detail-value field-view">
-                        ${isCost ? formatCurrency(item[key]) : item[key]}
-                    </div>
-
-                    <!-- EDIT MODE -->
-                    <input
-                        type="${inputType}"
-                        name="${key}"
-                        ${inputMode}
-                        ${step}
-                        class="edit-input hidden field-edit"
-                        value="${val}"
-                        ${isLocked}
-                    >
-
-                </div>
-            </div>
-        `;
+                </div>`;
+        }
+        
+        // Modal UI Reset
+        document.getElementById('editToggleBtn').classList.remove('hidden');
+        document.getElementById('saveBtn').classList.add('hidden');
+        document.getElementById('shareBtn').classList.remove('hidden');
+        new bootstrap.Modal(document.getElementById('workModal')).show();
     }
 
-    // RESET BUTTONS
-    document.querySelectorAll('.field-view')
-        .forEach(el => el.classList.remove('hidden'));
-
-    document.querySelectorAll('.field-edit')
-        .forEach(el => el.classList.add('hidden'));
-
-    document.getElementById('editToggleBtn')
-        .classList.remove('hidden');
-
-    document.getElementById('saveBtn')
-        .classList.add('hidden');
-
-    document.getElementById('shareBtn')
-        .classList.remove('hidden');
-
-    new bootstrap.Modal(
-        document.getElementById('workModal')
-    ).show();
-}
     function enableEditMode() {
         document.querySelectorAll('.field-view').forEach(el => el.classList.add('hidden'));
         document.querySelectorAll('.field-edit').forEach(el => el.classList.remove('hidden'));
@@ -501,64 +442,16 @@
     }
 
     async function saveDetails() {
-
-    const formData = new FormData(document.getElementById('editForm'));
-
-    const payload = {
-        tenderId: currentTenderId
-    };
-
-    formData.forEach((v, k) => {
-        payload[k] = v;
-    });
-
-    document.getElementById('loadingOverlay')
-        .classList.remove('hidden');
-
-    try {
-
-        const res = await fetch(SCRIPT_URL, {
-            method: 'POST',
-
-            headers: {
-                'Content-Type': 'application/json'
-            },
-
-            body: JSON.stringify({
-                action: 'updateWork',
-                details: payload
-            })
-        });
-
-        const resp = await res.json();
-
-        console.log(resp);
-
-        if (resp.status === 'success') {
-
-            alert("Updated Successfully");
-
-            fetchData();
-
-            bootstrap.Modal
-                .getInstance(document.getElementById('workModal'))
-                .hide();
-
-        } else {
-
-            alert(resp.message || "Update Failed");
-        }
-
-    } catch (e) {
-
-        console.error(e);
-
-        alert("Server Connection Failed");
-    }
-
-    document.getElementById('loadingOverlay')
-        .classList.add('hidden');
-}
+        const formData = new FormData(document.getElementById('editForm'));
+        const payload = { tenderId: currentTenderId };
+        formData.forEach((v, k) => { payload[k] = v; });
+        document.getElementById('loadingOverlay').classList.remove('hidden');
+        try {
+            const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'updateWork', details: payload }) });
+            const resp = await res.json();
+            if(resp.status === 'success') { fetchData(); bootstrap.Modal.getInstance(document.getElementById('workModal')).hide(); }
+        } catch (e) { alert("Update Failed"); }
+        document.getElementById('loadingOverlay').classList.add('hidden');
     }
 </script>
 </body>
