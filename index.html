@@ -3,129 +3,197 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MC Charkhi Dadri | Work Management System</title>
+    <title>MC Charkhi Dadri | Modern Works Portal</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
-        /* REFRESHED COLOR PALETTE - High Contrast & Modern */
         :root { 
-            --primary: #0f172a;        /* Deep Navy for Header */
-            --accent: #6366f1;         /* Indigo for Buttons/Links */
-            --success: #10b981;        /* Emerald Green for Financials */
-            --bg: #f8fafc;             /* Very Light Cool Gray Background */
-            --card-border: #e2e8f0; 
-            --text-main: #334155;
+            --primary: #0f172a; 
+            --accent: #6366f1; /* Modern Indigo/Violet */
+            --bg: #fdfdfd; 
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
         }
 
-        body { background-color: var(--bg); font-family: 'Inter', system-ui, -apple-system, sans-serif; color: var(--text-main); overflow-x: hidden; }
+        body { 
+            background-color: var(--bg); 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            color: var(--text-main); 
+            overflow-x: hidden; 
+        }
         
-        /* Navbar with Emerald Accent */
-        .navbar { background: var(--primary); padding: 1rem 2rem; border-bottom: 4px solid var(--success); box-shadow: 0 4px 20px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 1000; }
-        .navbar-brand { font-weight: 800; letter-spacing: 0.5px; color: #ffffff !important; }
+        /* Sleek Navbar */
+        .navbar { 
+            background: rgba(15, 23, 42, 0.95); 
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem; 
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            position: sticky; top: 0; z-index: 1000; 
+        }
+        .navbar-brand { font-weight: 800; font-size: 1.25rem; letter-spacing: -0.5px; color: #fff !important; }
         
-        /* Stats Cards - Clean white with Top Borders */
-        .card-stats { border: none; border-radius: 16px; background: white; transition: 0.3s; border-top: 5px solid transparent; cursor: pointer; }
-        .card-stats:hover { transform: translateY(-5px); box-shadow: 0 12px 24px rgba(0,0,0,0.06); }
+        /* Modern Stats */
+        .card-stats { 
+            border: 1px solid #f1f5f9; 
+            border-radius: 24px; 
+            background: var(--card-bg); 
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
+            position: relative;
+        }
+        .card-stats:hover { transform: translateY(-5px); box-shadow: 0 20px 40px rgba(0,0,0,0.05); }
         
-        /* Investment Banner - High Contrast White Card */
-        .investment-banner { background: #ffffff; color: var(--primary); border-radius: 24px; border: 1px solid var(--card-border); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); }
-        .investment-banner h1 { color: var(--success) !important; font-weight: 800; }
+        /* Premium Banner */
+        .investment-banner { 
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); 
+            color: white; 
+            border-radius: 32px; 
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .investment-banner::after {
+            content: ''; position: absolute; top: -50%; right: -10%; width: 300px; height: 300px;
+            background: var(--accent); filter: blur(120px); opacity: 0.15;
+        }
         
-        /* Work Cards - No Blue Tint, Clean Indigo Focus */
+        /* THE MODERN WORK CARD */
         .work-card { 
-            background: white; 
-            border-radius: 20px; 
-            border: 1px solid var(--card-border); 
-            transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            background: var(--card-bg); 
+            border-radius: 28px; 
+            border: 1px solid #f1f5f9; 
+            transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1); 
             cursor: pointer; 
-            overflow: hidden; 
             height: 100%; 
             display: flex; 
-            flex-direction: column; 
+            flex-direction: column;
         }
         .work-card:hover { 
+            transform: translateY(-12px) scale(1.02); 
+            box-shadow: 0 40px 80px -20px rgba(15, 23, 42, 0.15); 
             border-color: var(--accent); 
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); 
-            transform: scale(1.02);
         }
         
-        /* Status Badges with Subtle Tints */
-        .status-badge { font-size: 0.7rem; padding: 6px 14px; border-radius: 100px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+        /* Glassmorphism Badges */
+        .status-badge { 
+            font-size: 0.65rem; 
+            padding: 6px 14px; 
+            border-radius: 12px; 
+            font-weight: 800; 
+            text-transform: uppercase; 
+            letter-spacing: 0.8px;
+            backdrop-filter: blur(4px);
+        }
         
-        .detail-label { font-size: 0.65rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px; }
-        .detail-value { font-size: 0.95rem; color: #0f172a; font-weight: 600; line-height: 1.4; }
-        
-        /* Search Bar Style */
-        #searchInput { border: 2px solid transparent; background: #ffffff; transition: 0.3s; padding: 12px 20px 12px 50px; }
-        #searchInput:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1); outline: none; }
+        /* Data Styling */
+        .detail-label { 
+            font-size: 0.6rem; 
+            font-weight: 800; 
+            color: var(--text-muted); 
+            text-transform: uppercase; 
+            letter-spacing: 1.2px; 
+            margin-bottom: 6px; 
+        }
+        .detail-value { 
+            font-size: 0.9rem; 
+            color: var(--text-main); 
+            font-weight: 600; 
+        }
 
-        .btn-primary { background-color: var(--accent); border: none; font-weight: 700; }
-        .btn-primary:hover { background-color: #4f46e5; }
-        
-        #loadingOverlay { position: fixed; inset: 0; background: rgba(255,255,255,0.98); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .price-tag {
+            color: var(--accent);
+            font-weight: 800;
+            font-size: 1.4rem;
+            letter-spacing: -0.5px;
+        }
+
+        /* Input Overhaul */
+        .form-control {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 0.8rem 1.2rem;
+            border-radius: 16px;
+            font-weight: 500;
+        }
+        .form-control:focus {
+            background: #fff;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+        }
+
+        #loadingOverlay { 
+            position: fixed; inset: 0; background: #fff; z-index: 9999; 
+            display: flex; flex-direction: column; justify-content: center; align-items: center; 
+        }
         .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
 <div id="loadingOverlay">
-    <div class="spinner-border text-success" style="width: 3rem; height: 3rem;"></div>
-    <span class="mt-3 fw-bold text-dark">Syncing Municipal Data...</span>
+    <div class="spinner-grow text-primary" role="status"></div>
+    <span class="mt-3 fw-bold opacity-75">Syncing Digital Assets...</span>
 </div>
 
-<nav class="navbar navbar-dark px-4">
-    <span class="navbar-brand m-0 fs-4"><i class="fa-solid fa-landmark-flag me-2 text-success"></i>MC CHARKHI DADRI</span>
+<nav class="navbar navbar-dark">
+    <div class="container-fluid px-lg-5">
+        <span class="navbar-brand"><i class="fa-solid fa-cube me-2 text-accent"></i>WORKS OS</span>
+        <div class="d-flex align-items-center">
+            <span class="text-light opacity-50 small fw-bold d-none d-md-block">MC CHARKHI DADRI</span>
+        </div>
+    </div>
 </nav>
 
-<div class="container-fluid py-4 px-lg-5">
+<div class="container-fluid py-5 px-lg-5">
     <!-- Stats Section -->
-    <div class="row g-4 mb-4">
+    <div class="row g-4 mb-5">
         <div class="col-6 col-md-3" onclick="filterData('All')">
-            <div class="card card-stats p-4 shadow-sm" style="border-top-color: #94a3b8;">
+            <div class="card card-stats p-4">
                 <small class="detail-label">Total Portfolio</small>
                 <h2 id="count-all" class="fw-bold m-0">0</h2>
             </div>
         </div>
         <div class="col-6 col-md-3" onclick="filterData('In Progress')">
-            <div class="card card-stats p-4 shadow-sm" style="border-top-color: var(--success);">
-                <small class="detail-label text-success">In Progress</small>
+            <div class="card card-stats p-4">
+                <small class="detail-label">In Progress</small>
                 <h2 id="count-progress" class="fw-bold m-0 text-success">0</h2>
             </div>
         </div>
         <div class="col-6 col-md-3" onclick="filterData('Live Tender')">
-            <div class="card card-stats p-4 shadow-sm" style="border-top-color: var(--accent);">
-                <small class="detail-label text-primary">Live Tenders</small>
-                <h2 id="count-live" class="fw-bold m-0 text-primary">0</h2>
+            <div class="card card-stats p-4">
+                <small class="detail-label">Live Tenders</small>
+                <h2 id="count-live" class="fw-bold m-0" style="color: var(--accent);">0</h2>
             </div>
         </div>
         <div class="col-6 col-md-3" onclick="filterData('Yet to be Allotted')">
-            <div class="card card-stats p-4 shadow-sm" style="border-top-color: #f59e0b;">
-                <small class="detail-label text-warning">Pending Allotment</small>
+            <div class="card card-stats p-4">
+                <small class="detail-label">Awaiting</small>
                 <h2 id="count-pending" class="fw-bold m-0 text-warning">0</h2>
             </div>
         </div>
     </div>
 
     <!-- Investment Banner -->
-    <div class="investment-banner p-4 p-md-5 mb-5 d-flex flex-column flex-md-row justify-content-between align-items-center">
+    <div class="investment-banner p-4 p-md-5 mb-5 shadow-lg d-flex flex-column flex-md-row justify-content-between align-items-center">
         <div>
-            <h3 class="fw-bold mb-1"><i class="fa-solid fa-chart-pie me-2 text-success"></i>Ongoing Works Status</h3>
-            <p class="text-muted m-0">Live valuation of works currently in execution phase</p>
+            <h2 class="fw-extrabold mb-1">Portfolio Valuation</h2>
+            <p class="text-light opacity-50 m-0">Consolidated value of active infrastructure works</p>
         </div>
         <div class="mt-4 mt-md-0 text-md-end">
-            <small class="detail-label">Total Ongoing Investment</small>
-            <h1 class="display-5 m-0" id="total-progress-amount">₹0.00</h1>
+            <small class="detail-label text-light opacity-50">Active Capital</small>
+            <h1 class="display-4 fw-bold m-0" id="total-progress-amount" style="color: #10b981;">₹0.00</h1>
         </div>
     </div>
 
     <!-- Search and Title -->
     <div class="row mb-4 align-items-center">
-        <div class="col-md-6"><h3 id="viewTitle" class="fw-bold text-dark m-0">All Works</h3></div>
-        <div class="col-md-6">
-            <div class="position-relative mt-3 mt-md-0">
-                <i class="fa fa-search position-absolute" style="left:20px; top:18px; color:#94a3b8;"></i>
-                <input type="text" id="searchInput" class="form-control rounded-4 shadow-sm" placeholder="Search ID, Agency or Work..." onkeyup="searchWorks()">
+        <div class="col-md-6"><h3 id="viewTitle" class="fw-bold m-0">All Projects</h3></div>
+        <div class="col-md-6 mt-3 mt-md-0">
+            <div class="position-relative">
+                <i class="fa fa-search position-absolute" style="left:20px; top:16px; color:var(--text-muted);"></i>
+                <input type="text" id="searchInput" class="form-control ps-5" placeholder="Search projects, agencies, or IDs..." onkeyup="searchWorks()">
             </div>
         </div>
     </div>
@@ -133,39 +201,33 @@
     <div id="workDeck" class="row g-4"></div>
 </div>
 
-<!-- Modal -->
+<!-- Modal Refined -->
 <div class="modal fade" id="workModal" tabindex="-1">
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden" id="modalMainContent">
-            <div id="modalCaptureArea" style="background: white;">
-                <div class="modal-header border-0 pb-0 px-4 pt-4 d-flex justify-content-between">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-5 overflow-hidden">
+            <div id="modalCaptureArea" class="bg-white p-2">
+                <div class="modal-header border-0 px-4 pt-4">
                     <div>
-                        <h5 class="modal-title fw-bold text-dark" id="modalHeaderTitle">Work Details</h5>
-                        <span class="badge bg-light text-secondary border mt-2" id="modalTenderId"></span>
+                        <span class="badge rounded-pill mb-2" id="modalTenderId" style="background: #f1f5f9; color: var(--text-muted);"></span>
+                        <h4 class="modal-title fw-extrabold" id="modalWorkName"></h4>
                     </div>
-                    <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" id="closeModalBtn"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                
                 <div class="modal-body p-4">
-                    <div class="bg-light p-4 rounded-4 mb-4 border-start border-success border-5">
-                        <small class="detail-label text-success">Project Name</small>
-                        <h5 id="modalWorkName" class="fw-bold text-dark mt-1 mb-0 lh-base"></h5>
-                    </div>
                     <form id="editForm">
-                        <div id="modalContent" class="row g-4"></div>
+                        <div id="modalContent" class="row g-3"></div>
                     </form>
                 </div>
             </div>
-
-            <div class="modal-footer border-0 justify-content-center p-4 pt-0" id="actionArea">
-                <button id="shareBtn" class="btn btn-success px-4 py-2 rounded-3 fw-bold" onclick="shareWorkDetails()">
-                    <i class="fa-brands fa-whatsapp me-2"></i>Share Update
+            <div class="modal-footer border-0 p-4 pt-0 justify-content-start">
+                <button id="shareBtn" class="btn btn-dark px-4 py-2 rounded-pill fw-bold" onclick="shareWorkDetails()">
+                    <i class="fa-solid fa-share-nodes me-2"></i>Export Status
                 </button>
-                <button id="editToggleBtn" class="btn btn-dark px-4 py-2 rounded-3 fw-bold" onclick="enableEditMode()">
+                <button id="editToggleBtn" class="btn btn-outline-secondary px-4 py-2 rounded-pill fw-bold" onclick="enableEditMode()">
                     <i class="fa fa-edit me-2"></i>Edit
                 </button>
-                <button id="saveBtn" class="btn btn-primary px-5 py-2 rounded-3 fw-bold hidden" onclick="saveDetails()">
-                    <i class="fa fa-save me-2"></i>Save Changes
+                <button id="saveBtn" class="btn btn-primary px-5 py-2 rounded-pill fw-bold hidden" onclick="saveDetails()" style="background: var(--accent); border:none;">
+                    Confirm Updates
                 </button>
             </div>
         </div>
@@ -192,16 +254,8 @@
         document.getElementById('loadingOverlay').classList.add('hidden');
     }
 
-    function getDnitValue(item) {
-        const keys = ["DNIT Cost", "DNIT COST", "DNIT_Cost", "DNIT_AMOUNT", "DNIT AMOUNT"];
-        for(let k of keys) {
-            if(item[k] !== undefined && item[k] !== null && item[k] !== "") return item[k];
-        }
-        return 0;
-    }
-
     function formatCurrency(num) {
-        if (num === undefined || num === null || num === "-" || num === "0" || num === 0) return "₹0.00";
+        if (!num || num === "-" || num === 0) return "₹0.00";
         let val = num.toString().replace(/,/g, '').replace('₹', '').trim();
         return isNaN(parseFloat(val)) ? "₹" + num : '₹' + parseFloat(val).toLocaleString('en-IN', { minimumFractionDigits: 2 });
     }
@@ -214,7 +268,7 @@
         document.getElementById('count-pending').innerText = masterData.filter(d => d.computedStatus === 'Yet to be Allotted').length;
         
         let totalVal = inProg.reduce((acc, curr) => {
-            let cost = curr["Allotted Amount"] || getDnitValue(curr);
+            let cost = curr["Allotted Amount"] || curr["DNIT Cost"] || 0;
             let cleanCost = parseFloat(cost.toString().replace(/,/g, '').replace('₹','')) || 0;
             return acc + cleanCost;
         }, 0);
@@ -226,64 +280,46 @@
         const deck = document.getElementById('workDeck');
         deck.innerHTML = '';
         const filtered = currentFilter === 'All' ? masterData : masterData.filter(d => d.computedStatus === currentFilter);
-        const allowedBadges = ["UNDER DLP", "IN PROGRESS", "YET TO BE ALLOTTED", "LIVE TENDER"];
 
         filtered.forEach(item => {
-            const statusStr = (item.computedStatus || "").toUpperCase();
-            const showBadge = allowedBadges.includes(statusStr);
-            const dnitVal = getDnitValue(item);
+            const status = (item.computedStatus || "").toUpperCase();
             const tID = item.E_TENDERID || item.E_TenderID;
+            const cost = item["DNIT Cost"] || item["Allotted Amount"] || 0;
+            
+            // Modern Dynamic Colors
+            let badgeBg = "rgba(100, 116, 139, 0.1)";
+            let badgeColor = "#64748b";
+            
+            if(status === 'IN PROGRESS') { badgeBg = "rgba(16, 185, 129, 0.1)"; badgeColor = "#10b981"; }
+            else if(status === 'LIVE TENDER') { badgeBg = "rgba(99, 102, 241, 0.1)"; badgeColor = "#6366f1"; }
+            else if(status === 'YET TO BE ALLOTTED') { badgeBg = "rgba(245, 158, 11, 0.1)"; badgeColor = "#f59e0b"; }
 
-            const startDate = item["Agreement Start Date"];
-            const endDate = item["Agreement End Date"];
-            let durationText = "";
-            
-            if ((!startDate || startDate === "-" || startDate === "") && (!endDate || endDate === "-" || endDate === "")) {
-                durationText = `<span class="text-danger fw-bold">AWAITING ALLOTMENT</span>`;
-            } else {
-                durationText = `${startDate || '-'} to ${endDate || '-'}`;
-            }
-            
             const card = document.createElement('div');
             card.className = 'col-md-6 col-lg-4';
-            
-            // Badge logic for refreshed colors
-            let badgeStyle = `background:#f1f5f9; color:#475569;`;
-            if(statusStr === 'IN PROGRESS') badgeStyle = `background:#ecfdf5; color:#059669;`;
-            if(statusStr === 'LIVE TENDER') badgeStyle = `background:#eef2ff; color:#4f46e5;`;
-            if(statusStr === 'YET TO BE ALLOTTED') badgeStyle = `background:#fff7ed; color:#ea580c;`;
-
             card.innerHTML = `
-                <div class="card work-card shadow-sm" onclick="showModal('${tID}')">
+                <div class="card work-card" onclick="showModal('${tID}')">
                     <div class="card-body p-4">
-                        <div class="d-flex justify-content-between align-items-start mb-3">
-                            <span class="badge bg-light text-secondary border px-2 py-1">#${tID}</span>
-                            ${showBadge ? `<span class="status-badge" style="${badgeStyle}">${item.computedStatus}</span>` : ''}
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="status-badge" style="background:${badgeBg}; color:${badgeColor}">${status}</span>
+                            <small class="fw-bold opacity-25">#${tID}</small>
                         </div>
-                        <h6 class="fw-bold text-dark mb-4 lh-base" style="height:48px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;">${item["Work_Name"] || item["WORK NAME"]}</h6>
+                        <h6 class="fw-bold mb-4 lh-base" style="height:45px; overflow:hidden;">${item["Work_Name"] || item["WORK NAME"]}</h6>
                         
                         <div class="mb-4">
                             <div class="d-flex align-items-center mb-2">
-                                <div class="rounded-circle bg-light d-flex align-items-center justify-content-center me-2" style="width: 28px; height: 28px;">
-                                    <i class="fa-solid fa-user-tie text-secondary" style="font-size: 0.8rem;"></i>
-                                </div>
-                                <div class="detail-value m-0 text-truncate fw-semibold" style="font-size: 0.85rem;">${item["Agency_Name"] || 'Not Assigned'}</div>
-                            </div>
-                            
-                            <div class="d-flex align-items-center">
-                                <div class="rounded-circle bg-light d-flex align-items-center justify-content-center me-2" style="width: 28px; height: 28px;">
-                                    <i class="fa-solid fa-calendar-check text-secondary" style="font-size: 0.8rem;"></i>
-                                </div>
-                                <div class="fw-semibold text-dark" style="font-size: 0.85rem;">${durationText}</div>
+                                <i class="fa-solid fa-building-user me-2 opacity-50" style="font-size:0.8rem;"></i>
+                                <div class="detail-value text-truncate small">${item["Agency_Name"] || 'Awaiting Allocation'}</div>
                             </div>
                         </div>
 
-                        <div class="pt-3 border-top d-flex justify-content-between align-items-center">
+                        <div class="pt-3 border-top d-flex justify-content-between align-items-end">
                             <div>
-                                <div class="detail-label" style="color:var(--accent);">DNIT COST</div>
-                                <div class="fw-bold text-dark fs-5">${formatCurrency(dnitVal)}</div>
+                                <div class="detail-label">Valuation</div>
+                                <div class="price-tag">${formatCurrency(cost)}</div>
                             </div>
-                            <div class="btn btn-outline-secondary btn-sm rounded-circle border-0 bg-light"><i class="fa fa-chevron-right"></i></div>
+                            <div class="btn btn-light rounded-circle" style="width:40px; height:40px; display:grid; place-items:center;">
+                                <i class="fa fa-chevron-right small"></i>
+                            </div>
                         </div>
                     </div>
                 </div>`;
@@ -295,7 +331,7 @@
         currentTenderId = id;
         const item = masterData.find(d => (d.E_TENDERID || d.E_TenderID) == id);
         document.getElementById('modalWorkName').innerText = item["Work_Name"] || item["WORK NAME"];
-        document.getElementById('modalTenderId').innerText = "Ref ID: " + id;
+        document.getElementById('modalTenderId').innerText = "ID: " + id;
         
         const container = document.getElementById('modalContent');
         container.innerHTML = '';
@@ -303,23 +339,18 @@
 
         for (let key in item) {
             if (skip.includes(key.toLowerCase())) continue;
-            let val = item[key] || "";
-            const isCost = key.toLowerCase().includes('cost') || key.toLowerCase().includes('amount');
-            const isLocked = (val && val !== "-" && val !== "0" && val !== "0.00") ? "readonly" : "";
-            
+            let val = item[key] || "—";
             container.innerHTML += `
                 <div class="col-md-4 col-6">
-                    <div class="p-2">
-                        <div class="detail-label">${key.replace(/_/g, ' ')}</div>
-                        <div class="detail-value field-view">${isCost ? formatCurrency(val) : val}</div>
-                        <input type="text" name="${key}" class="edit-input hidden field-edit" value="${val}" ${isLocked} 
-                               style="border-radius:10px; border:1px solid #cbd5e1; padding:8px; width:100%;">
+                    <div class="p-3 border rounded-4 bg-light bg-opacity-50">
+                        <div class="detail-label text-nowrap">${key.replace(/_/g, ' ')}</div>
+                        <div class="detail-value field-view">${key.toLowerCase().includes('cost') ? formatCurrency(val) : val}</div>
+                        <input type="text" name="${key}" class="form-control field-edit hidden" value="${val}">
                     </div>
                 </div>`;
         }
         document.getElementById('editToggleBtn').classList.remove('hidden');
         document.getElementById('saveBtn').classList.add('hidden');
-        document.getElementById('shareBtn').classList.remove('hidden');
         new bootstrap.Modal(document.getElementById('workModal')).show();
     }
 
@@ -327,73 +358,53 @@
         document.querySelectorAll('.field-view').forEach(el => el.classList.add('hidden'));
         document.querySelectorAll('.field-edit').forEach(el => el.classList.remove('hidden'));
         document.getElementById('editToggleBtn').classList.add('hidden');
-        document.getElementById('shareBtn').classList.add('hidden');
         document.getElementById('saveBtn').classList.remove('hidden');
     }
 
     function filterData(f) { 
         currentFilter = f; 
-        document.getElementById('viewTitle').innerText = (f === 'All') ? "All Works Portfolio" : f; 
+        document.getElementById('viewTitle').innerText = (f === 'All') ? "All Projects" : f; 
         renderDeck(); 
     }
 
     function searchWorks() {
         const query = document.getElementById('searchInput').value.toLowerCase();
+        const filtered = masterData.filter(d => JSON.stringify(d).toLowerCase().includes(query));
+        renderFilteredDeck(filtered);
+    }
+
+    function renderFilteredDeck(data) {
         const deck = document.getElementById('workDeck');
         deck.innerHTML = '';
-        const filtered = masterData.filter(d => JSON.stringify(d).toLowerCase().includes(query));
-        
-        filtered.forEach(item => {
+        data.forEach(item => {
             const tID = item.E_TENDERID || item.E_TenderID;
-            const dnitVal = getDnitValue(item);
             const card = document.createElement('div');
             card.className = 'col-md-6 col-lg-4';
             card.innerHTML = `
-                <div class="card work-card shadow-sm" onclick="showModal('${tID}')">
-                    <div class="card-body p-4">
-                        <h6 class="fw-bold text-dark mb-4 lh-base">${item["Work_Name"] || item["WORK NAME"]}</h6>
-                        <div class="pt-3 border-top"><div class="detail-label">DNIT COST</div><div class="fw-bold text-dark fs-5">${formatCurrency(dnitVal)}</div></div>
-                    </div>
+                <div class="card work-card p-4" onclick="showModal('${tID}')">
+                    <h6 class="fw-bold mb-3">${item["Work_Name"] || item["WORK NAME"]}</h6>
+                    <div class="price-tag">${formatCurrency(item["DNIT Cost"] || 0)}</div>
                 </div>`;
             deck.appendChild(card);
         });
     }
 
     async function shareWorkDetails() {
-        const modal = document.getElementById('workModal');
         const capture = document.getElementById('modalCaptureArea');
-        const actions = document.getElementById('actionArea');
-        const close = document.getElementById('closeModalBtn');
-        
-        modal.classList.add('capturing');
-        actions.style.display = 'none';
-        close.style.opacity = '0';
-
         try {
-            const canvas = await html2canvas(capture, { 
-                scale: 2, 
-                useCORS: true,
-                backgroundColor: "#ffffff"
-            });
-            
+            const canvas = await html2canvas(capture, { scale: 2, backgroundColor: "#ffffff" });
             canvas.toBlob(blob => {
-                const file = new File([blob], `Work_${currentTenderId}.png`, { type: "image/png" });
+                const file = new File([blob], `Project_${currentTenderId}.png`, { type: "image/png" });
                 if (navigator.share) {
-                    navigator.share({ title: 'Work Status - MC Charkhi Dadri', files: [file] }).catch(e => console.log(e));
+                    navigator.share({ files: [file] });
                 } else {
                     const link = document.createElement('a');
                     link.href = URL.createObjectURL(blob);
-                    link.download = `Work_${currentTenderId}.png`;
+                    link.download = `Project_${currentTenderId}.png`;
                     link.click();
                 }
             }, 'image/png');
-        } catch (err) {
-            console.error("Capture failed", err);
-        } finally {
-            modal.classList.remove('capturing');
-            actions.style.display = 'flex';
-            close.style.opacity = '1';
-        }
+        } catch (err) { console.error(err); }
     }
 
     async function saveDetails() {
