@@ -210,7 +210,6 @@
             const dnitVal = getDnitValue(item);
             const tID = item.E_TENDERID || item.E_TenderID;
 
-            // Date logic for "Awaiting Allotment"
             const startDate = item["Agreement Start Date"];
             const endDate = item["Agreement End Date"];
             let durationText = "";
@@ -233,7 +232,6 @@
                         <h6 class="fw-bold text-dark mb-4 lh-base" style="height:48px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;">${item["Work_Name"] || item["WORK NAME"]}</h6>
                         
                         <div class="mb-4">
-                            <!-- Agency Row -->
                             <div class="d-flex align-items-center mb-2">
                                 <div class="rounded-circle bg-primary-subtle d-flex align-items-center justify-content-center me-2" style="width: 28px; height: 28px;">
                                     <i class="fa-solid fa-user-tie text-primary" style="font-size: 0.85rem;"></i>
@@ -241,7 +239,6 @@
                                 <div class="detail-value m-0 text-truncate fw-semibold" style="font-size: 0.85rem;">${item["Agency_Name"] || 'Not Assigned'}</div>
                             </div>
                             
-                            <!-- Duration Row -->
                             <div class="d-flex align-items-center">
                                 <div class="rounded-circle bg-warning-subtle d-flex align-items-center justify-content-center me-2" style="width: 28px; height: 28px;">
                                     <i class="fa-solid fa-calendar-days text-warning" style="font-size: 0.85rem;"></i>
@@ -272,7 +269,9 @@
         
         const container = document.getElementById('modalContent');
         container.innerHTML = '';
-        const skip = ['work_name', 'work name', 'rowindex', 'computedstatus'];
+        
+        // Tender ID aur E_TenderID ko list se hide karne ke liye skip array mein add kiya
+        const skip = ['work_name', 'work name', 'rowindex', 'computedstatus', 'e_tenderid', 'tender id', 'e_tender id'];
 
         for (let key in item) {
             if (skip.includes(key.toLowerCase())) continue;
@@ -385,4 +384,3 @@
 </script>
 </body>
 </html>
-```[cite: 1]
