@@ -54,36 +54,38 @@
 </nav>
 
 <div class="container-fluid py-4 px-lg-5">
-    <!-- Updated Stats Section with 5 Columns for DLP -->
+    
+    <!-- Updated Stats Section: DLP Moved to 5th Position -->
     <div class="row g-3 mb-4">
-        <div class="col-md-2 col-6" onclick="filterData('All')">
+        <div class="col-md col-6" onclick="filterData('All')">
             <div class="card card-stats p-3 shadow-sm" style="border-bottom-color: #64748b;">
                 <small class="detail-label">Total</small>
                 <h3 id="count-all" class="fw-bold m-0">0</h3>
             </div>
         </div>
-        <div class="col-md-2 col-6" onclick="filterData('In Progress')">
+        <div class="col-md col-6" onclick="filterData('In Progress')">
             <div class="card card-stats p-3 shadow-sm" style="border-bottom-color: #10b981;">
                 <small class="detail-label text-success">Progress</small>
                 <h3 id="count-progress" class="fw-bold m-0 text-success">0</h3>
             </div>
         </div>
-        <div class="col-md-3 col-6" onclick="filterData('Under DLP')">
-            <div class="card card-stats p-3 shadow-sm" style="border-bottom-color: #6366f1;">
-                <small class="detail-label text-primary">Under DLP</small>
-                <h3 id="count-dlp" class="fw-bold m-0" style="color:#6366f1;">0</h3>
-            </div>
-        </div>
-        <div class="col-md-2 col-6" onclick="filterData('Live Tender')">
+        <div class="col-md col-6" onclick="filterData('Live Tender')">
             <div class="card card-stats p-3 shadow-sm" style="border-bottom-color: #3b82f6;">
                 <small class="detail-label text-primary">Live</small>
                 <h3 id="count-live" class="fw-bold m-0 text-primary">0</h3>
             </div>
         </div>
-        <div class="col-md-3 col-6" onclick="filterData('Yet to be Allotted')">
+        <div class="col-md col-6" onclick="filterData('Yet to be Allotted')">
             <div class="card card-stats p-3 shadow-sm" style="border-bottom-color: #f59e0b;">
                 <small class="detail-label text-warning">Pending</small>
                 <h3 id="count-pending" class="fw-bold m-0 text-warning">0</h3>
+            </div>
+        </div>
+        <!-- Under DLP is now the 5th card on the right -->
+        <div class="col-md col-6" onclick="filterData('Under DLP')">
+            <div class="card card-stats p-3 shadow-sm" style="border-bottom-color: #6366f1;">
+                <small class="detail-label text-primary">Under DLP</small>
+                <h3 id="count-dlp" class="fw-bold m-0" style="color:#6366f1;">0</h3>
             </div>
         </div>
     </div>
@@ -229,7 +231,6 @@
                 durationText = `${startDate || '-'} to ${endDate || '-'}`;
             }
 
-            // Status Colors Logic
             let badgeBg = '#fef3c7', badgeColor = '#92400e';
             if(statusStr === 'IN PROGRESS') { badgeBg = '#dcfce7'; badgeColor = '#166534'; }
             else if(statusStr === 'UNDER DLP') { badgeBg = '#e0e7ff'; badgeColor = '#3730a3'; }
