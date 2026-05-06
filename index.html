@@ -34,8 +34,17 @@
         .hidden { display: none !important; }
         
         /* Modal Fix for long details */
-        .modal-body { max-height: 70vh; overflow-y: auto; }
-        #modalCaptureArea { background: white; }
+        /* Purani .modal-body line hata kar ye likho */
+.modal-body { 
+    max-height: none !important; 
+    overflow: visible !important; 
+}
+
+/* Purani #modalCaptureArea line ko replace karo */
+#modalCaptureArea { 
+    background: #ffffff !important; 
+    width: 100%;
+}
     </style>
 </head>
 <body>
@@ -291,21 +300,25 @@
         });
     }
 
-    async function shareWorkDetails() {
-        const capture = document.getElementById('modalCaptureArea');
-        const actions = document.getElementById('actionArea');
-        const close = document.getElementById('closeModalBtn');
-        
-        actions.style.display = 'none';
-        close.style.opacity = '0';
+async function shareWorkDetails() {
+    const capture = document.getElementById('modalCaptureArea');
+    const actions = document.getElementById('actionArea');
+    
+    actions.style.display = 'none'; // Buttons hide karo
+    window.scrollTo(0,0); // Scroll position reset karo
 
-        const canvas = await html2canvas(capture, { 
-            scale: 2, 
-            useCORS: true,
-            windowHeight: capture.scrollHeight 
-        });
-        
-        actions.style.display = 'flex';
+    const canvas = await html2canvas(capture, { 
+        scale: 2, 
+        useCORS: true,
+        backgroundColor: "#ffffff",
+        height: capture.scrollHeight, // YE SABSE JARURI HAI: Poori height capture ke liye
+        windowHeight: capture.scrollHeight
+    });
+    
+    actions.style.display = 'flex'; // Buttons wapas dikhao
+    
+    // ... baki ka blob aur share logic wahi rahega
+}
         close.style.opacity = '1';
         
         canvas.toBlob(blob => {
