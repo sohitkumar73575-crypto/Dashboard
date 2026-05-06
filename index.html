@@ -33,18 +33,14 @@
         #loadingOverlay { position: fixed; inset: 0; background: rgba(255,255,255,0.95); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .hidden { display: none !important; }
         
-        /* Modal Fix for long details */
-        /* Purani .modal-body line hata kar ye likho */
-.modal-body { 
-    max-height: none !important; 
-    overflow: visible !important; 
-}
-
-/* Purani #modalCaptureArea line ko replace karo */
-#modalCaptureArea { 
-    background: #ffffff !important; 
-    width: 100%;
-}
+        /* Fixed Modal Styles for Screenshot */
+        .modal-body { max-height: 70vh; overflow-y: auto; }
+        
+        /* Jab screenshot liya jaye tab full content dikhe */
+        .capturing .modal-body { max-height: none !important; overflow: visible !important; }
+        .capturing .modal-dialog { max-width: none !important; margin: 0 !important; }
+        
+        #modalCaptureArea { background: white; width: 100%; }
     </style>
 </head>
 <body>
@@ -116,7 +112,7 @@
 <!-- Modal Structure -->
 <div class="modal fade" id="workModal" tabindex="-1">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden" id="modalMainContent">
             <div id="modalCaptureArea">
                 <div class="modal-header border-0 pb-0 px-4 pt-4 d-flex justify-content-between align-items-start">
                     <div>
@@ -172,7 +168,6 @@
         document.getElementById('loadingOverlay').classList.add('hidden');
     }
 
-    // Amount zero na aaye isliye multi-key check
     function getDnitCost(item) {
         return item["DNIT Cost"] || item["DNIT_Cost"] || item["DNIT_AMOUNT"] || item["DNIT AMOUNT"] || 0;
     }
@@ -238,7 +233,6 @@
         const container = document.getElementById('modalContent');
         container.innerHTML = '';
         
-        // Items skip list minimal rakhi hai taaki sab dikhe
         const skip = ['work_name', 'work name', 'rowindex', 'computedstatus'];
 
         for (let key in item) {
@@ -300,38 +294,45 @@
         });
     }
 
-async function shareWorkDetails() {
-    const capture = document.getElementById('modalCaptureArea');
-    const actions = document.getElementById('actionArea');
-    
-    actions.style.display = 'none'; // Buttons hide karo
-    window.scrollTo(0,0); // Scroll position reset karo
-
-    const canvas = await html2canvas(capture, { 
-        scale: 2, 
-        useCORS: true,
-        backgroundColor: "#ffffff",
-        height: capture.scrollHeight, // YE SABSE JARURI HAI: Poori height capture ke liye
-        windowHeight: capture.scrollHeight
-    });
-    
-    actions.style.display = 'flex'; // Buttons wapas dikhao
-    
-    // ... baki ka blob aur share logic wahi rahega
-}
-        close.style.opacity = '1';
+    async function shareWorkDetails() {
+        const modal = document.getElementById('workModal');
+        const capture = document.getElementById('modalCaptureArea');
+        const actions = document.getElementById('actionArea');
+        const close = document.getElementById('closeModalBtn');
         
-        canvas.toBlob(blob => {
-            const file = new File([blob], `Update_${currentTenderId}.png`, { type: "image/png" });
-            if (navigator.share) {
-                navigator.share({ title: 'Work Update', files: [file] });
-            } else {
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
-                link.download = `Work_Update_${currentTenderId}.png`;
-                link.click();
-            }
-        });
+        // Modal ko capture mode mein dalo taaki scrollbar hat jaye aur poora content dikhe
+        modal.classList.add('capturing');
+        actions.style.display = 'none';
+        close.style.opacity = '0';
+
+        try {
+            const canvas = await html2canvas(capture, { 
+                scale: 2, 
+                useCORS: true,
+                backgroundColor: "#ffffff",
+                height: capture.scrollHeight,
+                windowHeight: capture.scrollHeight
+            });
+            
+            canvas.toBlob(blob => {
+                const file = new File([blob], `Work_${currentTenderId}.png`, { type: "image/png" });
+                if (navigator.share) {
+                    navigator.share({ title: 'Work Status Update', files: [file] }).catch(e => console.log(e));
+                } else {
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = `Work_${currentTenderId}.png`;
+                    link.click();
+                }
+            }, 'image/png');
+        } catch (err) {
+            console.error("Capture failed", err);
+        } finally {
+            // Restore UI
+            modal.classList.remove('capturing');
+            actions.style.display = 'flex';
+            close.style.opacity = '1';
+        }
     }
 
     async function saveDetails() {
