@@ -21,7 +21,7 @@
         /* Investment Banner */
         .investment-banner { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; border-radius: 24px; border: 1px solid rgba(255,255,255,0.1); }
         
-        /* Work Cards - Original Design Requested */
+        /* Work Cards */
         .work-card { background: white; border-radius: 24px; border: 1px solid rgba(226, 232, 240, 0.8); transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); cursor: pointer; overflow: hidden; height: 100%; display: flex; flex-direction: column; position: relative; }
         .work-card:hover { transform: translateY(-10px); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.12); border-color: var(--accent); }
         
@@ -168,8 +168,17 @@
         document.getElementById('loadingOverlay').classList.add('hidden');
     }
 
+    // Helper to find DNIT value from multiple possible keys
+    function getDnitValue(item) {
+        const keys = ["DNIT Cost", "DNIT COST", "DNIT_Cost", "DNIT_AMOUNT", "DNIT AMOUNT"];
+        for(let k of keys) {
+            if(item[k] !== undefined && item[k] !== null && item[k] !== "") return item[k];
+        }
+        return 0;
+    }
+
     function formatCurrency(num) {
-        if (!num || num === "-" || num === "0") return "₹0.00";
+        if (num === undefined || num === null || num === "-" || num === "0" || num === 0) return "₹0.00";
         let val = num.toString().replace(/,/g, '').replace('₹', '').trim();
         return isNaN(parseFloat(val)) ? "₹" + num : '₹' + parseFloat(val).toLocaleString('en-IN', { minimumFractionDigits: 2 });
     }
@@ -182,7 +191,7 @@
         document.getElementById('count-pending').innerText = masterData.filter(d => d.computedStatus === 'Yet to be Allotted').length;
         
         let totalVal = inProg.reduce((acc, curr) => {
-            let cost = curr["Allotted Amount"] || curr["DNIT Cost"] || 0;
+            let cost = curr["Allotted Amount"] || getDnitValue(curr);
             let cleanCost = parseFloat(cost.toString().replace(/,/g, '').replace('₹','')) || 0;
             return acc + cleanCost;
         }, 0);
@@ -194,12 +203,12 @@
         const deck = document.getElementById('workDeck');
         deck.innerHTML = '';
         const filtered = currentFilter === 'All' ? masterData : masterData.filter(d => d.computedStatus === currentFilter);
-        const allowedBadges = ["UNDER DLP", "IN PROGRESS", "YET TO BE ALLOTTED"];
+        const allowedBadges = ["UNDER DLP", "IN PROGRESS", "YET TO BE ALLOTTED", "LIVE TENDER"];
 
         filtered.forEach(item => {
             const statusStr = (item.computedStatus || "").toUpperCase();
             const showBadge = allowedBadges.includes(statusStr);
-            const dnitVal = item["DNIT Cost"] || 0;
+            const dnitVal = getDnitValue(item); // Fixed line
             const tID = item.E_TENDERID || item.E_TenderID;
             
             const card = document.createElement('div');
@@ -282,13 +291,14 @@
         
         filtered.forEach(item => {
             const tID = item.E_TENDERID || item.E_TenderID;
+            const dnitVal = getDnitValue(item);
             const card = document.createElement('div');
             card.className = 'col-md-6 col-lg-4';
             card.innerHTML = `
                 <div class="card work-card shadow-sm" onclick="showModal('${tID}')">
                     <div class="card-body p-4">
                         <h6 class="fw-bold text-dark mb-4 lh-base">${item["Work_Name"] || item["WORK NAME"]}</h6>
-                        <div class="pt-3 border-top"><div class="detail-label">DNIT COST</div><div class="fw-bold text-primary fs-5">${formatCurrency(item["DNIT Cost"])}</div></div>
+                        <div class="pt-3 border-top"><div class="detail-label">DNIT COST</div><div class="fw-bold text-primary fs-5">${formatCurrency(dnitVal)}</div></div>
                     </div>
                 </div>`;
             deck.appendChild(card);
