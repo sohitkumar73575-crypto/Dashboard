@@ -25,13 +25,17 @@
         .status-badge { font-size: 0.7rem; padding: 6px 16px; border-radius: 100px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
         
         .detail-label { font-size: 0.65rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 1px; }
-        .detail-value { font-size: 0.95rem; color: #0f172a; font-weight: 600; margin-bottom: 12px; line-height: 1.4; }
+        .detail-value { font-size: 0.95rem; color: #0f172a; font-weight: 600; margin-bottom: 12px; line-height: 1.4; word-break: break-all; }
         
         .edit-input { border-radius: 10px; border: 1px solid #cbd5e1; padding: 10px 14px; font-weight: 600; width: 100%; margin-bottom: 10px; }
         .edit-input[readonly] { background-color: #f1f5f9; color: #64748b; cursor: not-allowed; }
 
         #loadingOverlay { position: fixed; inset: 0; background: rgba(255,255,255,0.95); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .hidden { display: none !important; }
+        
+        /* Modal Fix for long details */
+        .modal-body { max-height: 70vh; overflow-y: auto; }
+        #modalCaptureArea { background: white; }
     </style>
 </head>
 <body>
@@ -46,7 +50,7 @@
 </nav>
 
 <div class="container-fluid py-4 px-lg-5">
-    <!-- Stats -->
+    <!-- Stats Section -->
     <div class="row g-4 mb-4">
         <div class="col-6 col-md-3" onclick="filterData('All')">
             <div class="card card-stats p-4 shadow-sm" style="border-bottom-color: #64748b;">
@@ -74,7 +78,7 @@
         </div>
     </div>
 
-    <!-- Banner -->
+    <!-- Investment Banner -->
     <div class="investment-banner p-4 p-md-5 mb-5 shadow-lg d-flex flex-column flex-md-row justify-content-between align-items-center">
         <div>
             <h3 class="fw-bold mb-1"><i class="fa-solid fa-chart-line me-2 text-success"></i>Ongoing Works Status</h3>
@@ -86,7 +90,7 @@
         </div>
     </div>
 
-    <!-- Search -->
+    <!-- Search and Title -->
     <div class="row mb-4 align-items-center">
         <div class="col-md-6"><h3 id="viewTitle" class="fw-bold text-dark m-0">All Works</h3></div>
         <div class="col-md-6">
@@ -100,12 +104,11 @@
     <div id="workDeck" class="row g-4"></div>
 </div>
 
-<!-- Modal -->
+<!-- Modal Structure -->
 <div class="modal fade" id="workModal" tabindex="-1">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
-            <!-- Capture Area Wraps Header + Body -->
-            <div id="modalCaptureArea" style="background: white; padding-bottom: 20px;">
+            <div id="modalCaptureArea">
                 <div class="modal-header border-0 pb-0 px-4 pt-4 d-flex justify-content-between align-items-start">
                     <div>
                         <h5 class="modal-title fw-bold text-dark" id="modalHeaderTitle">Work Details</h5>
@@ -125,7 +128,6 @@
                 </div>
             </div>
 
-            <!-- Action Area is NOT captured -->
             <div class="modal-footer border-0 justify-content-center p-4 pt-0" id="actionArea">
                 <button id="shareBtn" class="btn btn-success px-4 py-2 rounded-3 fw-bold" onclick="shareWorkDetails()">
                     <i class="fa-brands fa-whatsapp me-2"></i>Share Status
@@ -161,10 +163,15 @@
         document.getElementById('loadingOverlay').classList.add('hidden');
     }
 
+    // Amount zero na aaye isliye multi-key check
+    function getDnitCost(item) {
+        return item["DNIT Cost"] || item["DNIT_Cost"] || item["DNIT_AMOUNT"] || item["DNIT AMOUNT"] || 0;
+    }
+
     function formatCurrency(num) {
         if (!num || num === "-" || num === "0") return "₹0.00";
         let val = num.toString().replace(/,/g, '').replace('₹', '').trim();
-        return isNaN(parseFloat(val)) ? num : '₹' + parseFloat(val).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+        return isNaN(parseFloat(val)) ? "₹" + num : '₹' + parseFloat(val).toLocaleString('en-IN', { minimumFractionDigits: 2 });
     }
 
     function updateDashboard() {
@@ -175,8 +182,9 @@
         document.getElementById('count-pending').innerText = masterData.filter(d => d.computedStatus === 'Yet to be Allotted').length;
         
         let totalVal = inProg.reduce((acc, curr) => {
-            let cost = curr["Allotted Amount"] || curr["DNIT Cost"] || 0;
-            return acc + (parseFloat(cost.toString().replace(/,/g, '').replace('₹','')) || 0);
+            let cost = curr["Allotted Amount"] || getDnitCost(curr);
+            let cleanCost = parseFloat(cost.toString().replace(/,/g, '').replace('₹','')) || 0;
+            return acc + cleanCost;
         }, 0);
         document.getElementById('total-progress-amount').innerText = formatCurrency(totalVal);
         renderDeck();
@@ -186,11 +194,13 @@
         const deck = document.getElementById('workDeck');
         deck.innerHTML = '';
         const filtered = currentFilter === 'All' ? masterData : masterData.filter(d => d.computedStatus === currentFilter);
-        const allowedBadges = ["UNDER DLP", "IN PROGRESS", "YET TO BE ALLOTTED"];
+        const allowedBadges = ["UNDER DLP", "IN PROGRESS", "YET TO BE ALLOTTED", "LIVE TENDER"];
 
         filtered.forEach(item => {
             const statusStr = (item.computedStatus || "").toUpperCase();
             const showBadge = allowedBadges.includes(statusStr);
+            const dnitVal = getDnitCost(item);
+            
             const card = document.createElement('div');
             card.className = 'col-md-6 col-lg-4';
             card.innerHTML = `
@@ -202,7 +212,7 @@
                         </div>
                         <h6 class="fw-bold text-dark mb-4 lh-base" style="height:48px; overflow:hidden;">${item["Work_Name"] || item["WORK NAME"]}</h6>
                         <div class="pt-3 border-top d-flex justify-content-between align-items-center">
-                            <div><div class="detail-label">DNIT COST</div><div class="fw-bold text-primary fs-5">${formatCurrency(item["DNIT Cost"])}</div></div>
+                            <div><div class="detail-label">DNIT COST</div><div class="fw-bold text-primary fs-5">${formatCurrency(dnitVal)}</div></div>
                             <div class="btn btn-outline-primary btn-sm rounded-circle"><i class="fa fa-arrow-right"></i></div>
                         </div>
                     </div>
@@ -218,16 +228,24 @@
         document.getElementById('modalTenderId').innerText = "Tender ID: " + id;
         const container = document.getElementById('modalContent');
         container.innerHTML = '';
-        const skip = ['work_name', 'work name', 'rowindex', 'row_index', 'computedstatus', 'e_tenderid', 'e_tender id'];
+        
+        // Items skip list minimal rakhi hai taaki sab dikhe
+        const skip = ['work_name', 'work name', 'rowindex', 'computedstatus'];
 
         for (let key in item) {
-            if (skip.includes(key.toLowerCase().replace(/_/g, ' '))) continue;
+            if (skip.includes(key.toLowerCase())) continue;
             let val = item[key] || "";
             const isCost = key.toLowerCase().includes('cost') || key.toLowerCase().includes('amount');
-            const isLocked = (val && val !== "-" && val !== "0" && val !== "0.00") ? "readonly" : "";
-            container.innerHTML += `<div class="col-md-4 col-6"><div class="p-2"><div class="detail-label">${key.replace(/_/g, ' ')}</div>
-                <div class="detail-value field-view">${isCost ? formatCurrency(val) : val}</div>
-                <input type="text" name="${key}" class="edit-input hidden field-edit" value="${val}" ${isLocked}></div></div>`;
+            const isLocked = (val && val !== "-" && val !== "0") ? "readonly" : "";
+            
+            container.innerHTML += `
+                <div class="col-md-4 col-6">
+                    <div class="p-2">
+                        <div class="detail-label">${key.replace(/_/g, ' ')}</div>
+                        <div class="detail-value field-view">${isCost ? formatCurrency(val) : val}</div>
+                        <input type="text" name="${key}" class="edit-input hidden field-edit" value="${val}" ${isLocked}>
+                    </div>
+                </div>`;
         }
         document.getElementById('editToggleBtn').classList.remove('hidden');
         document.getElementById('saveBtn').classList.add('hidden');
@@ -244,7 +262,11 @@
         document.getElementById('saveBtn').classList.remove('hidden');
     }
 
-    function filterData(f) { currentFilter = f; document.getElementById('viewTitle').innerText = (f === 'All') ? "All Works" : f; renderDeck(); }
+    function filterData(f) { 
+        currentFilter = f; 
+        document.getElementById('viewTitle').innerText = (f === 'All') ? "All Works" : f; 
+        renderDeck(); 
+    }
 
     function searchWorks() {
         const query = document.getElementById('searchInput').value.toLowerCase();
@@ -255,23 +277,14 @@
     function renderDeckWithData(data) {
         const deck = document.getElementById('workDeck');
         deck.innerHTML = '';
-        const allowedBadges = ["UNDER DLP", "IN PROGRESS", "YET TO BE ALLOTTED"];
         data.forEach(item => {
-            const statusStr = (item.computedStatus || "").toUpperCase();
-            const showBadge = allowedBadges.includes(statusStr);
+            const dnitVal = getDnitCost(item);
             const card = document.createElement('div');
             card.className = 'col-md-6 col-lg-4';
             card.innerHTML = `<div class="card work-card shadow-sm" onclick="showModal('${item.E_TENDERID || item.E_TenderID}')">
                 <div class="card-body p-4">
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <span class="badge bg-light text-secondary border px-2 py-1">#${item.E_TENDERID || item.E_TenderID}</span>
-                        ${showBadge ? `<span class="status-badge" style="background:${statusStr==='IN PROGRESS'?'#dcfce7':'#fef3c7'}; color:${statusStr==='IN PROGRESS'?'#166534':'#92400e'}">${item.computedStatus}</span>` : ''}
-                    </div>
-                    <h6 class="fw-bold text-dark mb-4 lh-base" style="height:48px; overflow:hidden;">${item["Work_Name"] || item["WORK NAME"]}</h6>
-                    <div class="pt-3 border-top d-flex justify-content-between align-items-center">
-                        <div><div class="detail-label">DNIT COST</div><div class="fw-bold text-primary fs-5">${formatCurrency(item["DNIT Cost"])}</div></div>
-                        <div class="btn btn-outline-primary btn-sm rounded-circle"><i class="fa fa-arrow-right"></i></div>
-                    </div>
+                    <h6 class="fw-bold text-dark mb-4 lh-base">${item["Work_Name"] || item["WORK NAME"]}</h6>
+                    <div class="pt-3 border-top"><div class="detail-label">DNIT COST</div><div class="fw-bold text-primary fs-5">${formatCurrency(dnitVal)}</div></div>
                 </div>
             </div>`;
             deck.appendChild(card);
@@ -282,8 +295,9 @@
         const capture = document.getElementById('modalCaptureArea');
         const actions = document.getElementById('actionArea');
         const close = document.getElementById('closeModalBtn');
-        actions.classList.add('hidden');
-        close.classList.add('hidden');
+        
+        actions.style.display = 'none';
+        close.style.opacity = '0';
 
         const canvas = await html2canvas(capture, { 
             scale: 2, 
@@ -291,13 +305,13 @@
             windowHeight: capture.scrollHeight 
         });
         
-        actions.classList.remove('hidden');
-        close.classList.remove('hidden');
+        actions.style.display = 'flex';
+        close.style.opacity = '1';
         
         canvas.toBlob(blob => {
-            const file = new File([blob], `MC_Work_${currentTenderId}.png`, { type: "image/png" });
+            const file = new File([blob], `Update_${currentTenderId}.png`, { type: "image/png" });
             if (navigator.share) {
-                navigator.share({ title: 'Work Progress Update', files: [file] });
+                navigator.share({ title: 'Work Update', files: [file] });
             } else {
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(blob);
