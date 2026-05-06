@@ -117,7 +117,6 @@
                 <div class="modal-header border-0 pb-0 px-4 pt-4 d-flex justify-content-between align-items-start">
                     <div>
                         <h5 class="modal-title fw-bold text-dark" id="modalHeaderTitle">Work Details</h5>
-                        <span class="badge bg-primary-subtle text-primary mt-2" id="modalTenderId"></span>
                     </div>
                     <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" id="closeModalBtn"></button>
                 </div>
@@ -264,14 +263,13 @@
         currentTenderId = id;
         const item = masterData.find(d => (d.E_TENDERID || d.E_TenderID) == id);
         document.getElementById('modalWorkName').innerText = item["Work_Name"] || item["WORK NAME"];
-        document.getElementById('modalTenderId').innerText = "Tender ID: " + id;
         document.getElementById('modalHeaderTitle').innerText = "Work Details";
         
         const container = document.getElementById('modalContent');
         container.innerHTML = '';
         
-        // Tender ID aur E_TenderID ko list se hide karne ke liye skip array mein add kiya
-        const skip = ['work_name', 'work name', 'rowindex', 'computedstatus', 'e_tenderid', 'tender id', 'e_tender id'];
+        // Tender ID ko list mein dikhane ke liye skip array se hata diya hai
+        const skip = ['work_name', 'work name', 'rowindex', 'computedstatus'];
 
         for (let key in item) {
             if (skip.includes(key.toLowerCase())) continue;
