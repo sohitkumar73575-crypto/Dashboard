@@ -168,7 +168,6 @@
         document.getElementById('loadingOverlay').classList.add('hidden');
     }
 
-    // Helper to find DNIT value from multiple possible keys
     function getDnitValue(item) {
         const keys = ["DNIT Cost", "DNIT COST", "DNIT_Cost", "DNIT_AMOUNT", "DNIT AMOUNT"];
         for(let k of keys) {
@@ -208,8 +207,19 @@
         filtered.forEach(item => {
             const statusStr = (item.computedStatus || "").toUpperCase();
             const showBadge = allowedBadges.includes(statusStr);
-            const dnitVal = getDnitValue(item); // Fixed line
+            const dnitVal = getDnitValue(item);
             const tID = item.E_TENDERID || item.E_TenderID;
+
+            // Date logic for "Awaiting Allotment"
+            const startDate = item["Agreement Start Date"];
+            const endDate = item["Agreement End Date"];
+            let durationText = "";
+            
+            if ((!startDate || startDate === "-" || startDate === "") && (!endDate || endDate === "-" || endDate === "")) {
+                durationText = `<span class="text-danger fw-bold">AWAITING ALLOTMENT</span>`;
+            } else {
+                durationText = `${startDate || '-'} to ${endDate || '-'}`;
+            }
             
             const card = document.createElement('div');
             card.className = 'col-md-6 col-lg-4';
@@ -225,7 +235,7 @@
                             <div class="detail-label"><i class="fa-solid fa-user-tie me-1"></i> Agency</div>
                             <div class="detail-value text-truncate">${item["Agency_Name"] || 'Not Assigned'}</div>
                             <div class="detail-label"><i class="fa-solid fa-calendar me-1"></i> Duration</div>
-                            <div class="fw-semibold small">${item["Agreement Start Date"] || '-'} to ${item["Agreement End Date"] || '-'}</div>
+                            <div class="fw-semibold small">${durationText}</div>
                         </div>
                         <div class="pt-3 border-top d-flex justify-content-between align-items-center">
                             <div><div class="detail-label" style="color:var(--accent);">DNIT COST</div><div class="fw-bold text-primary fs-5">${formatCurrency(dnitVal)}</div></div>
