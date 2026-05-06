@@ -15,7 +15,7 @@
         .navbar-brand { font-weight: 800; letter-spacing: 1px; color: #f1f5f9 !important; }
         
         /* Stats Cards */
-        .card-stats { border: none; border-radius: 20px; background: white; transition: 0.3s; border-bottom: 5px solid transparent; cursor: pointer; position: relative; overflow: hidden; }
+        .card-stats { border: none; border-radius: 20px; background: white; transition: 0.3s; border-bottom: 5px solid transparent; cursor: pointer; position: relative; overflow: hidden; height: 100%; }
         .card-stats:hover { transform: translateY(-7px); box-shadow: 0 15px 30px rgba(0,0,0,0.08); }
         
         /* Investment Banner */
@@ -36,7 +36,6 @@
         #loadingOverlay { position: fixed; inset: 0; background: rgba(255,255,255,0.95); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .hidden { display: none !important; }
         
-        /* Modal Screenshot Fixes */
         .modal-body { max-height: 70vh; overflow-y: auto; }
         .capturing .modal-body { max-height: none !important; overflow: visible !important; }
         .capturing .modal-dialog { max-width: none !important; margin: 0 !important; }
@@ -55,30 +54,36 @@
 </nav>
 
 <div class="container-fluid py-4 px-lg-5">
-    <!-- Stats Section -->
-    <div class="row g-4 mb-4">
-        <div class="col-6 col-md-3" onclick="filterData('All')">
-            <div class="card card-stats p-4 shadow-sm" style="border-bottom-color: #64748b;">
-                <small class="detail-label">Total Portfolio</small>
-                <h2 id="count-all" class="fw-bold m-0 mt-1">0</h2>
+    <!-- Updated Stats Section with 5 Columns for DLP -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-2 col-6" onclick="filterData('All')">
+            <div class="card card-stats p-3 shadow-sm" style="border-bottom-color: #64748b;">
+                <small class="detail-label">Total</small>
+                <h3 id="count-all" class="fw-bold m-0">0</h3>
             </div>
         </div>
-        <div class="col-6 col-md-3" onclick="filterData('In Progress')">
-            <div class="card card-stats p-4 shadow-sm" style="border-bottom-color: #10b981;">
-                <small class="detail-label text-success">In Progress</small>
-                <h2 id="count-progress" class="fw-bold m-0 mt-1 text-success">0</h2>
+        <div class="col-md-2 col-6" onclick="filterData('In Progress')">
+            <div class="card card-stats p-3 shadow-sm" style="border-bottom-color: #10b981;">
+                <small class="detail-label text-success">Progress</small>
+                <h3 id="count-progress" class="fw-bold m-0 text-success">0</h3>
             </div>
         </div>
-        <div class="col-6 col-md-3" onclick="filterData('Live Tender')">
-            <div class="card card-stats p-4 shadow-sm" style="border-bottom-color: #3b82f6;">
-                <small class="detail-label text-primary">Live Tenders</small>
-                <h2 id="count-live" class="fw-bold m-0 mt-1 text-primary">0</h2>
+        <div class="col-md-3 col-6" onclick="filterData('Under DLP')">
+            <div class="card card-stats p-3 shadow-sm" style="border-bottom-color: #6366f1;">
+                <small class="detail-label text-primary">Under DLP</small>
+                <h3 id="count-dlp" class="fw-bold m-0" style="color:#6366f1;">0</h3>
             </div>
         </div>
-        <div class="col-6 col-md-3" onclick="filterData('Yet to be Allotted')">
-            <div class="card card-stats p-4 shadow-sm" style="border-bottom-color: #f59e0b;">
-                <small class="detail-label text-warning">Pending Allotment</small>
-                <h2 id="count-pending" class="fw-bold m-0 mt-1 text-warning">0</h2>
+        <div class="col-md-2 col-6" onclick="filterData('Live Tender')">
+            <div class="card card-stats p-3 shadow-sm" style="border-bottom-color: #3b82f6;">
+                <small class="detail-label text-primary">Live</small>
+                <h3 id="count-live" class="fw-bold m-0 text-primary">0</h3>
+            </div>
+        </div>
+        <div class="col-md-3 col-6" onclick="filterData('Yet to be Allotted')">
+            <div class="card card-stats p-3 shadow-sm" style="border-bottom-color: #f59e0b;">
+                <small class="detail-label text-warning">Pending</small>
+                <h3 id="count-pending" class="fw-bold m-0 text-warning">0</h3>
             </div>
         </div>
     </div>
@@ -183,8 +188,13 @@
 
     function updateDashboard() {
         document.getElementById('count-all').innerText = masterData.length;
+        
         const inProg = masterData.filter(d => d.computedStatus === 'In Progress');
         document.getElementById('count-progress').innerText = inProg.length;
+        
+        const inDlp = masterData.filter(d => d.computedStatus === 'Under DLP');
+        document.getElementById('count-dlp').innerText = inDlp.length;
+        
         document.getElementById('count-live').innerText = masterData.filter(d => d.computedStatus === 'Live Tender').length;
         document.getElementById('count-pending').innerText = masterData.filter(d => d.computedStatus === 'Yet to be Allotted').length;
         
@@ -218,6 +228,11 @@
             } else {
                 durationText = `${startDate || '-'} to ${endDate || '-'}`;
             }
+
+            // Status Colors Logic
+            let badgeBg = '#fef3c7', badgeColor = '#92400e';
+            if(statusStr === 'IN PROGRESS') { badgeBg = '#dcfce7'; badgeColor = '#166534'; }
+            else if(statusStr === 'UNDER DLP') { badgeBg = '#e0e7ff'; badgeColor = '#3730a3'; }
             
             const card = document.createElement('div');
             card.className = 'col-md-6 col-lg-4';
@@ -226,7 +241,7 @@
                     <div class="card-body p-4">
                         <div class="d-flex justify-content-between align-items-start mb-3">
                             <span class="badge bg-light text-secondary border px-2 py-1">#${tID}</span>
-                            ${showBadge ? `<span class="status-badge" style="background:${statusStr==='IN PROGRESS'?'#dcfce7':'#fef3c7'}; color:${statusStr==='IN PROGRESS'?'#166534':'#92400e'}">${item.computedStatus}</span>` : ''}
+                            ${showBadge ? `<span class="status-badge" style="background:${badgeBg}; color:${badgeColor}">${item.computedStatus}</span>` : ''}
                         </div>
                         <h6 class="fw-bold text-dark mb-4 lh-base" style="height:48px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;">${item["Work_Name"] || item["WORK NAME"]}</h6>
                         
@@ -275,7 +290,6 @@
             let val = item[key] || "";
             const keyLower = key.toLowerCase();
             
-            // SMART DETECTION
             const isCost = keyLower.includes('cost') || keyLower.includes('amount');
             const isDate = keyLower.includes('date');
             const isLocked = (val && val !== "-" && val !== "0" && val !== "0.00") ? "readonly" : "";
@@ -329,18 +343,29 @@
 
     function searchWorks() {
         const query = document.getElementById('searchInput').value.toLowerCase();
+        const filtered = masterData.filter(d => JSON.stringify(d).toLowerCase().includes(query));
+        
         const deck = document.getElementById('workDeck');
         deck.innerHTML = '';
-        const filtered = masterData.filter(d => JSON.stringify(d).toLowerCase().includes(query));
         
         filtered.forEach(item => {
             const tID = item.E_TENDERID || item.E_TenderID;
             const dnitVal = getDnitValue(item);
+            const statusStr = (item.computedStatus || "").toUpperCase();
+            
+            let badgeBg = '#fef3c7', badgeColor = '#92400e';
+            if(statusStr === 'IN PROGRESS') { badgeBg = '#dcfce7'; badgeColor = '#166534'; }
+            else if(statusStr === 'UNDER DLP') { badgeBg = '#e0e7ff'; badgeColor = '#3730a3'; }
+
             const card = document.createElement('div');
             card.className = 'col-md-6 col-lg-4';
             card.innerHTML = `
                 <div class="card work-card shadow-sm" onclick="showModal('${tID}')">
                     <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                             <span class="badge bg-light text-secondary border px-2 py-1">#${tID}</span>
+                             <span class="status-badge" style="background:${badgeBg}; color:${badgeColor}; font-size:0.6rem;">${item.computedStatus}</span>
+                        </div>
                         <h6 class="fw-bold text-dark mb-4 lh-base">${item["Work_Name"] || item["WORK NAME"]}</h6>
                         <div class="pt-3 border-top"><div class="detail-label">DNIT COST</div><div class="fw-bold text-primary fs-5">${formatCurrency(dnitVal)}</div></div>
                     </div>
