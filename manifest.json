@@ -15,13 +15,13 @@
   "categories": ["government", "business", "productivity", "utilities"],
   "icons": [
     {
-      "src": "./icons/dadri-work-icon.svg",
+      "src": "./dadri-work-icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
     },
     {
-      "src": "./icons/dadri-work-maskable.svg",
+      "src": "./dadri-work-maskable.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "maskable"
@@ -54,7 +54,7 @@
       "url": "./index.html#add-work",
       "icons": [
         {
-          "src": "./icons/dadri-work-icon.svg",
+          "src": "./dadri-work-icon.svg",
           "sizes": "any",
           "type": "image/svg+xml"
         }
