@@ -14,12 +14,15 @@
         .navbar { background: var(--primary); padding: 1.2rem 2rem; box-shadow: 0 4px 20px rgba(0,0,0,0.15); position: sticky; top: 0; z-index: 1000; }
         .navbar-brand { font-weight: 800; letter-spacing: 1px; color: #f1f5f9 !important; }
         
+        /* Stats Cards */
         .card-stats { border: none; border-radius: 20px; background: white; transition: 0.3s; border-bottom: 5px solid transparent; cursor: pointer; position: relative; overflow: hidden; }
         .card-stats:hover { transform: translateY(-7px); box-shadow: 0 15px 30px rgba(0,0,0,0.08); }
         
+        /* Investment Banner */
         .investment-banner { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; border-radius: 24px; border: 1px solid rgba(255,255,255,0.1); }
         
-        .work-card { background: white; border-radius: 24px; border: 1px solid rgba(226, 232, 240, 0.8); transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); cursor: pointer; overflow: hidden; height: 100%; display: flex; flex-direction: column; }
+        /* Work Cards - Original Design Requested */
+        .work-card { background: white; border-radius: 24px; border: 1px solid rgba(226, 232, 240, 0.8); transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); cursor: pointer; overflow: hidden; height: 100%; display: flex; flex-direction: column; position: relative; }
         .work-card:hover { transform: translateY(-10px); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.12); border-color: var(--accent); }
         
         .status-badge { font-size: 0.7rem; padding: 6px 16px; border-radius: 100px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -33,14 +36,11 @@
         #loadingOverlay { position: fixed; inset: 0; background: rgba(255,255,255,0.95); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .hidden { display: none !important; }
         
-        /* Fixed Modal Styles for Screenshot */
+        /* Modal Screenshot Fixes */
         .modal-body { max-height: 70vh; overflow-y: auto; }
-        
-        /* Jab screenshot liya jaye tab full content dikhe */
         .capturing .modal-body { max-height: none !important; overflow: visible !important; }
         .capturing .modal-dialog { max-width: none !important; margin: 0 !important; }
-        
-        #modalCaptureArea { background: white; width: 100%; }
+        #modalCaptureArea { background: white; width: 100%; border-radius: 24px; }
     </style>
 </head>
 <body>
@@ -101,7 +101,7 @@
         <div class="col-md-6">
             <div class="position-relative">
                 <i class="fa fa-search position-absolute" style="left:20px; top:18px; color:#94a3b8;"></i>
-                <input type="text" id="searchInput" class="form-control ps-5 py-3 rounded-4 shadow-sm" placeholder="Search works..." onkeyup="searchWorks()">
+                <input type="text" id="searchInput" class="form-control ps-5 py-3 rounded-4 shadow-sm" placeholder="Search ID, Agency or Work..." onkeyup="searchWorks()">
             </div>
         </div>
     </div>
@@ -109,7 +109,7 @@
     <div id="workDeck" class="row g-4"></div>
 </div>
 
-<!-- Modal Structure -->
+<!-- Modal -->
 <div class="modal fade" id="workModal" tabindex="-1">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden" id="modalMainContent">
@@ -168,10 +168,6 @@
         document.getElementById('loadingOverlay').classList.add('hidden');
     }
 
-    function getDnitCost(item) {
-        return item["DNIT Cost"] || item["DNIT_Cost"] || item["DNIT_AMOUNT"] || item["DNIT AMOUNT"] || 0;
-    }
-
     function formatCurrency(num) {
         if (!num || num === "-" || num === "0") return "₹0.00";
         let val = num.toString().replace(/,/g, '').replace('₹', '').trim();
@@ -186,7 +182,7 @@
         document.getElementById('count-pending').innerText = masterData.filter(d => d.computedStatus === 'Yet to be Allotted').length;
         
         let totalVal = inProg.reduce((acc, curr) => {
-            let cost = curr["Allotted Amount"] || getDnitCost(curr);
+            let cost = curr["Allotted Amount"] || curr["DNIT Cost"] || 0;
             let cleanCost = parseFloat(cost.toString().replace(/,/g, '').replace('₹','')) || 0;
             return acc + cleanCost;
         }, 0);
@@ -198,25 +194,32 @@
         const deck = document.getElementById('workDeck');
         deck.innerHTML = '';
         const filtered = currentFilter === 'All' ? masterData : masterData.filter(d => d.computedStatus === currentFilter);
-        const allowedBadges = ["UNDER DLP", "IN PROGRESS", "YET TO BE ALLOTTED", "LIVE TENDER"];
+        const allowedBadges = ["UNDER DLP", "IN PROGRESS", "YET TO BE ALLOTTED"];
 
         filtered.forEach(item => {
             const statusStr = (item.computedStatus || "").toUpperCase();
             const showBadge = allowedBadges.includes(statusStr);
-            const dnitVal = getDnitCost(item);
+            const dnitVal = item["DNIT Cost"] || 0;
+            const tID = item.E_TENDERID || item.E_TenderID;
             
             const card = document.createElement('div');
             card.className = 'col-md-6 col-lg-4';
             card.innerHTML = `
-                <div class="card work-card shadow-sm" onclick="showModal('${item.E_TENDERID || item.E_TenderID}')">
+                <div class="card work-card shadow-sm" onclick="showModal('${tID}')">
                     <div class="card-body p-4">
                         <div class="d-flex justify-content-between align-items-start mb-3">
-                            <span class="badge bg-light text-secondary border px-2 py-1">#${item.E_TENDERID || item.E_TenderID}</span>
+                            <span class="badge bg-light text-secondary border px-2 py-1">#${tID}</span>
                             ${showBadge ? `<span class="status-badge" style="background:${statusStr==='IN PROGRESS'?'#dcfce7':'#fef3c7'}; color:${statusStr==='IN PROGRESS'?'#166534':'#92400e'}">${item.computedStatus}</span>` : ''}
                         </div>
-                        <h6 class="fw-bold text-dark mb-4 lh-base" style="height:48px; overflow:hidden;">${item["Work_Name"] || item["WORK NAME"]}</h6>
+                        <h6 class="fw-bold text-dark mb-4 lh-base" style="height:48px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;">${item["Work_Name"] || item["WORK NAME"]}</h6>
+                        <div class="mb-4">
+                            <div class="detail-label"><i class="fa-solid fa-user-tie me-1"></i> Agency</div>
+                            <div class="detail-value text-truncate">${item["Agency_Name"] || 'Not Assigned'}</div>
+                            <div class="detail-label"><i class="fa-solid fa-calendar me-1"></i> Duration</div>
+                            <div class="fw-semibold small">${item["Agreement Start Date"] || '-'} to ${item["Agreement End Date"] || '-'}</div>
+                        </div>
                         <div class="pt-3 border-top d-flex justify-content-between align-items-center">
-                            <div><div class="detail-label">DNIT COST</div><div class="fw-bold text-primary fs-5">${formatCurrency(dnitVal)}</div></div>
+                            <div><div class="detail-label" style="color:var(--accent);">DNIT COST</div><div class="fw-bold text-primary fs-5">${formatCurrency(dnitVal)}</div></div>
                             <div class="btn btn-outline-primary btn-sm rounded-circle"><i class="fa fa-arrow-right"></i></div>
                         </div>
                     </div>
@@ -230,16 +233,17 @@
         const item = masterData.find(d => (d.E_TENDERID || d.E_TenderID) == id);
         document.getElementById('modalWorkName').innerText = item["Work_Name"] || item["WORK NAME"];
         document.getElementById('modalTenderId').innerText = "Tender ID: " + id;
+        document.getElementById('modalHeaderTitle').innerText = "Work Details";
+        
         const container = document.getElementById('modalContent');
         container.innerHTML = '';
-        
         const skip = ['work_name', 'work name', 'rowindex', 'computedstatus'];
 
         for (let key in item) {
             if (skip.includes(key.toLowerCase())) continue;
             let val = item[key] || "";
             const isCost = key.toLowerCase().includes('cost') || key.toLowerCase().includes('amount');
-            const isLocked = (val && val !== "-" && val !== "0") ? "readonly" : "";
+            const isLocked = (val && val !== "-" && val !== "0" && val !== "0.00") ? "readonly" : "";
             
             container.innerHTML += `
                 <div class="col-md-4 col-6">
@@ -257,7 +261,6 @@
     }
 
     function enableEditMode() {
-        document.getElementById('modalHeaderTitle').innerText = "Edit Details";
         document.querySelectorAll('.field-view').forEach(el => el.classList.add('hidden'));
         document.querySelectorAll('.field-edit').forEach(el => el.classList.remove('hidden'));
         document.getElementById('editToggleBtn').classList.add('hidden');
@@ -273,23 +276,21 @@
 
     function searchWorks() {
         const query = document.getElementById('searchInput').value.toLowerCase();
-        const filtered = masterData.filter(d => JSON.stringify(d).toLowerCase().includes(query));
-        renderDeckWithData(filtered);
-    }
-
-    function renderDeckWithData(data) {
         const deck = document.getElementById('workDeck');
         deck.innerHTML = '';
-        data.forEach(item => {
-            const dnitVal = getDnitCost(item);
+        const filtered = masterData.filter(d => JSON.stringify(d).toLowerCase().includes(query));
+        
+        filtered.forEach(item => {
+            const tID = item.E_TENDERID || item.E_TenderID;
             const card = document.createElement('div');
             card.className = 'col-md-6 col-lg-4';
-            card.innerHTML = `<div class="card work-card shadow-sm" onclick="showModal('${item.E_TENDERID || item.E_TenderID}')">
-                <div class="card-body p-4">
-                    <h6 class="fw-bold text-dark mb-4 lh-base">${item["Work_Name"] || item["WORK NAME"]}</h6>
-                    <div class="pt-3 border-top"><div class="detail-label">DNIT COST</div><div class="fw-bold text-primary fs-5">${formatCurrency(dnitVal)}</div></div>
-                </div>
-            </div>`;
+            card.innerHTML = `
+                <div class="card work-card shadow-sm" onclick="showModal('${tID}')">
+                    <div class="card-body p-4">
+                        <h6 class="fw-bold text-dark mb-4 lh-base">${item["Work_Name"] || item["WORK NAME"]}</h6>
+                        <div class="pt-3 border-top"><div class="detail-label">DNIT COST</div><div class="fw-bold text-primary fs-5">${formatCurrency(item["DNIT Cost"])}</div></div>
+                    </div>
+                </div>`;
             deck.appendChild(card);
         });
     }
@@ -300,7 +301,6 @@
         const actions = document.getElementById('actionArea');
         const close = document.getElementById('closeModalBtn');
         
-        // Modal ko capture mode mein dalo taaki scrollbar hat jaye aur poora content dikhe
         modal.classList.add('capturing');
         actions.style.display = 'none';
         close.style.opacity = '0';
@@ -328,7 +328,6 @@
         } catch (err) {
             console.error("Capture failed", err);
         } finally {
-            // Restore UI
             modal.classList.remove('capturing');
             actions.style.display = 'flex';
             close.style.opacity = '1';
