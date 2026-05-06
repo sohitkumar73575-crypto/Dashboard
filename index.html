@@ -11,14 +11,16 @@
         .navbar { background: #1a2a3a; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
         .card-stats { cursor: pointer; transition: 0.3s; border: none; border-radius: 15px; }
         .card-stats:hover { transform: translateY(-5px); box-shadow: 0 8px 15px rgba(0,0,0,0.1); }
-        .work-card { background: white; border-radius: 12px; border: none; transition: 0.3s; height: 100%; border-top: 5px solid #ccc; display: flex; flex-direction: column; }
-        .work-card:hover { box-shadow: 0 10px 20px rgba(0,0,0,0.12); transform: translateY(-3px); }
+        .work-card { background: white; border-radius: 12px; border: none; transition: 0.3s; height: 100%; border-top: 5px solid #ccc; display: flex; flex-direction: column; cursor: pointer; }
+        .work-card:hover { box-shadow: 0 10px 20px rgba(0,0,0,0.12); transform: translateY(-3px); background-color: #fcfcfc; }
         .status-badge { font-size: 0.75rem; padding: 5px 12px; border-radius: 20px; font-weight: 600; }
         .search-box { border-radius: 25px; padding-left: 45px; height: 45px; border: 1px solid #ddd; }
         .detail-label { font-size: 0.62rem; font-weight: 800; color: #999; text-transform: uppercase; margin-bottom: 2px; }
-        .edit-input { font-size: 0.85rem; padding: 5px 8px; border-radius: 4px; border: 1px solid #ced4da; width: 100%; background-color: #fff; margin-bottom: 10px; font-weight: 600; color: #333; }
+        .detail-value { font-size: 0.88rem; color: #333; font-weight: 600; margin-bottom: 12px; }
+        .edit-input { font-size: 0.85rem; padding: 5px 8px; border-radius: 4px; border: 1px solid #ced4da; width: 100%; background-color: #fff; margin-bottom: 10px; font-weight: 600; }
         .edit-input:disabled { background-color: #f8f9fa; color: #6c757d; border: 1px solid #dee2e6; cursor: not-allowed; }
         #loadingOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 9999; display: flex; justify-content: center; align-items: center; }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
@@ -75,12 +77,12 @@
     <div id="workDeck" class="row g-4"></div>
 </div>
 
-<!-- Edit Modal -->
+<!-- Details & Edit Modal -->
 <div class="modal fade" id="workModal" tabindex="-1">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content border-0 shadow-lg">
             <div class="modal-header bg-dark text-white py-2">
-                <h6 class="modal-title fw-bold">Work Detail Editor</h6>
+                <h6 class="modal-title fw-bold" id="modalTitle">Project Details</h6>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body bg-light">
@@ -93,11 +95,13 @@
                     <div id="modalContent" class="row g-2 px-2"></div>
                 </form>
 
-                <div class="mt-4 border-top pt-3 text-center">
-                    <button id="saveBtn" class="btn btn-success px-5 fw-bold shadow-sm" onclick="saveDetails()">
-                        <i class="fa fa-save me-2"></i>SAVE DETAILS TO SHEET
+                <div class="mt-4 border-top pt-3 text-center" id="actionArea">
+                    <button id="editToggleBtn" class="btn btn-dark px-4 fw-bold shadow-sm" onclick="enableEditMode()">
+                        <i class="fa fa-edit me-2"></i>EDIT DETAILS
                     </button>
-                    <p class="text-muted small mt-2"><i class="fa fa-lock me-1"></i> Note: Filled fields are locked to prevent errors.</p>
+                    <button id="saveBtn" class="btn btn-success px-5 fw-bold shadow-sm hidden" onclick="saveDetails()">
+                        <i class="fa fa-save me-2"></i>SAVE TO SHEET
+                    </button>
                 </div>
             </div>
         </div>
@@ -120,7 +124,7 @@
             const result = await res.json();
             masterData = result.data;
             updateUI();
-        } catch (e) { console.error("Error fetching data:", e); }
+        } catch (e) { console.error("Error:", e); }
         document.getElementById('loadingOverlay').style.display = 'none';
     }
 
@@ -154,21 +158,16 @@
         
         filtered.forEach(item => {
             const color = getStatusColor(item.computedStatus);
-            
-            // Flexible Date Logic
-            const start = item["AGREEMENT START DATE"] || item["Agreement_Start_Date"] || item["Agreement Start Date"] || "";
-            const end = item["AGREEMENT END DATE"] || item["Agreement_End_Date"] || item["Agreement End Date"] || "";
+            const start = item["AGREEMENT START DATE"] || item["Agreement_Start_Date"] || "";
+            const end = item["AGREEMENT END DATE"] || item["Agreement_End_Date"] || "";
             let dateDisplay = (start && end && start !== "-") ? `${start} to ${end}` : (start && start !== "-" ? `Start: ${start}` : "Date Not Fixed");
 
-            // Hide "Other" tag
-            const badgeHtml = (item.computedStatus === 'Other' || !item.computedStatus) 
-                ? '' 
-                : `<span class="badge status-badge" style="background-color: ${color}20; color: ${color}">${item.computedStatus}</span>`;
+            const badgeHtml = (item.computedStatus === 'Other' || !item.computedStatus) ? '' : `<span class="badge status-badge" style="background-color: ${color}20; color: ${color}">${item.computedStatus}</span>`;
 
             const col = document.createElement('div');
             col.className = 'col-md-6 col-lg-4';
             col.innerHTML = `
-                <div class="card work-card shadow-sm" style="border-top-color: ${color}">
+                <div class="card work-card shadow-sm" style="border-top-color: ${color}" onclick="showModal('${item.E_TENDERID || item.E_TenderID}')">
                     <div class="card-body d-flex flex-column">
                         <div class="d-flex justify-content-between mb-2">
                             <span class="badge bg-light text-dark border small"># ${item.E_TENDERID || item.E_TenderID}</span>
@@ -181,7 +180,7 @@
                         </div>
                         <div class="mt-auto d-flex justify-content-between align-items-center pt-2 border-top">
                             <div><small class="text-muted d-block" style="font-size:0.6rem">DNIT COST</small><span class="fw-bold text-primary">${formatCurrency(item["DNIT_Cost"] || item["DNIT COST"])}</span></div>
-                            <button class="btn btn-sm btn-dark rounded-pill px-3 shadow-sm" onclick="showEditModal('${item.E_TENDERID || item.E_TenderID}')">Edit Details</button>
+                            <i class="fa fa-chevron-right text-muted small"></i>
                         </div>
                     </div>
                 </div>`;
@@ -189,40 +188,45 @@
         });
     }
 
-    function showEditModal(tenderId) {
+    function showModal(tenderId) {
         currentTenderId = tenderId;
         const item = masterData.find(d => (d.E_TENDERID || d.E_TenderID) == tenderId);
         document.getElementById('modalWorkName').innerText = item["Work_Name"] || item["WORK NAME"] || "N/A";
+        document.getElementById('modalTitle').innerText = "Project Details";
+        
+        // Reset Buttons
+        document.getElementById('editToggleBtn').classList.remove('hidden');
+        document.getElementById('saveBtn').classList.add('hidden');
         
         const container = document.getElementById('modalContent');
         container.innerHTML = '';
         
-        // Hide list including ROWINDEX (Case-insensitive)
         const hideKeys = ['work_name', 'work name', 'rowindex', 'row_index', 'computedstatus', 'computed status'];
 
         for (let key in item) {
             if (hideKeys.includes(key.toLowerCase())) continue;
 
-            let val = item[key] && item[key] !== "-" ? item[key] : "";
-            
-            // Format amounts for display in locked fields
-            let displayVal = val;
-            if (key.toLowerCase().includes('cost') || key.toLowerCase().includes('amount')) {
-                displayVal = formatCurrency(val);
-            }
-
-            // Logic: Agar data filled hai, toh lock kar do
-            const isLocked = (val !== "" && val !== "₹0.00") ? "disabled" : "";
+            let val = item[key] && item[key] !== "-" ? item[key] : "-";
+            let displayVal = (key.toLowerCase().includes('cost') || key.toLowerCase().includes('amount')) ? formatCurrency(val) : val;
 
             const col = document.createElement('div');
             col.className = 'col-md-4 col-6 mb-1';
             col.innerHTML = `
                 <div class="detail-label">${key.replace(/_/g, ' ')}</div>
-                <input type="text" name="${key}" class="edit-input" value="${displayVal}" ${isLocked} placeholder="---">
+                <div class="detail-value" id="val_${key}">${displayVal}</div>
+                <input type="text" name="${key}" class="edit-input hidden" value="${val === "-" ? "" : val}" ${(val !== "-" && val !== "") ? "disabled" : ""}>
             `;
             container.appendChild(col);
         }
         new bootstrap.Modal(document.getElementById('workModal')).show();
+    }
+
+    function enableEditMode() {
+        document.getElementById('modalTitle').innerText = "Edit Project Mode";
+        document.querySelectorAll('.detail-value').forEach(el => el.classList.add('hidden'));
+        document.querySelectorAll('.edit-input').forEach(el => el.classList.remove('hidden'));
+        document.getElementById('editToggleBtn').classList.add('hidden');
+        document.getElementById('saveBtn').classList.remove('hidden');
     }
 
     async function saveDetails() {
@@ -230,9 +234,7 @@
         const formData = new FormData(form);
         const dataToSave = { tenderId: currentTenderId };
         
-        formData.forEach((value, key) => {
-            if(value) dataToSave[key] = value;
-        });
+        formData.forEach((value, key) => { if(value) dataToSave[key] = value; });
 
         document.getElementById('loadingOverlay').style.display = 'flex';
         try {
@@ -242,11 +244,11 @@
             });
             const res = await response.json();
             if(res.status === 'success') {
-                alert("Sheet Updated Successfully!");
-                fetchData(); // Data refresh bina page reload ke
+                alert("Updated Successfully!");
+                fetchData();
                 bootstrap.Modal.getInstance(document.getElementById('workModal')).hide();
             }
-        } catch (e) { alert("Error: Could not sync with Sheet."); }
+        } catch (e) { alert("Sync Error!"); }
         document.getElementById('loadingOverlay').style.display = 'none';
     }
 
