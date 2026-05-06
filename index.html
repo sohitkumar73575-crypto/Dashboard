@@ -268,21 +268,42 @@
         const container = document.getElementById('modalContent');
         container.innerHTML = '';
         
-        // Tender ID ko list mein dikhane ke liye skip array se hata diya hai
         const skip = ['work_name', 'work name', 'rowindex', 'computedstatus'];
 
         for (let key in item) {
             if (skip.includes(key.toLowerCase())) continue;
             let val = item[key] || "";
-            const isCost = key.toLowerCase().includes('cost') || key.toLowerCase().includes('amount');
-            const isLocked = (val && val !== "-" && val !== "0" && val !== "0.00") ? "readonly" : "";
+            const keyLower = key.toLowerCase();
             
+            // SMART DETECTION
+            const isCost = keyLower.includes('cost') || keyLower.includes('amount');
+            const isDate = keyLower.includes('date');
+            const isLocked = (val && val !== "-" && val !== "0" && val !== "0.00") ? "readonly" : "";
+
+            let inputType = "text";
+            let inputMode = "";
+            let step = "";
+            
+            if (isDate) {
+                inputType = "date";
+            } else if (isCost) {
+                inputType = "number";
+                inputMode = 'inputmode="decimal"'; 
+                step = 'step="0.01"';
+            }
+
             container.innerHTML += `
                 <div class="col-md-4 col-6">
                     <div class="p-2">
                         <div class="detail-label">${key.replace(/_/g, ' ')}</div>
                         <div class="detail-value field-view">${isCost ? formatCurrency(val) : val}</div>
-                        <input type="text" name="${key}" class="edit-input hidden field-edit" value="${val}" ${isLocked}>
+                        <input type="${inputType}" 
+                               name="${key}" 
+                               ${inputMode} 
+                               ${step}
+                               class="edit-input hidden field-edit" 
+                               value="${val}" 
+                               ${isLocked}>
                     </div>
                 </div>`;
         }
