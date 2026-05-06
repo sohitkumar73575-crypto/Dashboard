@@ -288,12 +288,15 @@
 
         for (let key in item) {
             if (skip.includes(key.toLowerCase())) continue;
-            let val = item[key] || "";
+            
+            let val = item[key] !== undefined && item[key] !== null ? item[key] : "";
             const keyLower = key.toLowerCase();
             
             const isCost = keyLower.includes('cost') || keyLower.includes('amount');
             const isDate = keyLower.includes('date');
-            const isLocked = (val && val !== "-" && val !== "0" && val !== "0.00") ? "readonly" : "";
+            
+            // Logic: Agar value blank, 0, ya "-" hai toh hi edit karne do, varna lock (Readonly) rakho
+            const isLocked = (val !== "" && val !== "-" && val !== "0" && val !== "0.00") ? "readonly" : "";
 
             let inputType = "text";
             let inputMode = "";
@@ -305,13 +308,17 @@
                 inputType = "number";
                 inputMode = 'inputmode="decimal"'; 
                 step = 'step="0.01"';
+                // Input field ke liye numeric value extract karna agar currency format mein ho
+                if(typeof val === 'string') val = val.replace(/[^0-9.]/g, '');
             }
 
             container.innerHTML += `
                 <div class="col-md-4 col-6">
                     <div class="p-2">
                         <div class="detail-label">${key.replace(/_/g, ' ')}</div>
-                        <div class="detail-value field-view">${isCost ? formatCurrency(val) : val}</div>
+                        <!-- View Mode -->
+                        <div class="detail-value field-view">${isCost ? formatCurrency(item[key]) : item[key]}</div>
+                        <!-- Edit Mode -->
                         <input type="${inputType}" 
                                name="${key}" 
                                ${inputMode} 
@@ -322,6 +329,8 @@
                     </div>
                 </div>`;
         }
+        
+        // Modal UI Reset
         document.getElementById('editToggleBtn').classList.remove('hidden');
         document.getElementById('saveBtn').classList.add('hidden');
         document.getElementById('shareBtn').classList.remove('hidden');
