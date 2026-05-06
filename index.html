@@ -10,20 +10,32 @@
     <style>
         :root { --primary: #1a2a3a; --accent: #2563eb; --bg: #f8fafc; }
         body { background-color: var(--bg); font-family: 'Inter', system-ui, -apple-system, sans-serif; color: #1e293b; overflow-x: hidden; }
+        
         .navbar { background: var(--primary); padding: 1.2rem 2rem; box-shadow: 0 4px 20px rgba(0,0,0,0.15); position: sticky; top: 0; z-index: 1000; }
         .navbar-brand { font-weight: 800; letter-spacing: 1px; color: #f1f5f9 !important; }
+        
+        /* Stats Cards */
         .card-stats { border: none; border-radius: 20px; background: white; transition: 0.3s; border-bottom: 5px solid transparent; cursor: pointer; position: relative; overflow: hidden; height: 100%; }
         .card-stats:hover { transform: translateY(-7px); box-shadow: 0 15px 30px rgba(0,0,0,0.08); }
+        
+        /* Investment Banner */
         .investment-banner { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; border-radius: 24px; border: 1px solid rgba(255,255,255,0.1); }
+        
+        /* Work Cards */
         .work-card { background: white; border-radius: 24px; border: 1px solid rgba(226, 232, 240, 0.8); transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); cursor: pointer; overflow: hidden; height: 100%; display: flex; flex-direction: column; position: relative; }
         .work-card:hover { transform: translateY(-10px); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.12); border-color: var(--accent); }
+        
         .status-badge { font-size: 0.7rem; padding: 6px 16px; border-radius: 100px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+        
         .detail-label { font-size: 0.65rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 1px; }
         .detail-value { font-size: 0.95rem; color: #0f172a; font-weight: 600; margin-bottom: 12px; line-height: 1.4; word-break: break-all; }
+        
         .edit-input { border-radius: 10px; border: 1px solid #cbd5e1; padding: 10px 14px; font-weight: 600; width: 100%; margin-bottom: 10px; }
         .edit-input[readonly] { background-color: #f1f5f9; color: #64748b; cursor: not-allowed; }
+
         #loadingOverlay { position: fixed; inset: 0; background: rgba(255,255,255,0.95); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .hidden { display: none !important; }
+        
         .modal-body { max-height: 70vh; overflow-y: auto; }
         .capturing .modal-body { max-height: none !important; overflow: visible !important; }
         .capturing .modal-dialog { max-width: none !important; margin: 0 !important; }
@@ -42,46 +54,101 @@
 </nav>
 
 <div class="container-fluid py-4 px-lg-5">
+    
+    <!-- Updated Stats Section: DLP Moved to 5th Position -->
     <div class="row g-3 mb-4">
-        <div class="col-md col-6" onclick="filterData('All')"><div class="card card-stats p-3 shadow-sm" style="border-bottom-color: #64748b;"><small class="detail-label">Total</small><h3 id="count-all" class="fw-bold m-0">0</h3></div></div>
-        <div class="col-md col-6" onclick="filterData('In Progress')"><div class="card card-stats p-3 shadow-sm" style="border-bottom-color: #10b981;"><small class="detail-label text-success">Progress</small><h3 id="count-progress" class="fw-bold m-0 text-success">0</h3></div></div>
-        <div class="col-md col-6" onclick="filterData('Live Tender')"><div class="card card-stats p-3 shadow-sm" style="border-bottom-color: #3b82f6;"><small class="detail-label text-primary">Live</small><h3 id="count-live" class="fw-bold m-0 text-primary">0</h3></div></div>
-        <div class="col-md col-6" onclick="filterData('Yet to be Allotted')"><div class="card card-stats p-3 shadow-sm" style="border-bottom-color: #f59e0b;"><small class="detail-label text-warning">Pending</small><h3 id="count-pending" class="fw-bold m-0 text-warning">0</h3></div></div>
-        <div class="col-md col-6" onclick="filterData('Under DLP')"><div class="card card-stats p-3 shadow-sm" style="border-bottom-color: #6366f1;"><small class="detail-label text-primary">Under DLP</small><h3 id="count-dlp" class="fw-bold m-0" style="color:#6366f1;">0</h3></div></div>
+        <div class="col-md col-6" onclick="filterData('All')">
+            <div class="card card-stats p-3 shadow-sm" style="border-bottom-color: #64748b;">
+                <small class="detail-label">Total</small>
+                <h3 id="count-all" class="fw-bold m-0">0</h3>
+            </div>
+        </div>
+        <div class="col-md col-6" onclick="filterData('In Progress')">
+            <div class="card card-stats p-3 shadow-sm" style="border-bottom-color: #10b981;">
+                <small class="detail-label text-success">Progress</small>
+                <h3 id="count-progress" class="fw-bold m-0 text-success">0</h3>
+            </div>
+        </div>
+        <div class="col-md col-6" onclick="filterData('Live Tender')">
+            <div class="card card-stats p-3 shadow-sm" style="border-bottom-color: #3b82f6;">
+                <small class="detail-label text-primary">Live</small>
+                <h3 id="count-live" class="fw-bold m-0 text-primary">0</h3>
+            </div>
+        </div>
+        <div class="col-md col-6" onclick="filterData('Yet to be Allotted')">
+            <div class="card card-stats p-3 shadow-sm" style="border-bottom-color: #f59e0b;">
+                <small class="detail-label text-warning">Pending</small>
+                <h3 id="count-pending" class="fw-bold m-0 text-warning">0</h3>
+            </div>
+        </div>
+        <!-- Under DLP is now the 5th card on the right -->
+        <div class="col-md col-6" onclick="filterData('Under DLP')">
+            <div class="card card-stats p-3 shadow-sm" style="border-bottom-color: #6366f1;">
+                <small class="detail-label text-primary">Under DLP</small>
+                <h3 id="count-dlp" class="fw-bold m-0" style="color:#6366f1;">0</h3>
+            </div>
+        </div>
     </div>
 
+    <!-- Investment Banner -->
     <div class="investment-banner p-4 p-md-5 mb-5 shadow-lg d-flex flex-column flex-md-row justify-content-between align-items-center">
-        <div><h3 class="fw-bold mb-1"><i class="fa-solid fa-chart-line me-2 text-success"></i>Ongoing Works Status</h3><p class="text-light opacity-75 m-0">Real-time valuation of works under execution phase</p></div>
-        <div class="mt-4 mt-md-0 text-md-end"><small class="detail-label text-light opacity-50">Total Ongoing Investment</small><h1 class="display-5 fw-bold text-success m-0" id="total-progress-amount">₹0.00</h1></div>
+        <div>
+            <h3 class="fw-bold mb-1"><i class="fa-solid fa-chart-line me-2 text-success"></i>Ongoing Works Status</h3>
+            <p class="text-light opacity-75 m-0">Real-time valuation of works under execution phase</p>
+        </div>
+        <div class="mt-4 mt-md-0 text-md-end">
+            <small class="detail-label text-light opacity-50">Total Ongoing Investment</small>
+            <h1 class="display-5 fw-bold text-success m-0" id="total-progress-amount">₹0.00</h1>
+        </div>
     </div>
 
+    <!-- Search and Title -->
     <div class="row mb-4 align-items-center">
         <div class="col-md-6"><h3 id="viewTitle" class="fw-bold text-dark m-0">All Works</h3></div>
-        <div class="col-md-6"><div class="position-relative"><i class="fa fa-search position-absolute" style="left:20px; top:18px; color:#94a3b8;"></i><input type="text" id="searchInput" class="form-control ps-5 py-3 rounded-4 shadow-sm" placeholder="Search ID, Agency or Work..." onkeyup="searchWorks()"></div></div>
+        <div class="col-md-6">
+            <div class="position-relative">
+                <i class="fa fa-search position-absolute" style="left:20px; top:18px; color:#94a3b8;"></i>
+                <input type="text" id="searchInput" class="form-control ps-5 py-3 rounded-4 shadow-sm" placeholder="Search ID, Agency or Work..." onkeyup="searchWorks()">
+            </div>
+        </div>
     </div>
+
     <div id="workDeck" class="row g-4"></div>
 </div>
 
+<!-- Modal -->
 <div class="modal fade" id="workModal" tabindex="-1">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden" id="modalMainContent">
             <div id="modalCaptureArea">
                 <div class="modal-header border-0 pb-0 px-4 pt-4 d-flex justify-content-between align-items-start">
-                    <div><h5 class="modal-title fw-bold text-dark" id="modalHeaderTitle">Work Details</h5></div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark" id="modalHeaderTitle">Work Details</h5>
+                    </div>
                     <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" id="closeModalBtn"></button>
                 </div>
+                
                 <div class="modal-body p-4">
                     <div class="bg-light p-4 rounded-4 mb-4 border-start border-primary border-5 shadow-sm">
                         <small class="detail-label text-primary">Name of Work</small>
                         <h5 id="modalWorkName" class="fw-bold text-dark mt-1 mb-0 lh-base"></h5>
                     </div>
-                    <form id="editForm"><div id="modalContent" class="row g-4"></div></form>
+                    <form id="editForm">
+                        <div id="modalContent" class="row g-4"></div>
+                    </form>
                 </div>
             </div>
+
             <div class="modal-footer border-0 justify-content-center p-4 pt-0" id="actionArea">
-                <button id="shareBtn" class="btn btn-success px-4 py-2 rounded-3 fw-bold" onclick="shareWorkDetails()"><i class="fa-brands fa-whatsapp me-2"></i>Share Status</button>
-                <button id="editToggleBtn" class="btn btn-dark px-4 py-2 rounded-3 fw-bold" onclick="enableEditMode()"><i class="fa fa-edit me-2"></i>Edit Details</button>
-                <button id="saveBtn" class="btn btn-primary px-5 py-2 rounded-3 fw-bold hidden" onclick="saveDetails()"><i class="fa fa-save me-2"></i>Save Changes</button>
+                <button id="shareBtn" class="btn btn-success px-4 py-2 rounded-3 fw-bold" onclick="shareWorkDetails()">
+                    <i class="fa-brands fa-whatsapp me-2"></i>Share Status
+                </button>
+                <button id="editToggleBtn" class="btn btn-dark px-4 py-2 rounded-3 fw-bold" onclick="enableEditMode()">
+                    <i class="fa fa-edit me-2"></i>Edit Details
+                </button>
+                <button id="saveBtn" class="btn btn-primary px-5 py-2 rounded-3 fw-bold hidden" onclick="saveDetails()">
+                    <i class="fa fa-save me-2"></i>Save Changes
+                </button>
             </div>
         </div>
     </div>
@@ -109,7 +176,9 @@
 
     function getDnitValue(item) {
         const keys = ["DNIT Cost", "DNIT COST", "DNIT_Cost", "DNIT_AMOUNT", "DNIT AMOUNT"];
-        for(let k of keys) { if(item[k] !== undefined && item[k] !== null && item[k] !== "") return item[k]; }
+        for(let k of keys) {
+            if(item[k] !== undefined && item[k] !== null && item[k] !== "") return item[k];
+        }
         return 0;
     }
 
@@ -121,11 +190,16 @@
 
     function updateDashboard() {
         document.getElementById('count-all').innerText = masterData.length;
+        
         const inProg = masterData.filter(d => d.computedStatus === 'In Progress');
         document.getElementById('count-progress').innerText = inProg.length;
-        document.getElementById('count-dlp').innerText = masterData.filter(d => d.computedStatus === 'Under DLP').length;
+        
+        const inDlp = masterData.filter(d => d.computedStatus === 'Under DLP');
+        document.getElementById('count-dlp').innerText = inDlp.length;
+        
         document.getElementById('count-live').innerText = masterData.filter(d => d.computedStatus === 'Live Tender').length;
         document.getElementById('count-pending').innerText = masterData.filter(d => d.computedStatus === 'Yet to be Allotted').length;
+        
         let totalVal = inProg.reduce((acc, curr) => {
             let cost = curr["Allotted Amount"] || getDnitValue(curr);
             let cleanCost = parseFloat(cost.toString().replace(/,/g, '').replace('₹','')) || 0;
@@ -139,19 +213,64 @@
         const deck = document.getElementById('workDeck');
         deck.innerHTML = '';
         const filtered = currentFilter === 'All' ? masterData : masterData.filter(d => d.computedStatus === currentFilter);
+        const allowedBadges = ["UNDER DLP", "IN PROGRESS", "YET TO BE ALLOTTED", "LIVE TENDER"];
+
         filtered.forEach(item => {
             const statusStr = (item.computedStatus || "").toUpperCase();
+            const showBadge = allowedBadges.includes(statusStr);
             const dnitVal = getDnitValue(item);
             const tID = item.E_TENDERID || item.E_TenderID;
+
             const startDate = item["Agreement Start Date"];
             const endDate = item["Agreement End Date"];
-            let durationText = (!startDate || startDate === "-" || startDate === "") && (!endDate || endDate === "-" || endDate === "") ? `<span class="text-danger fw-bold">AWAITING ALLOTMENT</span>` : `${startDate || '-'} to ${endDate || '-'}`;
+            let durationText = "";
+            
+            if ((!startDate || startDate === "-" || startDate === "") && (!endDate || endDate === "-" || endDate === "")) {
+                durationText = `<span class="text-danger fw-bold">AWAITING ALLOTMENT</span>`;
+            } else {
+                durationText = `${startDate || '-'} to ${endDate || '-'}`;
+            }
+
             let badgeBg = '#fef3c7', badgeColor = '#92400e';
             if(statusStr === 'IN PROGRESS') { badgeBg = '#dcfce7'; badgeColor = '#166534'; }
             else if(statusStr === 'UNDER DLP') { badgeBg = '#e0e7ff'; badgeColor = '#3730a3'; }
+            
             const card = document.createElement('div');
             card.className = 'col-md-6 col-lg-4';
-            card.innerHTML = `<div class="card work-card shadow-sm" onclick="showModal('${tID}')"><div class="card-body p-4"><div class="d-flex justify-content-between align-items-start mb-3"><span class="badge bg-light text-secondary border px-2 py-1">#${tID}</span><span class="status-badge" style="background:${badgeBg}; color:${badgeColor}">${item.computedStatus}</span></div><h6 class="fw-bold text-dark mb-4 lh-base" style="height:48px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;">${item["Work_Name"] || item["WORK NAME"]}</h6><div class="mb-4"><div class="d-flex align-items-center mb-2"><div class="rounded-circle bg-primary-subtle d-flex align-items-center justify-content-center me-2" style="width: 28px; height: 28px;"><i class="fa-solid fa-user-tie text-primary" style="font-size: 0.85rem;"></i></div><div class="detail-value m-0 text-truncate fw-semibold" style="font-size: 0.85rem;">${item["Agency_Name"] || 'Not Assigned'}</div></div><div class="d-flex align-items-center"><div class="rounded-circle bg-warning-subtle d-flex align-items-center justify-content-center me-2" style="width: 28px; height: 28px;"><i class="fa-solid fa-calendar-days text-warning" style="font-size: 0.85rem;"></i></div><div class="fw-semibold text-dark" style="font-size: 0.85rem;">${durationText}</div></div></div><div class="pt-3 border-top d-flex justify-content-between align-items-center"><div><div class="detail-label" style="color:var(--accent); margin-bottom: 2px;">DNIT COST</div><div class="fw-bold text-primary fs-5">${formatCurrency(dnitVal)}</div></div><div class="btn btn-outline-primary btn-sm rounded-circle"><i class="fa fa-arrow-right"></i></div></div></div></div>`;
+            card.innerHTML = `
+                <div class="card work-card shadow-sm" onclick="showModal('${tID}')">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <span class="badge bg-light text-secondary border px-2 py-1">#${tID}</span>
+                            ${showBadge ? `<span class="status-badge" style="background:${badgeBg}; color:${badgeColor}">${item.computedStatus}</span>` : ''}
+                        </div>
+                        <h6 class="fw-bold text-dark mb-4 lh-base" style="height:48px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;">${item["Work_Name"] || item["WORK NAME"]}</h6>
+                        
+                        <div class="mb-4">
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="rounded-circle bg-primary-subtle d-flex align-items-center justify-content-center me-2" style="width: 28px; height: 28px;">
+                                    <i class="fa-solid fa-user-tie text-primary" style="font-size: 0.85rem;"></i>
+                                </div>
+                                <div class="detail-value m-0 text-truncate fw-semibold" style="font-size: 0.85rem;">${item["Agency_Name"] || 'Not Assigned'}</div>
+                            </div>
+                            
+                            <div class="d-flex align-items-center">
+                                <div class="rounded-circle bg-warning-subtle d-flex align-items-center justify-content-center me-2" style="width: 28px; height: 28px;">
+                                    <i class="fa-solid fa-calendar-days text-warning" style="font-size: 0.85rem;"></i>
+                                </div>
+                                <div class="fw-semibold text-dark" style="font-size: 0.85rem;">${durationText}</div>
+                            </div>
+                        </div>
+
+                        <div class="pt-3 border-top d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="detail-label" style="color:var(--accent); margin-bottom: 2px;">DNIT COST</div>
+                                <div class="fw-bold text-primary fs-5">${formatCurrency(dnitVal)}</div>
+                            </div>
+                            <div class="btn btn-outline-primary btn-sm rounded-circle"><i class="fa fa-arrow-right"></i></div>
+                        </div>
+                    </div>
+                </div>`;
             deck.appendChild(card);
         });
     }
@@ -160,29 +279,76 @@
         currentTenderId = id;
         const item = masterData.find(d => (d.E_TENDERID || d.E_TenderID) == id);
         document.getElementById('modalWorkName').innerText = item["Work_Name"] || item["WORK NAME"];
+        document.getElementById('modalHeaderTitle').innerText = "Work Details";
+        
         const container = document.getElementById('modalContent');
         container.innerHTML = '';
+        
         const skip = ['work_name', 'work name', 'rowindex', 'computedstatus'];
+
         for (let key in item) {
             if (skip.includes(key.toLowerCase())) continue;
+            
             let val = item[key] !== undefined && item[key] !== null ? item[key] : "";
-            const isCost = key.toLowerCase().includes('cost') || key.toLowerCase().includes('amount');
-            const isDate = key.toLowerCase().includes('date');
+            const keyLower = key.toLowerCase();
+            
+            const isCost = keyLower.includes('cost') || keyLower.includes('amount');
+            const isDate = keyLower.includes('date');
+            
+            // Logic: Agar value blank, 0, ya "-" hai toh hi edit karne do, varna lock (Readonly) rakho
             const isLocked = (val !== "" && val !== "-" && val !== "0" && val !== "0.00") ? "readonly" : "";
-            let inputType = "text", inputMode = "", step = "";
+
+            let inputType = "text";
+            let inputMode = "";
+            let step = "";
             
             if (isDate) {
-                inputType = "date";
-                if (val && val !== "-" && val !== "0") {
-                    const d = new Date(val);
-                    if (!isNaN(d.getTime())) val = d.toISOString().split('T');
-                }
+    inputType = "date";
+
+    // Convert date into YYYY-MM-DD for input type="date"
+    if (val) {
+        let d = new Date(val);
+
+        // Agar normal parse fail ho aur format DD/MM/YYYY ho
+        if (isNaN(d.getTime()) && typeof val === "string" && val.includes('/')) {
+            const parts = val.split('/');
+            if (parts.length === 3) {
+                d = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+            }
+        }
+
+        if (!isNaN(d.getTime())) {
+            val = d.toISOString().split('T')[0];
+        }
+    }
+}
             } else if (isCost) {
-                inputType = "number"; inputMode = 'inputmode="decimal"'; step = 'step="0.01"';
+                inputType = "number";
+                inputMode = 'inputmode="decimal"'; 
+                step = 'step="0.01"';
+                // Input field ke liye numeric value extract karna agar currency format mein ho
                 if(typeof val === 'string') val = val.replace(/[^0-9.]/g, '');
             }
-            container.innerHTML += `<div class="col-md-4 col-6"><div class="p-2"><div class="detail-label">${key.replace(/_/g, ' ')}</div><div class="detail-value field-view">${isCost ? formatCurrency(item[key]) : item[key]}</div><input type="${inputType}" name="${key}" ${inputMode} ${step} class="edit-input hidden field-edit" value="${val}" ${isLocked}></div></div>`;
+
+            container.innerHTML += `
+                <div class="col-md-4 col-6">
+                    <div class="p-2">
+                        <div class="detail-label">${key.replace(/_/g, ' ')}</div>
+                        <!-- View Mode -->
+                        <div class="detail-value field-view">${isCost ? formatCurrency(item[key]) : item[key]}</div>
+                        <!-- Edit Mode -->
+                        <input type="${inputType}" 
+                               name="${key}" 
+                               ${inputMode} 
+                               ${step}
+                               class="edit-input hidden field-edit" 
+                               value="${val}" 
+                               ${isLocked}>
+                    </div>
+                </div>`;
         }
+        
+        // Modal UI Reset
         document.getElementById('editToggleBtn').classList.remove('hidden');
         document.getElementById('saveBtn').classList.add('hidden');
         document.getElementById('shareBtn').classList.remove('hidden');
@@ -197,42 +363,87 @@
         document.getElementById('saveBtn').classList.remove('hidden');
     }
 
-    function filterData(f) { currentFilter = f; document.getElementById('viewTitle').innerText = (f === 'All') ? "All Works" : f; renderDeck(); }
+    function filterData(f) { 
+        currentFilter = f; 
+        document.getElementById('viewTitle').innerText = (f === 'All') ? "All Works" : f; 
+        renderDeck(); 
+    }
 
     function searchWorks() {
         const query = document.getElementById('searchInput').value.toLowerCase();
         const filtered = masterData.filter(d => JSON.stringify(d).toLowerCase().includes(query));
+        
         const deck = document.getElementById('workDeck');
         deck.innerHTML = '';
+        
         filtered.forEach(item => {
             const tID = item.E_TENDERID || item.E_TenderID;
             const dnitVal = getDnitValue(item);
             const statusStr = (item.computedStatus || "").toUpperCase();
+            
             let badgeBg = '#fef3c7', badgeColor = '#92400e';
             if(statusStr === 'IN PROGRESS') { badgeBg = '#dcfce7'; badgeColor = '#166534'; }
             else if(statusStr === 'UNDER DLP') { badgeBg = '#e0e7ff'; badgeColor = '#3730a3'; }
+
             const card = document.createElement('div');
             card.className = 'col-md-6 col-lg-4';
-            card.innerHTML = `<div class="card work-card shadow-sm" onclick="showModal('${tID}')"><div class="card-body p-4"><div class="d-flex justify-content-between align-items-start mb-2"><span class="badge bg-light text-secondary border px-2 py-1">#${tID}</span><span class="status-badge" style="background:${badgeBg}; color:${badgeColor}; font-size:0.6rem;">${item.computedStatus}</span></div><h6 class="fw-bold text-dark mb-4 lh-base">${item["Work_Name"] || item["WORK NAME"]}</h6><div class="pt-3 border-top"><div class="detail-label">DNIT COST</div><div class="fw-bold text-primary fs-5">${formatCurrency(dnitVal)}</div></div></div></div>`;
+            card.innerHTML = `
+                <div class="card work-card shadow-sm" onclick="showModal('${tID}')">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                             <span class="badge bg-light text-secondary border px-2 py-1">#${tID}</span>
+                             <span class="status-badge" style="background:${badgeBg}; color:${badgeColor}; font-size:0.6rem;">${item.computedStatus}</span>
+                        </div>
+                        <h6 class="fw-bold text-dark mb-4 lh-base">${item["Work_Name"] || item["WORK NAME"]}</h6>
+                        <div class="pt-3 border-top"><div class="detail-label">DNIT COST</div><div class="fw-bold text-primary fs-5">${formatCurrency(dnitVal)}</div></div>
+                    </div>
+                </div>`;
             deck.appendChild(card);
         });
     }
 
     async function shareWorkDetails() {
-        const modal = document.getElementById('workModal'), capture = document.getElementById('modalCaptureArea'), actions = document.getElementById('actionArea'), close = document.getElementById('closeModalBtn');
-        modal.classList.add('capturing'); actions.style.display = 'none'; close.style.opacity = '0';
+        const modal = document.getElementById('workModal');
+        const capture = document.getElementById('modalCaptureArea');
+        const actions = document.getElementById('actionArea');
+        const close = document.getElementById('closeModalBtn');
+        
+        modal.classList.add('capturing');
+        actions.style.display = 'none';
+        close.style.opacity = '0';
+
         try {
-            const canvas = await html2canvas(capture, { scale: 2, useCORS: true, backgroundColor: "#ffffff" });
+            const canvas = await html2canvas(capture, { 
+                scale: 2, 
+                useCORS: true,
+                backgroundColor: "#ffffff",
+                height: capture.scrollHeight,
+                windowHeight: capture.scrollHeight
+            });
+            
             canvas.toBlob(blob => {
                 const file = new File([blob], `Work_${currentTenderId}.png`, { type: "image/png" });
-                if (navigator.share) navigator.share({ title: 'Work Status', files: [file] });
-                else { const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `Work_${currentTenderId}.png`; link.click(); }
+                if (navigator.share) {
+                    navigator.share({ title: 'Work Status Update', files: [file] }).catch(e => console.log(e));
+                } else {
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = `Work_${currentTenderId}.png`;
+                    link.click();
+                }
             }, 'image/png');
-        } catch (err) { console.error(err); } finally { modal.classList.remove('capturing'); actions.style.display = 'flex'; close.style.opacity = '1'; }
+        } catch (err) {
+            console.error("Capture failed", err);
+        } finally {
+            modal.classList.remove('capturing');
+            actions.style.display = 'flex';
+            close.style.opacity = '1';
+        }
     }
 
     async function saveDetails() {
-        const formData = new FormData(document.getElementById('editForm')), payload = { tenderId: currentTenderId };
+        const formData = new FormData(document.getElementById('editForm'));
+        const payload = { tenderId: currentTenderId };
         formData.forEach((v, k) => { payload[k] = v; });
         document.getElementById('loadingOverlay').classList.remove('hidden');
         try {
