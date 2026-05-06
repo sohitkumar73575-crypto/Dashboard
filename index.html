@@ -6,149 +6,148 @@
     <title>MC Charkhi Dadri | Work Management System</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Screenshot lene ke liye magic library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
-        body { background-color: #f0f2f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .navbar { background: #1a2a3a; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
-        .card-stats { cursor: pointer; transition: 0.3s; border: none; border-radius: 15px; }
-        .card-stats:hover { transform: translateY(-5px); box-shadow: 0 8px 15px rgba(0,0,0,0.1); }
-        .work-card { background: white; border-radius: 12px; border: none; transition: 0.3s; height: 100%; border-top: 5px solid #ccc; display: flex; flex-direction: column; cursor: pointer; }
-        .work-card:hover { box-shadow: 0 10px 20px rgba(0,0,0,0.12); transform: translateY(-3px); background-color: #fcfcfc; }
-        .status-badge { font-size: 0.75rem; padding: 5px 12px; border-radius: 20px; font-weight: 600; }
-        .search-box { border-radius: 25px; padding-left: 45px; height: 45px; border: 1px solid #ddd; }
-        .detail-label { font-size: 0.62rem; font-weight: 800; color: #999; text-transform: uppercase; margin-bottom: 2px; }
-        .detail-value { font-size: 0.88rem; color: #333; font-weight: 600; margin-bottom: 12px; }
-        .edit-input { font-size: 0.85rem; padding: 5px 8px; border-radius: 4px; border: 1px solid #ced4da; width: 100%; background-color: #fff; margin-bottom: 10px; font-weight: 600; }
-        .edit-input:disabled { background-color: #f8f9fa; color: #6c757d; border: 1px solid #dee2e6; cursor: not-allowed; }
+        :root { --primary: #1a2a3a; --accent: #2563eb; --bg: #f8fafc; }
+        body { background-color: var(--bg); font-family: 'Inter', system-ui, -apple-system, sans-serif; color: #1e293b; }
         
-        /* Highlight Banner styling */
-        .investment-banner { background: linear-gradient(135deg, #ffffff 0%, #f4fdf8 100%); border-radius: 12px; transition: 0.3s; }
-        .investment-banner:hover { box-shadow: 0 5px 15px rgba(25, 135, 84, 0.15); }
+        /* Premium Navbar */
+        .navbar { background: var(--primary); padding: 1.2rem 2rem; box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
+        .navbar-brand { font-weight: 800; letter-spacing: 1px; color: #f1f5f9 !important; }
 
-        #loadingOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 9999; display: flex; justify-content: center; align-items: center; }
+        /* Modern Stats Cards */
+        .card-stats { border: none; border-radius: 20px; background: white; transition: 0.3s; border-bottom: 5px solid transparent; cursor: pointer; }
+        .card-stats:hover { transform: translateY(-7px); box-shadow: 0 15px 30px rgba(0,0,0,0.08); }
+        
+        /* Ultra Modern Work Card */
+        .work-card { background: white; border-radius: 24px; border: 1px solid rgba(226, 232, 240, 0.8); transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); cursor: pointer; overflow: hidden; height: 100%; display: flex; flex-direction: column; }
+        .work-card:hover { transform: translateY(-10px); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.12); border-color: var(--accent); }
+        
+        .status-badge { font-size: 0.7rem; padding: 6px 16px; border-radius: 100px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+        .search-box { border-radius: 15px; padding: 14px 20px 14px 50px; border: 2px solid #e2e8f0; transition: 0.3s; background: white; font-weight: 500; }
+        .search-box:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1); outline: none; }
+        
+        .detail-label { font-size: 0.65rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 1px; }
+        .detail-value { font-size: 0.95rem; color: #0f172a; font-weight: 600; margin-bottom: 12px; line-height: 1.4; }
+        
+        /* Luxury Investment Banner */
+        .investment-banner { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; border-radius: 24px; position: relative; overflow: hidden; }
+        .investment-banner::after { content: ''; position: absolute; top: -50%; right: -10%; width: 300px; height: 300px; background: rgba(37, 99, 235, 0.1); border-radius: 50%; }
+
+        .edit-input { border-radius: 10px; border: 1px solid #cbd5e1; padding: 8px 12px; font-weight: 600; width: 100%; margin-bottom: 10px; }
+        #loadingOverlay { position: fixed; inset: 0; background: rgba(255,255,255,0.95); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .hidden { display: none !important; }
         
-        /* Print layout hiding buttons */
         @media print {
-            .btn, .search-box, #actionArea, .investment-banner, .navbar .dropdown { display: none !important; }
-            body { background-color: white; }
-            .card { break-inside: avoid; border: 1px solid #ddd !important; box-shadow: none !important; }
+            .btn, .search-box, #actionArea, .navbar .dropdown, .investment-banner { display: none !important; }
+            .work-card { border: 1px solid #cbd5e1 !important; break-inside: avoid; }
         }
     </style>
 </head>
 <body>
 
 <div id="loadingOverlay">
-    <div class="spinner-border text-primary" role="status"></div>
-    <span class="ms-3 fw-bold">Syncing Records...</span>
+    <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status"></div>
+    <span class="mt-3 fw-bold text-dark">Refining Records...</span>
 </div>
 
 <!-- Main Navbar -->
-<nav class="navbar navbar-dark px-4 py-3 d-flex justify-content-between align-items-center">
-    <span class="navbar-brand fw-bold m-0"><i class="fa-solid fa-city me-2"></i> Municipal Council Charkhi Dadri</span>
-    
-    <!-- Hamburger Menu -->
+<nav class="navbar navbar-dark px-4 d-flex justify-content-between align-items-center">
+    <span class="navbar-brand m-0 fs-4"><i class="fa-solid fa-building-columns me-2 text-info"></i>MC CHARKHI DADRI</span>
     <div class="dropdown">
-        <button class="btn text-white fs-4 border-0 p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <button class="btn btn-dark rounded-circle shadow" style="width:45px; height:45px;" type="button" data-bs-toggle="dropdown">
             <i class="fa-solid fa-bars"></i>
         </button>
-        <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2">
-            <li>
-                <a class="dropdown-item fw-bold text-dark py-2" href="#" onclick="window.print()">
-                    <i class="fa-solid fa-print me-2 text-primary"></i> Print Dashboard
-                </a>
-            </li>
+        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-2">
+            <li><a class="dropdown-item py-2 fw-bold" href="#" onclick="window.print()"><i class="fa-solid fa-file-pdf me-2 text-danger"></i>Download Report</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item py-2" href="#" onclick="location.reload()"><i class="fa-solid fa-sync me-2"></i>Refresh Dashboard</a></li>
         </ul>
     </div>
 </nav>
 
 <div class="container-fluid py-4 px-lg-5">
     <!-- Stats Row -->
-    <div class="row g-3 mb-4">
+    <div class="row g-4 mb-4">
         <div class="col-6 col-md-3" onclick="filterData('All')">
-            <div class="card card-stats p-3 bg-white border-start border-primary border-5 text-center shadow-sm">
-                <small class="text-muted fw-bold">TOTAL WORKS</small>
-                <h2 id="count-all" class="m-0 text-primary">0</h2>
+            <div class="card card-stats p-4 shadow-sm" style="border-bottom-color: #64748b;">
+                <small class="detail-label">Total Works</small>
+                <h2 id="count-all" class="fw-bold m-0 mt-1">0</h2>
             </div>
         </div>
         <div class="col-6 col-md-3" onclick="filterData('In Progress')">
-            <div class="card card-stats p-3 bg-white border-start border-success border-5 text-center shadow-sm">
-                <small class="text-success fw-bold">IN PROGRESS</small>
-                <h2 id="count-progress" class="m-0 text-success">0</h2>
+            <div class="card card-stats p-4 shadow-sm" style="border-bottom-color: #10b981;">
+                <small class="detail-label text-success">In Progress</small>
+                <h2 id="count-progress" class="fw-bold m-0 mt-1 text-success">0</h2>
             </div>
         </div>
         <div class="col-6 col-md-3" onclick="filterData('Live Tender')">
-            <div class="card card-stats p-3 bg-white border-start border-info border-5 text-center shadow-sm">
-                <small class="text-info fw-bold">LIVE TENDERS</small>
-                <h2 id="count-live" class="m-0 text-info">0</h2>
+            <div class="card card-stats p-4 shadow-sm" style="border-bottom-color: #3b82f6;">
+                <small class="detail-label text-primary">Live Tenders</small>
+                <h2 id="count-live" class="fw-bold m-0 mt-1 text-primary">0</h2>
             </div>
         </div>
         <div class="col-6 col-md-3" onclick="filterData('Yet to be Allotted')">
-            <div class="card card-stats p-3 bg-white border-start border-warning border-5 text-center shadow-sm">
-                <small class="text-warning fw-bold">PENDING ALLOT.</small>
-                <h2 id="count-pending" class="m-0 text-warning">0</h2>
+            <div class="card card-stats p-4 shadow-sm" style="border-bottom-color: #f59e0b;">
+                <small class="detail-label text-warning">Pending</small>
+                <h2 id="count-pending" class="fw-bold m-0 mt-1 text-warning">0</h2>
             </div>
         </div>
     </div>
 
-    <!-- In Progress Total Amount Banner -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="investment-banner p-3 p-md-4 shadow-sm border-start border-success border-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center">
-                <div class="mb-2 mb-md-0">
-                    <h5 class="text-success fw-bold mb-1"><i class="fa-solid fa-chart-line me-2"></i>Ongoing Investment</h5>
-                    <small class="text-muted fw-semibold">Total cost of works currently 'In Progress'</small>
-                </div>
-                <h2 class="m-0 text-success fw-bolder" id="total-progress-amount">₹0.00</h2>
-            </div>
+    <!-- Highlight Banner -->
+    <div class="investment-banner p-4 p-md-5 mb-5 shadow-lg d-flex flex-column flex-md-row justify-content-between align-items-center">
+        <div class="text-center text-md-start">
+            <h3 class="fw-bold mb-1"><i class="fa-solid fa-chart-pie me-2 text-success"></i>Project Financial Status</h3>
+            <p class="text-light opacity-75 m-0">Consolidated value of works under execution phase</p>
+        </div>
+        <div class="mt-4 mt-md-0 text-center text-md-end">
+            <small class="detail-label text-light opacity-50">Total Ongoing Investment</small>
+            <h1 class="display-5 fw-bold text-success m-0" id="total-progress-amount">₹0.00</h1>
         </div>
     </div>
 
-    <!-- Search & Title -->
-    <div class="row mb-3 align-items-center">
-        <div class="col-md-6 mb-2 mb-md-0"><h4 id="viewTitle" class="fw-bold text-dark">All Works</h4></div>
+    <!-- Header & Search -->
+    <div class="row mb-4 align-items-center">
+        <div class="col-md-6 mb-3 mb-md-0"><h3 id="viewTitle" class="fw-bold text-dark m-0">Central Repository</h3></div>
         <div class="col-md-6">
             <div class="position-relative">
-                <i class="fa fa-search position-absolute" style="left:15px; top:12px; color:#aaa;"></i>
-                <input type="text" id="searchInput" class="form-control search-box shadow-sm" placeholder="Search Tender ID, Name or Agency..." onkeyup="searchWorks()">
+                <i class="fa fa-search position-absolute" style="left:20px; top:18px; color:#94a3b8;"></i>
+                <input type="text" id="searchInput" class="form-control search-box shadow-sm" placeholder="Search by ID, Agency, or Work Name..." onkeyup="searchWorks()">
             </div>
         </div>
     </div>
 
-    <!-- Works Grid -->
     <div id="workDeck" class="row g-4"></div>
 </div>
 
-<!-- Details & Edit Modal -->
+<!-- Premium Detail Modal -->
 <div class="modal fade" id="workModal" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow-lg" id="modalCaptureArea">
-            <div class="modal-header bg-dark text-white py-2 d-flex justify-content-between align-items-center">
-                <h6 class="modal-title fw-bold m-0" id="modalTitle">Work Details</h6>
-                <div>
-                    <button id="shareBtnTop" class="btn btn-sm btn-success me-3 rounded-pill px-3 fw-bold shadow-sm" onclick="shareWorkDetails()">
-                        <i class="fa-brands fa-whatsapp me-1"></i> Share
-                    </button>
-                    <button id="closeModalBtn" type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg rounded-4" id="modalCaptureArea">
+            <div class="modal-header border-0 pb-0 px-4 pt-4">
+                <h5 class="modal-title fw-bold text-dark" id="modalTitle">Technical Specification</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" id="closeModalBtn"></button>
             </div>
-            <div class="modal-body bg-light">
-                <div class="col-12 bg-white p-3 rounded shadow-sm mb-3 border-start border-primary border-4">
-                    <div class="detail-label text-primary">Work Name</div>
-                    <div id="modalWorkName" class="fw-bold text-dark" style="font-size:0.95rem;"></div>
+            <div class="modal-body p-4">
+                <div class="bg-light p-4 rounded-4 mb-4 border-start border-primary border-5 shadow-sm">
+                    <small class="detail-label text-primary">Project Nomenclature</small>
+                    <h5 id="modalWorkName" class="fw-bold text-dark mt-1 mb-0 lh-base"></h5>
                 </div>
                 
                 <form id="editForm">
-                    <div id="modalContent" class="row g-2 px-2"></div>
+                    <div id="modalContent" class="row g-3 px-1"></div>
                 </form>
 
-                <div class="mt-4 border-top pt-3 text-center" id="actionArea">
-                    <button id="editToggleBtn" type="button" class="btn btn-dark px-4 fw-bold shadow-sm" onclick="enableEditMode()">
-                        <i class="fa fa-edit me-2"></i>EDIT DETAILS
+                <div class="mt-5 d-flex flex-wrap gap-2 justify-content-center border-top pt-4" id="actionArea">
+                    <button id="shareBtnTop" class="btn btn-success px-4 py-2 rounded-3 fw-bold shadow-sm" onclick="shareWorkDetails()">
+                        <i class="fa-brands fa-whatsapp me-2"></i>Share Update
                     </button>
-                    <button id="saveBtn" type="button" class="btn btn-primary px-5 fw-bold shadow-sm hidden" onclick="saveDetails()">
-                        <i class="fa fa-save me-2"></i>SAVE TO SHEET
+                    <button id="editToggleBtn" class="btn btn-dark px-4 py-2 rounded-3 fw-bold shadow-sm" onclick="enableEditMode()">
+                        <i class="fa fa-edit me-2"></i>Edit Parameters
+                    </button>
+                    <button id="saveBtn" class="btn btn-primary px-5 py-2 rounded-3 fw-bold shadow-sm hidden" onclick="saveDetails()">
+                        <i class="fa fa-save me-2"></i>Apply Changes
                     </button>
                 </div>
             </div>
@@ -166,57 +165,42 @@
     window.onload = fetchData;
 
     async function fetchData() {
-        document.getElementById('loadingOverlay').style.display = 'flex';
+        document.getElementById('loadingOverlay').classList.remove('hidden');
         try {
             const res = await fetch(SCRIPT_URL);
             const result = await res.json();
             masterData = result.data;
             updateUI();
-        } catch (e) { console.error("Error fetching data:", e); }
-        document.getElementById('loadingOverlay').style.display = 'none';
+        } catch (e) { console.error("Error:", e); }
+        document.getElementById('loadingOverlay').classList.add('hidden');
     }
 
+    // Money Formatter
     function formatCurrency(num) {
-        if (!num || num === "-") return "₹0.00";
+        if (!num || num === "-" || num === "0") return "₹0.00";
         let val = num.toString().replace(/,/g, '').replace('₹', '').trim();
-        if (isNaN(parseFloat(val))) return num;
-        return '₹' + parseFloat(val).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        return isNaN(parseFloat(val)) ? num : '₹' + parseFloat(val).toLocaleString('en-IN', { minimumFractionDigits: 2 });
     }
 
-    function formatForDateInput(dateStr) {
-        if(!dateStr || dateStr === "-") return "";
-        let parts = dateStr.split(/[-/]/);
-        if(parts.length === 3) {
-            if(parts[2].length === 4) return `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
-            if(parts[0].length === 4) return dateStr; 
-        }
-        return dateStr; 
+    // Helper to find value from object ignoring key casing
+    function getVal(obj, searchKey) {
+        const key = Object.keys(obj).find(k => k.toLowerCase().replace(/_/g, ' ') === searchKey.toLowerCase().replace(/_/g, ' '));
+        return key ? obj[key] : null;
     }
 
     function updateUI() {
         document.getElementById('count-all').innerText = masterData.length;
-        const progressData = masterData.filter(d => d.computedStatus === 'In Progress');
-        document.getElementById('count-progress').innerText = progressData.length;
+        const prog = masterData.filter(d => d.computedStatus === 'In Progress');
+        document.getElementById('count-progress').innerText = prog.length;
         document.getElementById('count-live').innerText = masterData.filter(d => d.computedStatus === 'Live Tender').length;
         document.getElementById('count-pending').innerText = masterData.filter(d => d.computedStatus === 'Yet to be Allotted').length;
         
-        let totalProgressCost = 0;
-        progressData.forEach(item => {
-            let costStr = item["Allotted_Amount"] || item["ALLOTTED AMOUNT"] || item["DNIT_Cost"] || item["DNIT COST"] || "0";
-            let costVal = parseFloat(costStr.toString().replace(/,/g, '').replace('₹', '').trim()) || 0;
-            totalProgressCost += costVal;
-        });
-        document.getElementById('total-progress-amount').innerText = formatCurrency(totalProgressCost);
-
+        let totalVal = prog.reduce((acc, curr) => {
+            let cost = getVal(curr, "Allotted Amount") || getVal(curr, "DNIT Cost") || 0;
+            return acc + (parseFloat(cost.toString().replace(/,/g, '').replace('₹','')) || 0);
+        }, 0);
+        document.getElementById('total-progress-amount').innerText = formatCurrency(totalVal);
         renderDeck(masterData);
-    }
-
-    function getStatusColor(s) {
-        if(s === 'Live Tender') return '#0dcaf0';
-        if(s === 'In Progress') return '#198754';
-        if(s === 'Yet to be Allotted') return '#ffc107';
-        if(s === 'Under DLP') return '#d63384';
-        return '#6c757d';
     }
 
     function renderDeck(data) {
@@ -225,39 +209,38 @@
         const filtered = currentFilter === 'All' ? data : data.filter(d => d.computedStatus === currentFilter);
         
         filtered.forEach(item => {
-            const color = getStatusColor(item.computedStatus);
+            const status = item.computedStatus;
             
-            // UPDATED DATE LOGIC: Only Agreement Dates
-            const start = item["AGREEMENT START DATE"] || item["Agreement_Start_Date"] || "";
-            const end = item["AGREEMENT END DATE"] || item["Agreement_End_Date"] || "";
-            
-            let dateDisplay = "Pending Allotment"; // Default text if dates are missing
-            
-            if (start && start !== "-" && end && end !== "-") {
-                dateDisplay = `${start} to ${end}`;
-            } else if (start && start !== "-") {
-                dateDisplay = `Start: ${start}`;
-            }
+            // ROBUST DATE SEARCH
+            const start = getVal(item, "Agreement Start Date");
+            const end = getVal(item, "Agreement End Date");
+            const dnit = getVal(item, "DNIT Cost");
 
-            const badgeHtml = (item.computedStatus === 'Other' || !item.computedStatus) ? '' : `<span class="badge status-badge" style="background-color: ${color}20; color: ${color}">${item.computedStatus}</span>`;
+            let dateInfo = `<span class="text-danger fw-bold"><i class="fa-solid fa-calendar-xmark me-1"></i>Pending Allotment</span>`;
+            if (start && start !== "-" && end && end !== "-") {
+                dateInfo = `<i class="fa-solid fa-calendar-check me-1 text-success"></i> ${start} to ${end}`;
+            }
 
             const col = document.createElement('div');
             col.className = 'col-md-6 col-lg-4';
             col.innerHTML = `
-                <div class="card work-card shadow-sm" style="border-top-color: ${color}" onclick="showModal('${item.E_TENDERID || item.E_TenderID}')">
-                    <div class="card-body d-flex flex-column">
-                        <div class="d-flex justify-content-between mb-2">
-                            <span class="badge bg-light text-dark border small"># ${item.E_TENDERID || item.E_TenderID}</span>
-                            ${badgeHtml}
+                <div class="card work-card shadow-sm" onclick="showModal('${item.E_TENDERID || item.E_TenderID}')">
+                    <div class="card-body p-4 d-flex flex-column">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <span class="badge bg-light text-secondary border px-2 py-1">#${item.E_TENDERID || item.E_TenderID}</span>
+                            <span class="status-badge" style="background:${status==='In Progress'?'#dcfce7':'#fef3c7'}; color:${status==='In Progress'?'#166534':'#92400e'}">${status}</span>
                         </div>
-                        <h6 class="card-title fw-bold text-dark mb-3" style="min-height: 40px; font-size:0.85rem;">${item["Work_Name"] || item["WORK NAME"]}</h6>
-                        <div class="mb-3 small text-secondary">
-                            <div style="font-size:0.75rem;"><i class="fa fa-user-tie me-2"></i>${item["Agency_Name"] || item["AGENCY NAME"] || 'Not Allotted'}</div>
-                            <div class="mt-1" style="font-size:0.75rem;"><i class="fa fa-calendar-days me-2"></i>${dateDisplay}</div>
+                        <h6 class="fw-bold text-dark mb-4 lh-base" style="height:45px; overflow:hidden;">${item["Work_Name"] || item["WORK NAME"]}</h6>
+                        <div class="small mb-4">
+                            <div class="mb-2 text-truncate fw-medium text-secondary"><i class="fa-solid fa-user-tie me-2"></i>${item["Agency_Name"] || item["AGENCY NAME"] || 'No Agency Assigned'}</div>
+                            <div class="fw-semibold" style="font-size:0.8rem;">${dateInfo}</div>
                         </div>
-                        <div class="mt-auto d-flex justify-content-between align-items-center pt-2 border-top">
-                            <div><small class="text-muted d-block" style="font-size:0.6rem">COST / AMOUNT</small><span class="fw-bold text-primary">${formatCurrency(item["DNIT_Cost"] || item["DNIT COST"] || item["Allotted_Amount"])}</span></div>
-                            <i class="fa fa-chevron-right text-muted small"></i>
+                        <div class="mt-auto pt-3 border-top d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="detail-label" style="font-size:0.55rem; color:#3b82f6;">DNIT COST</div>
+                                <div class="fw-bold text-primary fs-5">${formatCurrency(dnit)}</div>
+                            </div>
+                            <div class="btn btn-outline-primary btn-sm rounded-circle" style="width:32px; height:32px; padding:0; display:flex; align-items:center; justify-content:center;"><i class="fa fa-chevron-right"></i></div>
                         </div>
                     </div>
                 </div>`;
@@ -268,45 +251,24 @@
     function showModal(tenderId) {
         currentTenderId = tenderId;
         const item = masterData.find(d => (d.E_TENDERID || d.E_TenderID) == tenderId);
-        document.getElementById('modalWorkName').innerText = item["Work_Name"] || item["WORK NAME"] || "N/A";
-        document.getElementById('modalTitle').innerText = "Work Details";
-        
-        document.getElementById('shareBtnTop').classList.remove('hidden');
-        document.getElementById('editToggleBtn').classList.remove('hidden');
-        document.getElementById('saveBtn').classList.add('hidden');
-        document.getElementById('actionArea').classList.remove('hidden');
-        
+        document.getElementById('modalWorkName').innerText = item["Work_Name"] || item["WORK NAME"];
         const container = document.getElementById('modalContent');
         container.innerHTML = '';
         
-        const hideKeys = ['work_name', 'work name', 'rowindex', 'row_index', 'computedstatus', 'computed status'];
+        const hideKeys = ['work_name', 'work name', 'rowindex', 'row_index', 'computedstatus'];
 
         for (let key in item) {
-            if (hideKeys.includes(key.toLowerCase())) continue;
-
-            let val = item[key] && item[key] !== "-" ? item[key] : "-";
-            let lowerKey = key.toLowerCase();
-            
-            let displayVal = val;
-            let inputType = "text";
-            let editVal = val === "-" ? "" : val;
-
-            if (lowerKey.includes('cost') || lowerKey.includes('amount')) {
-                displayVal = formatCurrency(val);
-                inputType = "number";
-                editVal = editVal.toString().replace(/,/g, '').replace('₹', '').trim(); 
-            } 
-            else if (lowerKey.includes('date')) {
-                inputType = "date";
-                editVal = formatForDateInput(editVal);
-            }
+            if (hideKeys.includes(key.toLowerCase().replace(/_/g, ' '))) continue;
+            let val = item[key] || "-";
+            const isCost = key.toLowerCase().includes('cost') || key.toLowerCase().includes('amount');
+            const isDate = key.toLowerCase().includes('date');
 
             const col = document.createElement('div');
-            col.className = 'col-md-4 col-6 mb-2';
+            col.className = 'col-md-4 col-6 mb-3';
             col.innerHTML = `
                 <div class="detail-label">${key.replace(/_/g, ' ')}</div>
-                <div class="detail-value" id="val_${key}">${displayVal}</div>
-                <input type="${inputType}" name="${key}" class="form-control edit-input hidden shadow-sm" step="any" value="${editVal}" ${(val !== "-" && val !== "") ? "disabled" : ""}>
+                <div class="detail-value">${isCost ? formatCurrency(val) : val}</div>
+                <input type="${isDate?'date':'text'}" name="${key}" class="form-control edit-input hidden" value="${val==='-'?'':val}">
             `;
             container.appendChild(col);
         }
@@ -314,94 +276,61 @@
     }
 
     function enableEditMode() {
-        document.getElementById('modalTitle').innerText = "Edit Details";
         document.querySelectorAll('.detail-value').forEach(el => el.classList.add('hidden'));
         document.querySelectorAll('.edit-input').forEach(el => el.classList.remove('hidden'));
-        
-        document.getElementById('shareBtnTop').classList.add('hidden');
         document.getElementById('editToggleBtn').classList.add('hidden');
         document.getElementById('saveBtn').classList.remove('hidden');
+        document.getElementById('shareBtnTop').classList.add('hidden');
+    }
+
+    function filterData(s) { currentFilter = s; document.getElementById('viewTitle').innerText = s === 'All' ? "Central Repository" : s + " Portfolio"; updateUI(); }
+    
+    function searchWorks() {
+        const val = document.getElementById('searchInput').value.toLowerCase();
+        renderDeck(masterData.filter(d => JSON.stringify(d).toLowerCase().includes(val)));
     }
 
     async function shareWorkDetails() {
-        const shareBtn = document.getElementById('shareBtnTop');
-        const closeBtn = document.getElementById('closeModalBtn');
         const actionArea = document.getElementById('actionArea');
-        const targetElement = document.getElementById('modalCaptureArea');
-        
-        shareBtn.style.display = 'none';
-        closeBtn.style.display = 'none';
-        actionArea.style.display = 'none';
+        const closeBtn = document.getElementById('closeModalBtn');
+        actionArea.classList.add('hidden');
+        closeBtn.classList.add('hidden');
 
         try {
-            const canvas = await html2canvas(targetElement, { scale: 2, backgroundColor: '#ffffff' });
+            const canvas = await html2canvas(document.getElementById('modalCaptureArea'), { scale: 2 });
+            actionArea.classList.remove('hidden');
+            closeBtn.classList.remove('hidden');
             
-            shareBtn.style.display = 'inline-block';
-            closeBtn.style.display = 'inline-block';
-            actionArea.style.display = 'block';
-
-            canvas.toBlob(async (blob) => {
-                const file = new File([blob], `Work_${currentTenderId}.png`, { type: "image/png" });
-                
-                if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                    await navigator.share({
-                        title: 'Work Details',
-                        text: `Details for Tender ID: ${currentTenderId}`,
-                        files: [file]
-                    });
+            canvas.toBlob(blob => {
+                const file = new File([blob], `Report_${currentTenderId}.png`, { type: "image/png" });
+                if (navigator.share) {
+                    navigator.share({ title: 'MC Charkhi Dadri Report', files: [file] });
                 } else {
                     const link = document.createElement('a');
-                    link.download = `Work_${currentTenderId}.png`;
                     link.href = URL.createObjectURL(blob);
+                    link.download = `Report_${currentTenderId}.png`;
                     link.click();
                 }
             });
-        } catch (e) {
-            shareBtn.style.display = 'inline-block';
-            closeBtn.style.display = 'inline-block';
-            actionArea.style.display = 'block';
-            alert("Screenshot process failed.");
-        }
+        } catch (e) { alert("Sharing failed."); }
     }
 
     async function saveDetails() {
-        const form = document.getElementById('editForm');
-        const formData = new FormData(form);
-        const dataToSave = { tenderId: currentTenderId };
-        
-        formData.forEach((value, key) => { 
-            if(value) dataToSave[key] = value; 
-        });
+        const formData = new FormData(document.getElementById('editForm'));
+        const details = { tenderId: currentTenderId };
+        formData.forEach((v, k) => { if(v) details[k] = v; });
 
-        document.getElementById('loadingOverlay').style.display = 'flex';
+        document.getElementById('loadingOverlay').classList.remove('hidden');
         try {
-            const response = await fetch(SCRIPT_URL, {
-                method: 'POST',
-                body: JSON.stringify({ action: 'updateWork', details: dataToSave })
-            });
-            const res = await response.json();
-            if(res.status === 'success') {
-                alert("Data Saved Perfectly!");
-                fetchData(); 
+            const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'updateWork', details }) });
+            const data = await res.json();
+            if(data.status === 'success') {
+                alert("Database Updated Successfully!");
+                fetchData();
                 bootstrap.Modal.getInstance(document.getElementById('workModal')).hide();
             }
         } catch (e) { alert("Sync Error!"); }
-        document.getElementById('loadingOverlay').style.display = 'none';
-    }
-
-    function filterData(status) {
-        currentFilter = status;
-        document.getElementById('viewTitle').innerText = (status === 'All' ? "All Works" : status + " Projects");
-        renderDeck(masterData);
-    }
-
-    function searchWorks() {
-        const val = document.getElementById('searchInput').value.toLowerCase();
-        renderDeck(masterData.filter(d => 
-            (d.E_TENDERID && d.E_TENDERID.toString().toLowerCase().includes(val)) || 
-            (d.Work_Name && d.Work_Name.toLowerCase().includes(val)) ||
-            (d.Agency_Name && d.Agency_Name.toLowerCase().includes(val))
-        ));
+        document.getElementById('loadingOverlay').classList.add('hidden');
     }
 </script>
 </body>
