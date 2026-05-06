@@ -501,16 +501,64 @@
     }
 
     async function saveDetails() {
-        const formData = new FormData(document.getElementById('editForm'));
-        const payload = { tenderId: currentTenderId };
-        formData.forEach((v, k) => { payload[k] = v; });
-        document.getElementById('loadingOverlay').classList.remove('hidden');
-        try {
-            const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'updateWork', details: payload }) });
-            const resp = await res.json();
-            if(resp.status === 'success') { fetchData(); bootstrap.Modal.getInstance(document.getElementById('workModal')).hide(); }
-        } catch (e) { alert("Update Failed"); }
-        document.getElementById('loadingOverlay').classList.add('hidden');
+
+    const formData = new FormData(document.getElementById('editForm'));
+
+    const payload = {
+        tenderId: currentTenderId
+    };
+
+    formData.forEach((v, k) => {
+        payload[k] = v;
+    });
+
+    document.getElementById('loadingOverlay')
+        .classList.remove('hidden');
+
+    try {
+
+        const res = await fetch(SCRIPT_URL, {
+            method: 'POST',
+
+            headers: {
+                'Content-Type': 'application/json'
+            },
+
+            body: JSON.stringify({
+                action: 'updateWork',
+                details: payload
+            })
+        });
+
+        const resp = await res.json();
+
+        console.log(resp);
+
+        if (resp.status === 'success') {
+
+            alert("Updated Successfully");
+
+            fetchData();
+
+            bootstrap.Modal
+                .getInstance(document.getElementById('workModal'))
+                .hide();
+
+        } else {
+
+            alert(resp.message || "Update Failed");
+        }
+
+    } catch (e) {
+
+        console.error(e);
+
+        alert("Server Connection Failed");
+    }
+
+    document.getElementById('loadingOverlay')
+        .classList.add('hidden');
+}
     }
 </script>
 </body>
