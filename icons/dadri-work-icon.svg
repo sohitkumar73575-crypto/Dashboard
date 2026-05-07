@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">DadriWorks App Icon</title>
+  <desc id="desc">Civic works dashboard app icon with a municipal building, checklist, and progress mark.</desc>
+  <defs>
+    <linearGradient id="bg" x1="72" y1="52" x2="438" y2="460" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#111827"/>
+      <stop offset="0.56" stop-color="#1d4ed8"/>
+      <stop offset="1" stop-color="#0f766e"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="132" y1="124" x2="390" y2="410" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#dbeafe"/>
+    </linearGradient>
+    <filter id="cardShadow" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#020617" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="108" fill="url(#bg)"/>
+  <path d="M78 378c70-18 113-14 171 15 58 28 111 31 185-2v70H78v-83Z" fill="#14b8a6" opacity="0.2"/>
+  <circle cx="405" cy="108" r="54" fill="#bfdbfe" opacity="0.2"/>
+  <g filter="url(#cardShadow)">
+    <rect x="108" y="128" width="296" height="272" rx="38" fill="url(#panel)"/>
+    <path d="M256 86 105 158h302L256 86Z" fill="#eff6ff"/>
+    <path d="M256 86 105 158h302L256 86Z" fill="none" stroke="#38bdf8" stroke-width="15" stroke-linejoin="round"/>
+    <rect x="132" y="360" width="248" height="36" rx="18" fill="#111827"/>
+    <rect x="150" y="190" width="42" height="132" rx="14" fill="#1d4ed8"/>
+    <rect x="234" y="190" width="42" height="132" rx="14" fill="#0f766e"/>
+    <rect x="318" y="190" width="42" height="132" rx="14" fill="#1d4ed8"/>
+    <path d="M172 286 218 246l45 33 79-82" fill="none" stroke="#16a34a" stroke-width="23" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="256" cy="142" r="23" fill="#111827"/>
+    <text x="256" y="151" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="800" fill="#ffffff">MC</text>
+  </g>
+</svg>

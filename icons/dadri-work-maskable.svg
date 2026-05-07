@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">DadriWorks Maskable App Icon</title>
+  <desc id="desc">Safe-zone civic works app icon for installed home-screen shortcuts.</desc>
+  <defs>
+    <linearGradient id="bg" x1="52" y1="54" x2="460" y2="462" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#111827"/>
+      <stop offset="0.56" stop-color="#1d4ed8"/>
+      <stop offset="1" stop-color="#0f766e"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="142" y1="138" x2="376" y2="386" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#dbeafe"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <path d="M54 378c72-17 122-12 181 17 58 28 121 29 223-8v82H54v-91Z" fill="#14b8a6" opacity="0.19"/>
+  <circle cx="415" cy="103" r="66" fill="#bfdbfe" opacity="0.17"/>
+  <rect x="128" y="138" width="256" height="250" rx="40" fill="url(#panel)"/>
+  <path d="M256 106 130 168h252L256 106Z" fill="#eff6ff" stroke="#38bdf8" stroke-width="14" stroke-linejoin="round"/>
+  <rect x="150" y="352" width="212" height="32" rx="16" fill="#111827"/>
+  <rect x="168" y="202" width="36" height="112" rx="13" fill="#1d4ed8"/>
+  <rect x="238" y="202" width="36" height="112" rx="13" fill="#0f766e"/>
+  <rect x="308" y="202" width="36" height="112" rx="13" fill="#1d4ed8"/>
+  <path d="M180 282 220 248l39 29 73-76" fill="none" stroke="#16a34a" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="256" cy="157" r="20" fill="#111827"/>
+  <text x="256" y="165" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="800" fill="#ffffff">MC</text>
+</svg>
