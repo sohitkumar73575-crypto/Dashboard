@@ -1737,14 +1737,10 @@
             allotted: byDate("Allotement_Date"),
             completed: byDate("Completion_Date"),
             inProgress: items.filter(item => {
-                const statusMatch = item.computedStatus === "In Progress";
-                const overlaps = doesDateRangeOverlap(
-                    getReportDate(item, "Agreement Start Date"),
-                    getReportDate(item, "Agreement End Date"),
-                    startDate,
-                    endDate
-                );
-                return statusMatch || overlaps;
+                const allotmentDate = getReportDate(item, "Allotement_Date");
+                const completionDate = getReportDate(item, "Completion_Date");
+                return isDateInRange(allotmentDate, startDate, endDate) &&
+                    !isDateInRange(completionDate, startDate, endDate);
             })
         };
     }
