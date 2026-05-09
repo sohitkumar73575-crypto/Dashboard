@@ -16,6 +16,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.4/jspdf.plugin.autotable.min.js"></script>
     <style>
         :root {
             --primary: #10243d;
@@ -76,6 +77,77 @@
         }
         .brand-kicker { color: #9fb2c8; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; }
         .brand-title { line-height: 1.1; }
+        .navbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            margin-left: auto;
+        }
+        .report-menu-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: var(--radius);
+            border: 1px solid rgba(255,255,255,0.18);
+            background: rgba(255,255,255,0.1);
+            color: #f8fafc;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: none;
+        }
+        .report-menu-btn:hover,
+        .report-menu-btn:focus {
+            background: rgba(255,255,255,0.18);
+            color: #fff;
+            outline: none;
+        }
+        .report-dropdown {
+            position: relative;
+        }
+        .report-dropdown-menu {
+            position: absolute;
+            top: calc(100% + 0.55rem);
+            right: 0;
+            min-width: 210px;
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-md);
+            padding: 0.45rem;
+            z-index: 1100;
+        }
+        .report-dropdown-menu.hidden {
+            display: none;
+        }
+        .report-dropdown-item {
+            width: 100%;
+            border: 0;
+            background: transparent;
+            border-radius: var(--radius);
+            padding: 0.72rem 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            color: var(--text);
+            font-weight: 800;
+            text-align: left;
+        }
+        .report-dropdown-item:hover,
+        .report-dropdown-item:focus {
+            background: #f1f5f9;
+            outline: none;
+        }
+        .report-dropdown-item .pdf-icon {
+            color: #dc2626;
+            font-size: 1.05rem;
+        }
+        .report-option-card {
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background: #fbfdff;
+            padding: 0.9rem;
+            height: 100%;
+        }
         .dashboard-shell {
             max-width: 1480px;
             margin: 0 auto;
@@ -491,6 +563,7 @@
             .brand-mark { width: 38px; height: 38px; }
             .brand-kicker { font-size: 0.65rem; }
             .brand-title { font-size: 1rem; }
+            .report-menu-btn { width: 40px; height: 40px; }
             .fab-add-work { width: 56px; height: 56px; }
             .status-badge { font-size: 0.6rem; padding: 5px 9px; }
             .toolbar-panel { padding: 0.85rem; }
@@ -608,6 +681,17 @@
             <span class="brand-title d-block">MC Charkhi Dadri</span>
         </span>
     </span>
+    <div class="navbar-actions report-dropdown">
+        <button class="report-menu-btn" type="button" onclick="toggleReportMenu(event)" title="Reports menu" aria-label="Reports menu" aria-expanded="false">
+            <i class="fa-solid fa-bars"></i>
+        </button>
+        <div id="reportDropdownMenu" class="report-dropdown-menu hidden">
+            <button class="report-dropdown-item" type="button" onclick="openReportModalFromMenu()">
+                <i class="fa-solid fa-file-pdf pdf-icon"></i>
+                <span>Get Reports</span>
+            </button>
+        </div>
+    </div>
 </nav>
 
 <div class="container-fluid dashboard-shell">
@@ -1045,7 +1129,83 @@
     </div>
 </div>
 
+<!-- Report Modal -->
+<div class="modal fade" id="reportModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg overflow-hidden">
+            <div class="modal-header border-0 px-4 pt-4 pb-2 align-items-start gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <span class="add-work-title-icon"><i class="fa-solid fa-file-excel"></i></span>
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark mb-0">Get Report</h5>
+                        <small class="text-secondary fw-semibold">MC Dadri Development Works</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body p-4">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <div class="report-option-card">
+                            <label class="detail-label" for="reportMode">Duration</label>
+                            <select id="reportMode" class="edit-input" onchange="syncReportModeFields()">
+                                <option value="month">Month Wise</option>
+                                <option value="year">Year Wise</option>
+                                <option value="custom">Custom Duration</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4" id="reportMonthWrap">
+                        <div class="report-option-card">
+                            <label class="detail-label" for="reportMonth">Month</label>
+                            <input id="reportMonth" type="month" class="edit-input" onchange="updateReportPreview()">
+                        </div>
+                    </div>
+                    <div class="col-md-4" id="reportYearWrap">
+                        <div class="report-option-card">
+                            <label class="detail-label" for="reportYear">Year</label>
+                            <input id="reportYear" type="number" min="2000" max="2100" step="1" class="edit-input" onchange="updateReportPreview()">
+                        </div>
+                    </div>
+                    <div class="col-md-4 d-none" id="reportFromWrap">
+                        <div class="report-option-card">
+                            <label class="detail-label" for="reportFromDate">From Date</label>
+                            <input id="reportFromDate" type="date" class="edit-input" onchange="updateReportPreview()">
+                        </div>
+                    </div>
+                    <div class="col-md-4 d-none" id="reportToWrap">
+                        <div class="report-option-card">
+                            <label class="detail-label" for="reportToDate">To Date</label>
+                            <input id="reportToDate" type="date" class="edit-input" onchange="updateReportPreview()">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-highlight p-3 mt-4">
+                    <small class="detail-label text-primary">Workbook Sheets</small>
+                    <div class="fw-bold text-dark mt-1">Summary, Tendered, Allotted, Completed, In Progress</div>
+                    <div class="small text-secondary mt-2" id="reportRangePreview"></div>
+                </div>
+            </div>
+
+            <div class="modal-footer border-0 justify-content-center p-4 pt-0">
+                <button type="button" class="btn btn-light border px-4 py-2 rounded-3 fw-bold" data-bs-dismiss="modal">
+                    Cancel
+                </button>
+                <button id="reportDownloadBtn" type="button" class="btn btn-success px-4 py-2 rounded-3 fw-bold" onclick="downloadWorksReportXlsx()">
+                    <i class="fa-solid fa-file-excel me-2"></i>Generate Report in XLSX
+                </button>
+                <button id="reportPdfBtn" type="button" class="btn btn-danger px-4 py-2 rounded-3 fw-bold" onclick="downloadWorksReportPdf()">
+                    <i class="fa-solid fa-file-pdf me-2"></i>Generate Report in PDF
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script>
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxOKN15Szd7A3OGEM1-Xg_Jnwhg4QUibhQ4zAaFHuQBmJiUhtoyeAHFzUtEwdDrUtEFeg/exec';
     let masterData = [];
@@ -1054,6 +1214,60 @@
     let pbgSelectedImageFiles = [];
     const BG_REGISTER_STORE_KEY = 'dadriworksBgRegisterDetails';
     const RUPEE = String.fromCharCode(8377);
+    const MAJOR_WORK_THRESHOLD = 10000000;
+    const MAJOR_WORK_FILL = "FFF2CC";
+    const MAJOR_WORK_NOTE = "Major works highlighted in light yellow colour";
+    const REPORT_SOURCE_COLUMNS = [
+        "Work_Name",
+        "Estimate_Cost",
+        "Admin Approval_Date",
+        "Tech_Approval_Date",
+        "DNIT_Cost",
+        "E_TENDERID",
+        "T_PUB_DATE",
+        "T_BIDSUB_START_DATE",
+        "T_BIDSUB_END_DATE",
+        "T_BID_OPEN_DATE",
+        "Agency_Name",
+        "Allotement_Date",
+        "Agreement Start Date",
+        "Agreement End Date",
+        "Agreement Amount",
+        "Revised_End Date(if any)",
+        "Completion_Date",
+        "DLP"
+    ];
+    const REPORT_HEADER_LABELS = {
+        "Work_Name": "Work Name",
+        "Estimate_Cost": "Estimate Cost",
+        "Admin Approval_Date": "Admin Approval Date",
+        "Tech_Approval_Date": "Technical Approval Date",
+        "DNIT_Cost": "DNIT Cost",
+        "E_TENDERID": "E-Tender ID",
+        "T_PUB_DATE": "Tender Publish Date",
+        "T_BIDSUB_START_DATE": "Tender Bid Submission Start Date",
+        "T_BIDSUB_END_DATE": "Tender Bid Submission End Date",
+        "T_BID_OPEN_DATE": "Tender Bid Open Date",
+        "Agency_Name": "Agency Name",
+        "Allotement_Date": "Allotment Date",
+        "Agreement Start Date": "Agreement Start Date",
+        "Agreement End Date": "Agreement End Date",
+        "Agreement Amount": "Agreement Amount",
+        "Revised_End Date(if any)": "Revised End Date, If Any",
+        "Completion_Date": "Completion Date",
+        "DLP": "DLP"
+    };
+    const REPORT_KEY_ALIASES = {
+        "Allotement_Date": ["Allotment Date", "Allotted Date", "Alloted Date", "Allotment_Date"],
+        "Admin Approval_Date": ["Admin_Approval_Date", "Admin Approval Date", "Admin Approved Date"],
+        "T_PUB_DATE": ["Tender Publish Date", "Publish Date", "Tender Publish_Date"],
+        "T_BID_OPEN_DATE": ["Tender Bid Open Date", "Bid Open Date", "Tender Opening Date"],
+        "Completion_Date": ["Completion Date", "Completed Date"],
+        "Estimate_Cost": ["Estimate Cost", "Estimated Cost"],
+        "DNIT_Cost": ["DNIT Cost", "DNIT COST"],
+        "E_TENDERID": ["E_TenderID", "Tender ID", "TenderID"],
+        "Agency_Name": ["Agency Name", "AGENCY_NAME"]
+    };
 
     window.onload = initApp;
 
@@ -1145,6 +1359,15 @@
         return key ? item[key] : 0;
     }
 
+    function getEstimateCostColumnValue(item) {
+        if (item && item["Estimate_Cost"] !== undefined && item["Estimate_Cost"] !== null) {
+            return item["Estimate_Cost"];
+        }
+
+        const key = Object.keys(item || {}).find(k => k.trim() === "Estimate_Cost");
+        return key ? item[key] : 0;
+    }
+
     function getAgreementAmountKey(item) {
         const keys = ["Agreement Amount", "Agreement_Amount", "AGREEMENT_AMOUNT", "Allotted Amount", "Alloted Amount", "Quoted Amount", "Quoted_Amount"];
         return keys.find(k => item[k] !== undefined && item[k] !== null && item[k] !== "") || "";
@@ -1157,6 +1380,201 @@
 
     function getAgencyName(item) {
         return item["Agency_Name"] || item["Agency Name"] || item["AGENCY_NAME"] || "";
+    }
+
+    function normalizeReportKey(key) {
+        return String(key || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    }
+
+    function resolveReportKey(item, sourceKey) {
+        if (!item) return sourceKey;
+        if (Object.prototype.hasOwnProperty.call(item, sourceKey)) return sourceKey;
+
+        const keys = Object.keys(item);
+        const candidates = [sourceKey, ...(REPORT_KEY_ALIASES[sourceKey] || [])];
+        for (const candidate of candidates) {
+            const normalized = normalizeReportKey(candidate);
+            const found = keys.find(key => normalizeReportKey(key) === normalized);
+            if (found) return found;
+        }
+
+        return sourceKey;
+    }
+
+    function getReportValue(item, sourceKey) {
+        const key = resolveReportKey(item, sourceKey);
+        return item && item[key] !== undefined && item[key] !== null ? item[key] : "";
+    }
+
+    function getReportColumnsThrough(endKey) {
+        const endIndex = REPORT_SOURCE_COLUMNS.indexOf(endKey);
+        return REPORT_SOURCE_COLUMNS.slice(0, endIndex === -1 ? REPORT_SOURCE_COLUMNS.length : endIndex + 1);
+    }
+
+    function pad2(value) {
+        return String(value).padStart(2, '0');
+    }
+
+    function formatReportDateDisplay(date) {
+        if (!date) return '';
+        return `${pad2(date.getDate())}/${pad2(date.getMonth() + 1)}/${date.getFullYear()}`;
+    }
+
+    function toDateInputValue(date) {
+        return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+    }
+
+    function isReportDateKey(key) {
+        return normalizeReportKey(key).includes('date') || normalizeReportKey(key).includes('tpub') || normalizeReportKey(key).includes('tbid');
+    }
+
+    function isReportAmountKey(key) {
+        const normalized = normalizeReportKey(key);
+        return normalized.includes('cost') || normalized.includes('amount');
+    }
+
+    function parseExcelSerialDate(serialValue) {
+        const serial = Number(serialValue);
+        if (!Number.isFinite(serial) || serial < 1) return null;
+        const utc = Date.UTC(1899, 11, 30) + Math.round(serial) * 86400000;
+        const d = new Date(utc);
+        return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+    }
+
+    function parseReportDate(value) {
+        if (value instanceof Date && !isNaN(value.getTime())) {
+            return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+        }
+
+        if (value === undefined || value === null || value === '' || value === '-') return null;
+        const text = String(value).trim();
+        if (!text) return null;
+
+        if (/^\d+(\.\d+)?$/.test(text)) {
+            return parseExcelSerialDate(text);
+        }
+
+        let match = text.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+        if (match) {
+            const d = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+            return isNaN(d.getTime()) ? null : d;
+        }
+
+        match = text.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})$/);
+        if (match) {
+            const year = Number(match[3].length === 2 ? `20${match[3]}` : match[3]);
+            const d = new Date(year, Number(match[2]) - 1, Number(match[1]));
+            return isNaN(d.getTime()) ? null : d;
+        }
+
+        const parsed = new Date(text);
+        return isNaN(parsed.getTime()) ? null : new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+    }
+
+    function getReportDate(item, sourceKey) {
+        return parseReportDate(getReportValue(item, sourceKey));
+    }
+
+    function isDateInRange(date, startDate, endDate) {
+        return Boolean(date && date >= startDate && date <= endDate);
+    }
+
+    function doesDateRangeOverlap(startA, endA, startB, endB) {
+        if (!startA && !endA) return false;
+        const aStart = startA || endA;
+        const aEnd = endA || startA;
+        return aStart <= endB && aEnd >= startB;
+    }
+
+    function getReportRange() {
+        const mode = document.getElementById('reportMode').value;
+        let startDate;
+        let endDate;
+
+        if (mode === 'year') {
+            const year = Number(document.getElementById('reportYear').value);
+            if (!year) throw new Error('Report year select karo.');
+            startDate = new Date(year, 0, 1);
+            endDate = new Date(year, 11, 31);
+        } else if (mode === 'custom') {
+            startDate = parseReportDate(document.getElementById('reportFromDate').value);
+            endDate = parseReportDate(document.getElementById('reportToDate').value);
+            if (!startDate || !endDate) throw new Error('From aur To date select karo.');
+        } else {
+            const monthValue = document.getElementById('reportMonth').value;
+            if (!monthValue) throw new Error('Report month select karo.');
+            const [year, month] = monthValue.split('-').map(Number);
+            startDate = new Date(year, month - 1, 1);
+            endDate = new Date(year, month, 0);
+        }
+
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setHours(0, 0, 0, 0);
+        if (startDate > endDate) throw new Error('From date To date se baad nahi ho sakti.');
+
+        return { startDate, endDate };
+    }
+
+    function setDefaultReportFields() {
+        const today = new Date();
+        const monthValue = `${today.getFullYear()}-${pad2(today.getMonth() + 1)}`;
+        document.getElementById('reportMonth').value = document.getElementById('reportMonth').value || monthValue;
+        document.getElementById('reportYear').value = document.getElementById('reportYear').value || today.getFullYear();
+        document.getElementById('reportFromDate').value = document.getElementById('reportFromDate').value || toDateInputValue(new Date(today.getFullYear(), today.getMonth(), 1));
+        document.getElementById('reportToDate').value = document.getElementById('reportToDate').value || toDateInputValue(today);
+    }
+
+    function syncReportModeFields() {
+        const mode = document.getElementById('reportMode').value;
+        document.getElementById('reportMonthWrap').classList.toggle('d-none', mode !== 'month');
+        document.getElementById('reportYearWrap').classList.toggle('d-none', mode !== 'year');
+        document.getElementById('reportFromWrap').classList.toggle('d-none', mode !== 'custom');
+        document.getElementById('reportToWrap').classList.toggle('d-none', mode !== 'custom');
+        updateReportPreview();
+    }
+
+    function updateReportPreview() {
+        const preview = document.getElementById('reportRangePreview');
+        if (!preview) return;
+        try {
+            const { startDate, endDate } = getReportRange();
+            preview.innerText = `Report From ${formatReportDateDisplay(startDate)} - ${formatReportDateDisplay(endDate)}`;
+        } catch (e) {
+            preview.innerText = e.message || '';
+        }
+    }
+
+    function toggleReportMenu(event) {
+        if (event) event.stopPropagation();
+        const menu = document.getElementById('reportDropdownMenu');
+        const button = document.querySelector('.report-menu-btn');
+        const willOpen = menu.classList.contains('hidden');
+        menu.classList.toggle('hidden', !willOpen);
+        if (button) button.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+    }
+
+    function closeReportMenu() {
+        const menu = document.getElementById('reportDropdownMenu');
+        const button = document.querySelector('.report-menu-btn');
+        if (menu) menu.classList.add('hidden');
+        if (button) button.setAttribute('aria-expanded', 'false');
+    }
+
+    document.addEventListener('click', event => {
+        const menu = document.getElementById('reportDropdownMenu');
+        if (!menu || menu.classList.contains('hidden')) return;
+        if (!event.target.closest('.report-dropdown')) closeReportMenu();
+    });
+
+    function openReportModalFromMenu() {
+        closeReportMenu();
+        openReportModal();
+    }
+
+    function openReportModal() {
+        setDefaultReportFields();
+        syncReportModeFields();
+        new bootstrap.Modal(document.getElementById('reportModal')).show();
     }
 
     function parseNumericAmount(value) {
@@ -1308,6 +1726,600 @@
 
     function parseCurrencyAmount(value) {
         return Math.round(parseNumericAmount(value));
+    }
+
+    function getReportRows(startDate, endDate) {
+        const items = Array.isArray(masterData) ? masterData : [];
+        const byDate = key => items.filter(item => isDateInRange(getReportDate(item, key), startDate, endDate));
+
+        return {
+            tendered: byDate("T_PUB_DATE"),
+            allotted: byDate("Allotement_Date"),
+            completed: byDate("Completion_Date"),
+            inProgress: items.filter(item => {
+                const statusMatch = item.computedStatus === "In Progress";
+                const overlaps = doesDateRangeOverlap(
+                    getReportDate(item, "Agreement Start Date"),
+                    getReportDate(item, "Agreement End Date"),
+                    startDate,
+                    endDate
+                );
+                return statusMatch || overlaps;
+            })
+        };
+    }
+
+    function getReportDefinitions(reportRows) {
+        return [
+            { name: "Tendered", rows: reportRows.tendered, columns: getReportColumnsThrough("T_BID_OPEN_DATE") },
+            { name: "Allotted", rows: reportRows.allotted, columns: getReportColumnsThrough("Agreement End Date") },
+            { name: "Completed", rows: reportRows.completed, columns: getReportColumnsThrough("Completion_Date") },
+            { name: "In Progress", rows: reportRows.inProgress, columns: getReportColumnsThrough("Agreement End Date") }
+        ];
+    }
+
+    function getUniqueReportRows(rows) {
+        const seen = new Set();
+        const unique = [];
+
+        rows.forEach(item => {
+            const id = getTenderId(item) || item.rowIndex || JSON.stringify(item);
+            if (!seen.has(id)) {
+                seen.add(id);
+                unique.push(item);
+            }
+        });
+
+        return unique;
+    }
+
+    function isMajorWork(item) {
+        return parseWorkAmount(getReportValue(item, "Estimate_Cost"), "Estimate_Cost") > MAJOR_WORK_THRESHOLD;
+    }
+
+    function getMajorWorks(reportRows) {
+        return getUniqueReportRows([
+            ...reportRows.tendered,
+            ...reportRows.allotted,
+            ...reportRows.completed,
+            ...reportRows.inProgress
+        ]).filter(isMajorWork);
+    }
+
+    function getReportRowIdentity(item) {
+        return getTenderId(item) || item.rowIndex || JSON.stringify(item);
+    }
+
+    function makeReportRowIdentitySet(rows) {
+        return new Set(rows.map(getReportRowIdentity));
+    }
+
+    function getMajorWorkStatus(item, reportRows) {
+        const id = getReportRowIdentity(item);
+        const completed = makeReportRowIdentitySet(reportRows.completed);
+        const inProgress = makeReportRowIdentitySet(reportRows.inProgress);
+        const allotted = makeReportRowIdentitySet(reportRows.allotted);
+
+        if (completed.has(id)) return "Completed";
+        if (inProgress.has(id)) return "In Progress";
+        if (allotted.has(id)) return "Allotted";
+        return "Tendered";
+    }
+
+    function formatIndianNumber(value) {
+        const amount = Number(value);
+        if (!Number.isFinite(amount)) return value || "";
+        const hasDecimals = Math.abs(amount % 1) > 0;
+        return amount.toLocaleString('en-IN', {
+            minimumFractionDigits: hasDecimals ? 2 : 0,
+            maximumFractionDigits: hasDecimals ? 2 : 0
+        });
+    }
+
+    function getReportCellValue(item, sourceKey) {
+        const value = getReportValue(item, sourceKey);
+        if (isReportDateKey(sourceKey)) {
+            const date = parseReportDate(value);
+            return date ? formatReportDateDisplay(date) : value;
+        }
+        if (isReportAmountKey(sourceKey)) {
+            const amount = parseWorkAmount(value, sourceKey);
+            return amount ? formatIndianNumber(amount) : "";
+        }
+        return value;
+    }
+
+    function makeBorderStyle() {
+        return {
+            top: { style: "thin", color: { rgb: "B7B7B7" } },
+            bottom: { style: "thin", color: { rgb: "B7B7B7" } },
+            left: { style: "thin", color: { rgb: "B7B7B7" } },
+            right: { style: "thin", color: { rgb: "B7B7B7" } }
+        };
+    }
+
+    function getColumnAlignment(header, sourceKey) {
+        if (header === "Sr No.") return { horizontal: "center", vertical: "top", wrapText: true };
+        if (isReportAmountKey(sourceKey)) return { horizontal: "right", vertical: "top", wrapText: true };
+        if (isReportDateKey(sourceKey)) return { horizontal: "center", vertical: "top", wrapText: true };
+        return { horizontal: "left", vertical: "top", wrapText: true };
+    }
+
+    function getXlsxColumnWidth(header, key) {
+        const normalizedHeader = String(header || "").toLowerCase();
+        if (header === "Sr No." || key === "sr") return 7;
+        if (key === "Work_Name" || normalizedHeader.includes("work name")) return 68;
+        if (key === "Agency_Name" || normalizedHeader.includes("agency")) return 42;
+        if (key === "E_TENDERID" || normalizedHeader.includes("tender id")) return 24;
+        if (normalizedHeader === "status") return 16;
+        if (isReportDateKey(key)) return 18;
+        if (isReportAmountKey(key)) return 19;
+        if (normalizedHeader.includes("report type")) return 24;
+        if (normalizedHeader.includes("count")) return 10;
+        return 22;
+    }
+
+    function estimateXlsxRowHeight(row, columnMeta, rowIndex, options = {}) {
+        if (rowIndex === 0) return 30;
+        if ((options.headerRows || []).includes(rowIndex)) return 32;
+        if ((options.sectionRows || []).includes(rowIndex)) return 24;
+        if ((options.noteRows || []).includes(rowIndex)) return 24;
+
+        const maxLines = Math.max(1, ...columnMeta.map((meta, index) => {
+            const value = row[index] === undefined || row[index] === null ? "" : String(row[index]);
+            const width = Math.max(meta.width || getXlsxColumnWidth(meta.header, meta.key), 8);
+            const lineCapacity = Math.max(width * 1.05, 8);
+            return value.split(/\r?\n/).reduce((sum, line) => {
+                return sum + Math.max(1, Math.ceil(line.length / lineCapacity));
+            }, 0);
+        }));
+
+        return Math.min(Math.max(24, maxLines * 15), 135);
+    }
+
+    function styleWorksheetRange(ws, columnMeta, rows, options = {}) {
+        const rowCount = rows.length;
+        const totalColumns = columnMeta.length;
+        const border = makeBorderStyle();
+        const titleStyle = {
+            font: { bold: true, sz: 14, color: { rgb: "FFFFFF" } },
+            fill: { fgColor: { rgb: "1F4E78" } },
+            alignment: { horizontal: "center", vertical: "center", wrapText: true },
+            border
+        };
+        const headerStyle = {
+            font: { bold: true, color: { rgb: "FFFFFF" } },
+            fill: { fgColor: { rgb: "4472C4" } },
+            alignment: { horizontal: "center", vertical: "center", wrapText: true },
+            border
+        };
+        const sectionStyle = {
+            font: { bold: true, color: { rgb: "FFFFFF" } },
+            fill: { fgColor: { rgb: "0F766E" } },
+            alignment: { horizontal: "left", vertical: "center", wrapText: true },
+            border
+        };
+        const noteStyle = {
+            font: { italic: true, color: { rgb: "7C5A00" } },
+            fill: { fgColor: { rgb: MAJOR_WORK_FILL } },
+            alignment: { horizontal: "left", vertical: "center", wrapText: true },
+            border
+        };
+
+        for (let r = 0; r < rowCount; r++) {
+            const rowColumnCount = options.getStyledColumnCount
+                ? options.getStyledColumnCount(r, rows[r], totalColumns)
+                : totalColumns;
+            for (let c = 0; c < rowColumnCount; c++) {
+                const address = XLSX.utils.encode_cell({ r, c });
+                if (!ws[address]) ws[address] = { t: "s", v: "" };
+                const meta = columnMeta[c] || {};
+                let style = {
+                    alignment: getColumnAlignment(meta.header, meta.key),
+                    border
+                };
+                if (r === 0) {
+                    style = titleStyle;
+                } else if ((options.headerRows || [1]).includes(r)) {
+                    style = headerStyle;
+                } else if ((options.sectionRows || []).includes(r)) {
+                    style = sectionStyle;
+                } else if ((options.noteRows || []).includes(r)) {
+                    style = noteStyle;
+                } else if ((options.majorRows || []).includes(r)) {
+                    style.fill = { fgColor: { rgb: MAJOR_WORK_FILL } };
+                }
+                ws[address].s = style;
+            }
+        }
+
+        const titleMergeEnd = options.titleMergeEndColumn !== undefined
+            ? options.titleMergeEndColumn
+            : Math.max(totalColumns - 1, 0);
+        ws["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: titleMergeEnd } }];
+        (options.extraMerges || []).forEach(merge => ws["!merges"].push(merge));
+        ws["!cols"] = columnMeta.map(meta => {
+            const width = getXlsxColumnWidth(meta.header, meta.key);
+            meta.width = width;
+            return { wch: width };
+        });
+        ws["!rows"] = rows.map((row, index) => ({
+            hpt: estimateXlsxRowHeight(row, columnMeta, index, options)
+        }));
+    }
+
+    function makeReportWorksheet(sheetTitle, rows, columns, reportTitle) {
+        const headers = ["Sr No.", ...columns.map(key => REPORT_HEADER_LABELS[key] || key.replace(/_/g, " "))];
+        const columnMeta = [
+            { header: "Sr No.", key: "sr" },
+            ...columns.map(key => ({
+                header: REPORT_HEADER_LABELS[key] || key.replace(/_/g, " "),
+                key
+            }))
+        ];
+        const dataRows = rows.map((item, index) => [
+            index + 1,
+            ...columns.map(key => getReportCellValue(item, key))
+        ]);
+        const majorRows = rows
+            .map((item, index) => isMajorWork(item) ? index + 2 : -1)
+            .filter(index => index >= 0);
+        const hasMajorRows = majorRows.length > 0;
+        const emptyRowIndex = 2;
+        const noteRowIndex = dataRows.length + 2;
+        const emptyMessage = `No work "${sheetTitle}" during the selected period`;
+        const aoa = rows.length
+            ? (hasMajorRows
+                ? [[reportTitle], headers, ...dataRows, [MAJOR_WORK_NOTE]]
+                : [[reportTitle], headers, ...dataRows])
+            : [[reportTitle], headers, [emptyMessage]];
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        styleWorksheetRange(ws, columnMeta, aoa, {
+            headerRows: [1],
+            sectionRows: rows.length ? [] : [emptyRowIndex],
+            noteRows: hasMajorRows ? [noteRowIndex] : [],
+            majorRows,
+            extraMerges: [
+                ...(rows.length ? [] : [{ s: { r: emptyRowIndex, c: 0 }, e: { r: emptyRowIndex, c: headers.length - 1 } }]),
+                ...(hasMajorRows ? [{ s: { r: noteRowIndex, c: 0 }, e: { r: noteRowIndex, c: headers.length - 1 } }] : [])
+            ]
+        });
+        return ws;
+    }
+
+    function makeSummaryWorksheet(reportRows, range) {
+        const definitions = getReportDefinitions(reportRows);
+        const majorWorks = getMajorWorks(reportRows);
+        const reportTitle = `MC Dadri Development Works Report From ${formatReportDateDisplay(range.startDate)} - ${formatReportDateDisplay(range.endDate)}`;
+        const summaryRows = definitions.map(def => [def.name, def.rows.length]);
+        const majorSectionRow = summaryRows.length + 3;
+        const majorHeaderRow = majorSectionRow + 1;
+        const majorDataRows = majorWorks.map((item, index) => [
+            index + 1,
+            getReportValue(item, "Work_Name"),
+            getReportCellValue(item, "Estimate_Cost"),
+            getReportValue(item, "E_TENDERID"),
+            getReportValue(item, "Agency_Name"),
+            getMajorWorkStatus(item, reportRows)
+        ]);
+        const hasMajorWorks = majorDataRows.length > 0;
+        const noteRowIndex = majorHeaderRow + 1 + majorDataRows.length;
+        const aoa = [
+            [reportTitle],
+            ["Report Type", "Count"],
+            ...summaryRows,
+            ...(hasMajorWorks ? [
+                ["", "", "", "", "", ""],
+                ["Major Works", "", "", "", "", ""],
+                ["Sr No.", "Work Name", "Estimate Cost", "E-Tender ID", "Agency Name", "Status"],
+                ...majorDataRows,
+                [MAJOR_WORK_NOTE, "", "", "", "", ""]
+            ] : [])
+        ];
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        styleWorksheetRange(ws, [
+            { header: "Report Type", key: "label" },
+            { header: "Work Name", key: "Work_Name" },
+            { header: "Estimate Cost", key: "Estimate_Cost" },
+            { header: "E-Tender ID", key: "E_TENDERID" },
+            { header: "Agency Name", key: "Agency_Name" },
+            { header: "Status", key: "status" }
+        ], aoa, {
+            headerRows: hasMajorWorks ? [1, majorHeaderRow] : [1],
+            sectionRows: hasMajorWorks ? [majorSectionRow] : [],
+            noteRows: hasMajorWorks ? [noteRowIndex] : [],
+            majorRows: hasMajorWorks ? majorDataRows.map((_, index) => majorHeaderRow + 1 + index) : [],
+            titleMergeEndColumn: 1,
+            getStyledColumnCount(rowIndex) {
+                if (rowIndex <= summaryRows.length + 1) return 2;
+                if (rowIndex === majorSectionRow || rowIndex === majorHeaderRow || rowIndex === noteRowIndex) return 6;
+                if (rowIndex > majorHeaderRow && rowIndex < noteRowIndex) return 6;
+                return 0;
+            },
+            extraMerges: hasMajorWorks ? [
+                { s: { r: majorSectionRow, c: 0 }, e: { r: majorSectionRow, c: 5 } },
+                { s: { r: noteRowIndex, c: 0 }, e: { r: noteRowIndex, c: 5 } }
+            ] : []
+        });
+        return ws;
+    }
+
+    function buildReportContext() {
+        if (!masterData.length) {
+            throw new Error('Report banane ke liye data available nahi hai.');
+        }
+
+        const range = getReportRange();
+        const reportRows = getReportRows(range.startDate, range.endDate);
+        const reportTitle = `MC Dadri Development Works Report From ${formatReportDateDisplay(range.startDate)} - ${formatReportDateDisplay(range.endDate)}`;
+        return {
+            range,
+            reportRows,
+            reportTitle,
+            definitions: getReportDefinitions(reportRows),
+            fileBase: `MC_Dadri_Development_Works_Report_${toDateInputValue(range.startDate)}_to_${toDateInputValue(range.endDate)}`
+        };
+    }
+
+    function downloadWorksReportXlsx() {
+        if (!window.XLSX) {
+            alert('XLSX library load nahi hui. Internet/CDN check karke dobara try karo.');
+            return;
+        }
+
+        let context;
+        try {
+            context = buildReportContext();
+        } catch (e) {
+            alert(e.message || 'Report duration check karo.');
+            return;
+        }
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, makeSummaryWorksheet(context.reportRows, context.range), "Summary");
+        context.definitions.forEach(def => {
+            XLSX.utils.book_append_sheet(wb, makeReportWorksheet(def.name, def.rows, def.columns, context.reportTitle), def.name);
+        });
+        XLSX.writeFile(wb, `${context.fileBase}.xlsx`);
+    }
+
+    function drawReportPdfTitle(doc, reportTitle) {
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const pageNumber = doc.internal.getCurrentPageInfo().pageNumber;
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(13);
+        doc.setTextColor(255, 255, 255);
+        doc.setFillColor(31, 78, 121);
+        doc.rect(8, 8, pageWidth - 16, 9, 'F');
+        doc.text(reportTitle, pageWidth / 2, 14, { align: 'center' });
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(100, 116, 139);
+        doc.text(`Page ${pageNumber}`, pageWidth - 8, pageHeight - 5, { align: 'right' });
+    }
+
+    function getPdfColumns(columns) {
+        return [
+            { header: "Sr No.", dataKey: "sr", sourceKey: "sr" },
+            ...columns.map(key => ({
+                header: REPORT_HEADER_LABELS[key] || key.replace(/_/g, " "),
+                dataKey: key,
+                sourceKey: key
+            }))
+        ];
+    }
+
+    function getPdfCellWidth(column, totalDataColumns) {
+        const key = column.sourceKey;
+        if (key === "sr") return 12;
+        if (key === "Work_Name") return 70;
+        if (key === "Agency_Name") return 45;
+        if (key === "E_TENDERID") return 28;
+        if (isReportDateKey(key)) return 22;
+        if (isReportAmountKey(key)) return 24;
+        return Math.max(18, Math.min(30, 300 / Math.max(totalDataColumns, 1)));
+    }
+
+    function getPdfAlign(key) {
+        if (key === "sr") return "center";
+        if (isReportAmountKey(key)) return "right";
+        if (isReportDateKey(key)) return "center";
+        return "left";
+    }
+
+    function buildPdfColumnStyles(columns, usableWidth) {
+        const styles = {};
+        const baseWidths = columns.map(column => getPdfCellWidth(column, columns.length));
+        const totalWidth = baseWidths.reduce((sum, width) => sum + width, 0);
+        const scale = totalWidth > usableWidth ? usableWidth / totalWidth : 1;
+        columns.forEach(column => {
+            const sourceKey = column.sourceKey;
+            const width = getPdfCellWidth(column, columns.length) * scale;
+            styles[column.dataKey] = {
+                cellWidth: width,
+                halign: getPdfAlign(sourceKey),
+                valign: "top"
+            };
+        });
+        return styles;
+    }
+
+    function addPdfNote(doc, text, startY, x = 10) {
+        const pageHeight = doc.internal.pageSize.getHeight();
+        let y = startY;
+        if (y + 8 > pageHeight - 12) {
+            doc.addPage();
+            y = 22;
+        }
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(8.5);
+        doc.setTextColor(124, 90, 0);
+        doc.text(text, x, y + 5);
+        return y + 11;
+    }
+
+    function drawPdfSectionHeading(doc, title, startY, reportTitle, options = {}) {
+        const pageHeight = doc.internal.pageSize.getHeight();
+        let y = startY;
+        if (y + 14 > pageHeight - 12) {
+            doc.addPage();
+            drawReportPdfTitle(doc, reportTitle);
+            y = 24;
+        }
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.setTextColor(15, 36, 61);
+        doc.text(title, options.headingX || 10, y);
+        return y + 4;
+    }
+
+    function drawPdfAutoTable(doc, title, columns, rows, options = {}) {
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const marginLeft = options.marginLeft !== undefined ? options.marginLeft : 8;
+        const marginRight = options.marginRight !== undefined ? options.marginRight : 8;
+        const startY = drawPdfSectionHeading(doc, title, options.startY || 24, options.reportTitle, {
+            headingX: options.headingX !== undefined ? options.headingX : marginLeft + 2
+        });
+        const usableWidth = pageWidth - marginLeft - marginRight;
+        doc.autoTable({
+            columns,
+            body: rows,
+            startY,
+            margin: { top: 22, right: marginRight, bottom: 12, left: marginLeft },
+            theme: "grid",
+            showHead: "everyPage",
+            rowPageBreak: "avoid",
+            tableWidth: options.tableWidth || "wrap",
+            styles: {
+                font: "helvetica",
+                fontSize: options.fontSize || 6.8,
+                cellPadding: 1.6,
+                overflow: "linebreak",
+                valign: "top",
+                lineColor: [180, 180, 180],
+                lineWidth: 0.1,
+                textColor: [17, 24, 39]
+            },
+            headStyles: {
+                fillColor: [68, 114, 196],
+                textColor: [255, 255, 255],
+                fontStyle: "bold",
+                halign: "center",
+                valign: "middle",
+                fontSize: options.headFontSize || 6.9
+            },
+            alternateRowStyles: { fillColor: [248, 250, 252] },
+            columnStyles: buildPdfColumnStyles(columns, usableWidth),
+            didParseCell(data) {
+                const key = data.column && data.column.dataKey;
+                const columnMeta = columns.find(column => column.dataKey === key);
+                const sourceKey = columnMeta ? columnMeta.sourceKey : key;
+                const raw = data.row && data.row.raw;
+                if (data.section === "body") {
+                    if (raw && raw.__major) data.cell.styles.fillColor = [255, 242, 204];
+                    data.cell.styles.halign = getPdfAlign(sourceKey);
+                }
+            },
+            didDrawPage() {
+                drawReportPdfTitle(doc, options.reportTitle);
+            }
+        });
+
+        let y = (doc.lastAutoTable && doc.lastAutoTable.finalY ? doc.lastAutoTable.finalY : startY) + 4;
+        if (options.majorNote) y = addPdfNote(doc, MAJOR_WORK_NOTE, y, marginLeft + 2);
+        return y;
+    }
+
+    function startNewPdfSection(doc, orientation = "landscape") {
+        doc.addPage("a4", orientation);
+        return 24;
+    }
+
+    function downloadWorksReportPdf() {
+        let context;
+        try {
+            context = buildReportContext();
+        } catch (e) {
+            alert(e.message || 'Report duration check karo.');
+            return;
+        }
+
+        if (!window.jspdf || !window.jspdf.jsPDF || !window.jspdf.jsPDF.API.autoTable) {
+            alert('PDF table library load nahi hui. Internet/CDN check karke dobara try karo.');
+            return;
+        }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        let y = 24;
+
+        const summaryRows = context.definitions.map(def => ({
+            reportType: def.name,
+            count: def.rows.length
+        }));
+        const firstPageWidth = doc.internal.pageSize.getWidth();
+        const summaryTableWidth = 48;
+        const summaryMargin = (firstPageWidth - summaryTableWidth) / 2;
+        const firstPageMargin = 16;
+        y = drawPdfAutoTable(doc, "Summary", [
+            { header: "Report Type", dataKey: "reportType", sourceKey: "label" },
+            { header: "Count", dataKey: "count", sourceKey: "sr" }
+        ], summaryRows, {
+            startY: y,
+            reportTitle: context.reportTitle,
+            fontSize: 8.5,
+            headFontSize: 8.5,
+            tableWidth: summaryTableWidth,
+            marginLeft: summaryMargin,
+            marginRight: summaryMargin,
+            headingX: summaryMargin
+        });
+
+        const majorRows = getMajorWorks(context.reportRows).map((item, index) => ({
+            sr: index + 1,
+            workName: getReportValue(item, "Work_Name"),
+            estimateCost: getReportCellValue(item, "Estimate_Cost"),
+            tenderId: getReportValue(item, "E_TENDERID"),
+            agency: getReportValue(item, "Agency_Name"),
+            status: getMajorWorkStatus(item, context.reportRows),
+            __major: true
+        }));
+        if (majorRows.length) {
+            y = drawPdfAutoTable(doc, "Major Works", [
+                { header: "Sr No.", dataKey: "sr", sourceKey: "sr" },
+                { header: "Work Name", dataKey: "workName", sourceKey: "Work_Name" },
+                { header: "Estimate Cost", dataKey: "estimateCost", sourceKey: "Estimate_Cost" },
+                { header: "E-Tender ID", dataKey: "tenderId", sourceKey: "E_TENDERID" },
+                { header: "Agency Name", dataKey: "agency", sourceKey: "Agency_Name" },
+                { header: "Status", dataKey: "status", sourceKey: "status" }
+            ], majorRows, {
+                startY: y,
+                reportTitle: context.reportTitle,
+                majorNote: true,
+                marginLeft: firstPageMargin,
+                marginRight: firstPageMargin,
+                headingX: firstPageMargin
+            });
+        }
+
+        context.definitions.forEach(def => {
+            if (!def.rows.length) return;
+            y = startNewPdfSection(doc, "landscape");
+            const columns = getPdfColumns(def.columns);
+            const rows = def.rows.map((item, index) => {
+                const row = { sr: index + 1, __major: isMajorWork(item) };
+                def.columns.forEach(key => { row[key] = getReportCellValue(item, key); });
+                return row;
+            });
+            y = drawPdfAutoTable(doc, def.name, columns, rows, {
+                startY: y,
+                reportTitle: context.reportTitle,
+                majorNote: rows.some(row => row.__major)
+            });
+        });
+
+        doc.save(`${context.fileBase}.pdf`);
     }
 
     function numberToWordsIndian(num) {
@@ -1495,9 +2507,7 @@
         document.getElementById('count-pending').innerText = masterData.filter(d => d.computedStatus === 'Yet to be Allotted').length;
 
         let totalVal = inProg.reduce((acc, curr) => {
-            const amountKey = getEstimateAmountKey(curr);
-            const amountValue = amountKey ? curr[amountKey] : 0;
-            return acc + parseWorkAmount(amountValue, amountKey);
+            return acc + parseNumericAmount(getEstimateCostColumnValue(curr));
         }, 0);
         document.getElementById('total-progress-amount').innerText = formatCurrency(totalVal);
         setActiveFilter();
@@ -2522,18 +3532,3 @@ async function confirmScan() {
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
