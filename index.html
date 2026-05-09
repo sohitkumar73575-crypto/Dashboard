@@ -418,6 +418,7 @@
         .modal-content { border-radius: var(--radius) !important; }
         .modal-body { max-height: 70vh; overflow-y: auto; overflow-x: hidden; }
         .modal-header, .modal-footer { background: white; }
+        .modal-header { align-items: center !important; }
         .modal-close-red {
             width: 38px;
             height: 38px;
@@ -431,6 +432,7 @@
             flex: 0 0 auto;
             box-shadow: 0 10px 22px rgba(220, 38, 38, 0.28);
             transition: transform 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+            margin-left: auto;
         }
         .modal-close-red:hover,
         .modal-close-red:focus {
@@ -530,9 +532,23 @@
             max-width: 100%;
             overflow: hidden;
             display: grid;
-            grid-template-columns: auto minmax(0, 1fr) auto;
+            grid-template-columns: minmax(0, 1fr) auto;
             align-items: center;
             gap: 0.85rem;
+        }
+        .photo-action-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.65rem;
+        }
+        .photo-action-btn {
+            min-height: 46px;
+            width: 100%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.45rem;
+            white-space: nowrap;
         }
         .bank-photo-row { align-items: end; }
         .bank-photo-row .edit-input,
@@ -595,12 +611,10 @@
             #pbgUploadModal .modal-header,
             #pbgUploadModal .modal-footer { padding-left: 1rem !important; padding-right: 1rem !important; }
             .photo-upload-box {
-                grid-template-columns: 1fr auto;
+                grid-template-columns: 1fr;
                 gap: 0.65rem;
             }
-            .photo-upload-box .btn {
-                grid-column: 1 / -1;
-            }
+            .photo-action-grid { grid-template-columns: 1fr 1fr; }
         }
 
         /* ===== CAMERA PDF ===== */
@@ -611,6 +625,7 @@
             top: max(14px, env(safe-area-inset-top));
             right: max(14px, env(safe-area-inset-right));
             z-index: 1070;
+            margin-left: 0;
         }
         .scanner-viewport {
             position: relative;
@@ -638,19 +653,7 @@
             z-index: 1065;
         }
         .scanner-status {
-            position: absolute;
-            top: -42px;
-            left: clamp(12px, 3vw, 24px);
-            right: clamp(12px, 3vw, 24px);
-            text-align: center;
-            font-size: 0.78rem;
-            font-weight: 800;
-            color: #fbbf24;
-            background: rgba(2, 6, 23, 0.78);
-            border: 1px solid rgba(255,255,255,0.14);
-            border-radius: var(--radius);
-            padding: 7px 10px;
-            pointer-events: none;
+            display: none;
         }
         .scanner-tools { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
         .justify-self-start { justify-self: start; }
@@ -692,7 +695,7 @@
             .scanner-viewport { height: calc(100vh - 140px); height: calc(100svh - 140px); min-height: 360px; }
             #scannerControls {
                 min-height: 140px;
-                grid-template-columns: auto auto auto;
+                grid-template-columns: 1fr auto 1fr;
                 align-content: center;
             }
             .scanner-tool-btn span { display: none; }
@@ -1096,11 +1099,11 @@
                             <label class="detail-label">PBG Photo</label>
                             <div class="photo-upload-box">
                                 <input id="pbgPhotoInput" type="file" accept="image/*,application/pdf,.pdf" multiple class="hidden" onchange="handlePbgPhotoSelected(event)">
-                                <div class="d-flex gap-2 flex-wrap">
-                                    <button type="button" class="btn btn-success fw-bold px-3 py-2" onclick="openDocScanner()">
+                                <div class="photo-action-grid">
+                                    <button type="button" class="btn btn-success fw-bold px-3 py-2 photo-action-btn" onclick="openDocScanner()">
                                         <i class="fa-solid fa-camera-rotate me-2"></i>Open Camera
                                     </button>
-                                    <button type="button" class="btn btn-outline-secondary fw-bold px-3 py-2" onclick="document.getElementById('pbgPhotoInput').click()">
+                                    <button type="button" class="btn btn-outline-secondary fw-bold px-3 py-2 photo-action-btn" onclick="document.getElementById('pbgPhotoInput').click()">
                                         <i class="fa-solid fa-image me-2"></i>Gallery
                                     </button>
                                 </div>
@@ -1109,7 +1112,7 @@
                                 <input id="fileMimeType" name="fileMimeType" type="hidden">
                                 <div class="min-width-0">
                                     <div id="pbgPhotoName" class="photo-name">No photo selected</div>
-                                    <div id="pbgPhotoHint" class="photo-hint">Camera scan creates clean PDF</div>
+                                    <div id="pbgPhotoHint" class="photo-hint"></div>
                                 </div>
                                 <img id="pbgPhotoPreview" class="photo-preview hidden" alt="PBG photo preview">
                             </div>
@@ -1299,6 +1302,9 @@
         "E_TENDERID": ["E_TenderID", "Tender ID", "TenderID"],
         "Agency_Name": ["Agency Name", "AGENCY_NAME"]
     };
+    let modalHistoryDepth = 0;
+    let suppressNextPopClose = false;
+    let closingModalFromHistory = false;
 
     window.onload = initApp;
 
@@ -1310,19 +1316,91 @@
         }
     }
 
-    function closeTopSubPage() {
+    function getTopOpenModal() {
         const openModals = Array.from(document.querySelectorAll('.modal.show'));
-        const topModal = openModals[openModals.length - 1];
-        if (!topModal) return false;
+        return openModals[openModals.length - 1] || null;
+    }
 
-        if (topModal.id === 'docScannerModal') {
+    function hideModalElement(modalEl) {
+        if (!modalEl) return false;
+        if (modalEl.id === 'docScannerModal') {
             closeDocScanner();
             return true;
         }
-
-        const instance = bootstrap.Modal.getInstance(topModal) || bootstrap.Modal.getOrCreateInstance(topModal);
+        const instance = bootstrap.Modal.getInstance(modalEl) || bootstrap.Modal.getOrCreateInstance(modalEl);
         instance.hide();
         return true;
+    }
+
+    function closeTopSubPage(options = {}) {
+        const topModal = getTopOpenModal();
+        if (!topModal) return false;
+
+        if (!options.fromHistory && modalHistoryDepth > 0) {
+            window.history.back();
+            return true;
+        }
+
+        return hideModalElement(topModal);
+    }
+
+    function pushModalHistory(modalEl) {
+        if (!window.history || !window.history.pushState) return;
+        modalHistoryDepth += 1;
+        window.history.pushState({ dadriModal: true, modalId: modalEl.id, depth: modalHistoryDepth }, '');
+    }
+
+    function showModalWithHistory(modalEl, modalOptions = {}, navOptions = {}) {
+        const instance = bootstrap.Modal.getOrCreateInstance(modalEl, modalOptions);
+
+        modalEl.addEventListener('shown.bs.modal', () => {
+            if (!modalEl.dataset.historyPushed) {
+                modalEl.dataset.historyPushed = '1';
+                if (navOptions.replaceHistory && modalHistoryDepth > 0) {
+                    window.history.replaceState({ dadriModal: true, modalId: modalEl.id, depth: modalHistoryDepth }, '');
+                } else {
+                    pushModalHistory(modalEl);
+                }
+            }
+        }, { once: true });
+
+        modalEl.addEventListener('hidden.bs.modal', () => {
+            delete modalEl.dataset.historyPushed;
+            if (modalEl.dataset.skipHistoryBack === '1') {
+                delete modalEl.dataset.skipHistoryBack;
+                return;
+            }
+            if (closingModalFromHistory) return;
+            if (modalHistoryDepth > 0) {
+                modalHistoryDepth -= 1;
+                suppressNextPopClose = true;
+                window.history.back();
+            }
+        }, { once: true });
+
+        instance.show();
+    }
+
+    function showSubPageModal(modalEl, options = {}) {
+        const { replaceOpen = false, keepIds = [], modalOptions = {} } = options;
+        const openModals = Array.from(document.querySelectorAll('.modal.show'))
+            .filter(openModal => openModal !== modalEl && !keepIds.includes(openModal.id));
+
+        if (replaceOpen && openModals.length) {
+            let remaining = openModals.length;
+            const showAfterHidden = () => {
+                remaining -= 1;
+                if (remaining <= 0) showModalWithHistory(modalEl, modalOptions, { replaceHistory: true });
+            };
+            openModals.forEach(openModal => {
+                openModal.dataset.skipHistoryBack = '1';
+                openModal.addEventListener('hidden.bs.modal', showAfterHidden, { once: true });
+                hideModalElement(openModal);
+            });
+            return;
+        }
+
+        showModalWithHistory(modalEl, modalOptions);
     }
 
     function initSwipeBackGesture() {
@@ -1366,6 +1444,21 @@
         document.addEventListener('touchcancel', () => {
             tracking = false;
         }, { passive: true });
+
+        window.addEventListener('popstate', () => {
+            if (suppressNextPopClose) {
+                suppressNextPopClose = false;
+                return;
+            }
+            if (modalHistoryDepth <= 0) return;
+
+            modalHistoryDepth -= 1;
+            closingModalFromHistory = true;
+            closeTopSubPage({ fromHistory: true });
+            setTimeout(() => {
+                closingModalFromHistory = false;
+            }, 0);
+        });
     }
 
 
@@ -1664,7 +1757,7 @@
     function openReportModal() {
         setDefaultReportFields();
         syncReportModeFields();
-        new bootstrap.Modal(document.getElementById('reportModal')).show();
+        showSubPageModal(document.getElementById('reportModal'));
     }
 
     function parseNumericAmount(value) {
@@ -2764,7 +2857,7 @@
 
         if (startEdit) enableEditMode();
 
-        new bootstrap.Modal(document.getElementById('workModal')).show();
+        showSubPageModal(document.getElementById('workModal'));
     }
 
     function enableEditMode() {
@@ -2836,7 +2929,7 @@
         });
 
         document.getElementById('addWorkForm').reset();
-        new bootstrap.Modal(document.getElementById('addWorkModal')).show();
+        showSubPageModal(document.getElementById('addWorkModal'));
     }
 
     function collectFormPayload(formId) {
@@ -2932,18 +3025,11 @@
         actionIcon.className = 'fa-solid fa-circle-notch fa-spin me-2';
 
         const bgModalEl = document.getElementById('bgDetailsModal');
-        const workModalEl = document.getElementById('workModal');
         const showBgModal = () => {
-            bootstrap.Modal.getOrCreateInstance(bgModalEl).show();
+            showSubPageModal(bgModalEl, { replaceOpen: true });
             updateBgRegisterAction(item);
         };
-
-        if (workModalEl.classList.contains('show')) {
-            workModalEl.addEventListener('hidden.bs.modal', showBgModal, { once: true });
-            bootstrap.Modal.getOrCreateInstance(workModalEl).hide();
-        } else {
-            showBgModal();
-        }
+        showBgModal();
     }
 
     async function printBgDocument(type, triggerButton) {
@@ -2995,14 +3081,19 @@
         const tenderId = getTenderId(item);
         const saved = await getBgRegisterDetails(tenderId);
         const text = document.getElementById('bgRegisterActionText');
+        const btn = document.getElementById('uploadBgDetailsBtn');
         const icon = document.querySelector('#uploadBgDetailsBtn i');
+        btn.dataset.bgState = 'checking';
+        btn.dataset.tenderId = tenderId || '';
 
         if (saved) {
             text.innerText = 'View BG Details';
             icon.className = 'fa-solid fa-eye me-2';
+            btn.dataset.bgState = 'saved';
         } else {
             text.innerText = 'Upload PBG Details';
             icon.className = 'fa-solid fa-file-arrow-up me-2';
+            btn.dataset.bgState = 'upload';
         }
     }
 
@@ -3016,6 +3107,20 @@
         const tenderId = getTenderId(item);
         const btn = document.getElementById('uploadBgDetailsBtn');
         const originalHtml = btn.innerHTML;
+        const knownState = btn.dataset.tenderId === String(tenderId || '') ? btn.dataset.bgState : '';
+
+        if (knownState === 'upload') {
+            openPbgUploadForm();
+            return;
+        }
+
+        if (knownState === 'saved') {
+            const saved = await getBgRegisterDetails(tenderId);
+            if (saved) {
+                openStoredBgDetails(saved);
+                return;
+            }
+        }
 
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Checking...';
@@ -3070,7 +3175,7 @@
             photoLink.removeAttribute('href');
         }
 
-        new bootstrap.Modal(document.getElementById('viewBgDetailsModal')).show();
+        showSubPageModal(document.getElementById('viewBgDetailsModal'), { replaceOpen: false });
     }
 
     function toRegisterDate(value) {
@@ -3273,10 +3378,13 @@
         document.getElementById('addAmt').value = bg.additional || '';
         pbgSelectedImageFiles = [];
         document.getElementById('pbgPhotoInput').value = '';
-        setPbgPhotoState('', '', '', 'No photo selected', 'Camera ya Gallery photo se high quality PDF banegi', '');
+        setPbgPhotoState('', '', '', 'No photo selected', '', '');
         setAdditionalPbgVisibility(bg.additional > 0);
 
-        new bootstrap.Modal(document.getElementById('pbgUploadModal')).show();
+        showSubPageModal(document.getElementById('pbgUploadModal'), {
+            replaceOpen: true,
+            keepIds: ['viewBgDetailsModal']
+        });
     }
 
     async function uploadPbgDetails() {
@@ -3507,10 +3615,13 @@ function updateScannerHint(text, color = '#fbbf24') {
 async function openDocScanner() {
     currentScanDataUrl = null;
     scannerCaptureInProgress = false;
-    updateScannerHint('Starting camera...');
     const modalEl = document.getElementById('docScannerModal');
     modalEl.addEventListener('shown.bs.modal', startScannerCamera, { once: true });
-    bootstrap.Modal.getOrCreateInstance(modalEl, { backdrop: 'static' }).show();
+    showSubPageModal(modalEl, {
+        replaceOpen: true,
+        keepIds: ['viewBgDetailsModal'],
+        modalOptions: { backdrop: 'static' }
+    });
 }
 
 async function startScannerCamera() {
@@ -3532,7 +3643,6 @@ async function startScannerCamera() {
 
         video.srcObject = scannerStream;
         await video.play();
-        updateScannerHint('Photo lo, PDF auto ban jayegi', '#4ade80');
     } catch (e) {
         alert('Camera access nahi mila: ' + e.message);
         closeDocScanner();
@@ -3578,7 +3688,11 @@ async function captureDocScan() {
 function showScanPreview() {
     document.getElementById('scanPreviewImg').src = currentScanDataUrl;
     document.getElementById('scanProcessingMsg').textContent = '';
-    bootstrap.Modal.getOrCreateInstance(document.getElementById('scanPreviewModal'), { backdrop: 'static' }).show();
+    showSubPageModal(document.getElementById('scanPreviewModal'), {
+        replaceOpen: true,
+        keepIds: ['viewBgDetailsModal'],
+        modalOptions: { backdrop: 'static' }
+    });
 }
 
 function retakeScan() {
@@ -3615,9 +3729,17 @@ async function confirmScan() {
             'Open Camera again to add more pages',
             currentScanDataUrl
         );
+        showSubPageModal(document.getElementById('pbgUploadModal'), {
+            replaceOpen: true,
+            keepIds: ['viewBgDetailsModal']
+        });
     } catch (e) {
         console.error('PDF build failed', e);
         setPbgPhotoState('', '', '', 'PDF failed', 'Photo se PDF nahi ban payi', currentScanDataUrl);
+        showSubPageModal(document.getElementById('pbgUploadModal'), {
+            replaceOpen: true,
+            keepIds: ['viewBgDetailsModal']
+        });
     }
 }
 </script>
