@@ -1739,8 +1739,9 @@
             inProgress: items.filter(item => {
                 const allotmentDate = getReportDate(item, "Allotement_Date");
                 const completionDate = getReportDate(item, "Completion_Date");
-                return isDateInRange(allotmentDate, startDate, endDate) &&
-                    !isDateInRange(completionDate, startDate, endDate);
+                return Boolean(allotmentDate) &&
+                    allotmentDate <= endDate &&
+                    (!completionDate || completionDate > endDate);
             })
         };
     }
