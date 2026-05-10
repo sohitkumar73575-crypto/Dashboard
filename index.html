@@ -1298,6 +1298,9 @@
     let currentTenderId = null;
     let currentFilter = 'All';
     let pbgSelectedImageFiles = [];
+    let bgRegisterMap = {};
+    let bgRegisterIndexLoaded = false;
+    let bgRegisterIndexPromise = null;
     const BG_REGISTER_STORE_KEY = 'dadriworksBgRegisterDetails';
     const RUPEE = String.fromCharCode(8377);
     const MAJOR_WORK_THRESHOLD = 10000000;
@@ -1366,6 +1369,7 @@
         initSwipeBackGesture();
         initPinUnlockModal();
         await fetchData();
+        await loadBgRegisterIndex();
         if (window.location.hash === '#add-work') {
             openAddWorkModal();
         }
@@ -2796,44 +2800,85 @@
         link.remove();
     }
 
-    function getStoredBgRegisterMap() {
+    function clearStoredBgRegisterDetails() {
         try {
-            return JSON.parse(localStorage.getItem(BG_REGISTER_STORE_KEY) || '{}');
+            localStorage.removeItem(BG_REGISTER_STORE_KEY);
         } catch (e) {
-            return {};
+            console.warn('Old BG_Register cache clear failed', e);
         }
     }
 
-    function getStoredBgRegisterDetails(tenderId) {
-        return getStoredBgRegisterMap()[String(tenderId || '')] || null;
-    }
+    async function loadBgRegisterIndex(force = false) {
+        if (bgRegisterIndexLoaded && !force) return bgRegisterMap;
+        if (bgRegisterIndexPromise && !force) return bgRegisterIndexPromise;
 
-    function setStoredBgRegisterDetails(tenderId, details) {
-        const map = getStoredBgRegisterMap();
-        map[String(tenderId || '')] = details;
-        localStorage.setItem(BG_REGISTER_STORE_KEY, JSON.stringify(map));
-    }
+        bgRegisterIndexPromise = (async () => {
+            try {
+                clearStoredBgRegisterDetails();
+                const resp = await postJson({
+                    method: 'getBgRegisterIndex',
+                    action: 'getBgRegisterIndex'
+                }, 15000);
 
-    async function getBgRegisterDetails(tenderId) {
-        const saved = getStoredBgRegisterDetails(tenderId);
-        if (saved) return saved;
-
-        try {
-            const resp = await postJson({
-                method: 'getBgRegisterDetails',
-                action: 'getBgRegisterDetails',
-                tenderId: tenderId
-            }, 7000);
-
-            if (isSuccessResponse(resp) && resp.details) {
-                setStoredBgRegisterDetails(tenderId, resp.details);
-                return resp.details;
+                bgRegisterMap = isSuccessResponse(resp) && resp.bgRegisterMap ? resp.bgRegisterMap : {};
+            } catch (e) {
+                console.error('BG_Register index load failed', e);
+                bgRegisterMap = {};
+            } finally {
+                bgRegisterIndexLoaded = true;
+                bgRegisterIndexPromise = null;
             }
-        } catch (e) {
-            console.error('BG_Register lookup failed', e);
-        }
 
-        return null;
+            return bgRegisterMap;
+        })();
+
+        return bgRegisterIndexPromise;
+    }
+
+    function isBgDetailsComplete(details, item = null) {
+        if (!details || !String(details.tenderId || '').trim()) return false;
+
+        const bg1Complete = Boolean(
+            String(details.pbgAmt || '').trim() &&
+            String(details.pbgNo || '').trim() &&
+            String(details.pbgSubDate || '').trim() &&
+            String(details.pbgValid || '').trim() &&
+            String(details.bankName || '').trim() &&
+            (String(details.fileUrl || '').trim() || String(details.fileName || '').trim())
+        );
+
+        if (!bg1Complete) return false;
+
+        const additionalRequired = item
+            ? calculateBgForItem(item).additional > 0
+            : parseCurrencyAmount(details.addAmt) > 0;
+
+        if (!additionalRequired) return true;
+
+        return Boolean(
+            String(details.addAmt || '').trim() &&
+            String(details.addNo || '').trim() &&
+            String(details.addSubDate || '').trim() &&
+            String(details.addValid || '').trim()
+        );
+    }
+
+    function setBgRegisterDetails(tenderId, details, item = null) {
+        const key = String(tenderId || '').trim();
+        if (!key) return;
+
+        if (isBgDetailsComplete(details, item)) {
+            bgRegisterMap[key] = details;
+        } else {
+            delete bgRegisterMap[key];
+        }
+    }
+
+    async function getBgRegisterDetails(tenderId, item = null) {
+        await loadBgRegisterIndex();
+        const key = String(tenderId || '').trim();
+        const details = bgRegisterMap[key] || null;
+        return isBgDetailsComplete(details, item) ? details : null;
     }
 
     function updateDashboard() {
@@ -3242,7 +3287,7 @@
         }
 
         const tenderId = getTenderId(item);
-        const details = await getBgRegisterDetails(tenderId);
+        const details = await getBgRegisterDetails(tenderId, item);
         if (!details) {
             alert("Pehle BG details upload karo, uske baad download available hoga.");
             return;
@@ -3281,7 +3326,7 @@
 
     async function updateBgRegisterAction(item) {
         const tenderId = getTenderId(item);
-        const saved = await getBgRegisterDetails(tenderId);
+        const saved = await getBgRegisterDetails(tenderId, item);
         const text = document.getElementById('bgRegisterActionText');
         const btn = document.getElementById('uploadBgDetailsBtn');
         const icon = document.querySelector('#uploadBgDetailsBtn i');
@@ -3317,7 +3362,7 @@
         }
 
         if (knownState === 'saved') {
-            const saved = await getBgRegisterDetails(tenderId);
+            const saved = await getBgRegisterDetails(tenderId, item);
             if (saved) {
                 openStoredBgDetails(saved);
                 return;
@@ -3328,7 +3373,7 @@
         btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Checking...';
 
         try {
-            const saved = await getBgRegisterDetails(tenderId);
+            const saved = await getBgRegisterDetails(tenderId, item);
             if (saved) {
                 openStoredBgDetails(saved);
                 return;
@@ -3621,8 +3666,8 @@
 
             if (isSuccessResponse(resp)) {
                 payload.fileUrl = resp.fileUrl || resp.fileLink || '';
-                setStoredBgRegisterDetails(payload.tenderId, payload);
                 const item = masterData.find(d => getTenderId(d) == currentTenderId);
+                setBgRegisterDetails(payload.tenderId, payload, item);
                 if (item) updateBgRegisterAction(item);
 
                 const uploadModalEl = document.getElementById('pbgUploadModal');
