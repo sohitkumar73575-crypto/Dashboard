@@ -353,7 +353,8 @@
         .edit-input {
             border-radius: var(--radius);
             border: 1px solid var(--line);
-            background: var(--surface-soft);
+            background: #fff;
+            color: var(--text);
             padding: 10px 12px;
             font-weight: 650;
             width: 100%;
@@ -365,7 +366,17 @@
             box-shadow: 0 0 0 4px rgba(37,99,235,0.12);
             background: white;
         }
-        .edit-input[readonly] { background-color: #eef2f7; color: var(--muted); cursor: not-allowed; }
+        .edit-input[readonly] { background-color: #eef2f7; color: var(--muted); border-color: #d4dde8; cursor: not-allowed; }
+        .edit-input.unlocked-field { background: #fff; color: var(--text); border-color: rgba(15,110,203,0.45); box-shadow: 0 0 0 3px rgba(15,110,203,0.08); cursor: text; }
+        .unlock-fields-btn {
+            width: 44px;
+            min-width: 44px;
+            height: 42px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
 
         .btn { border-radius: var(--radius) !important; }
         .fab-add-work {
@@ -733,13 +744,13 @@
 
 <div class="container-fluid dashboard-shell">
 
-    <!-- Updated Stats Section: DLP Moved to 5th Position -->
+    <!-- Stats Section -->
     <div class="row g-3 mb-4">
         <div class="col-md col-6" onclick="filterData('All')">
             <div class="card card-stats p-3" data-filter="All" style="--stat-color: #64748b;">
                 <div class="stat-card-top">
                     <div>
-                        <small class="detail-label">Total</small>
+                        <small class="detail-label">All Works</small>
                         <h3 id="count-all" class="fw-bold m-0">0</h3>
                     </div>
                     <span class="stat-icon"><i class="fa-solid fa-layer-group"></i></span>
@@ -750,21 +761,10 @@
             <div class="card card-stats p-3" data-filter="In Progress" style="--stat-color: #10b981;">
                 <div class="stat-card-top">
                     <div>
-                        <small class="detail-label text-success">Progress</small>
+                        <small class="detail-label text-success">In Progress</small>
                         <h3 id="count-progress" class="fw-bold m-0 text-success">0</h3>
                     </div>
                     <span class="stat-icon"><i class="fa-solid fa-person-digging"></i></span>
-                </div>
-            </div>
-        </div>
-        <div class="col-md col-6" onclick="filterData('Live Tender')">
-            <div class="card card-stats p-3" data-filter="Live Tender" style="--stat-color: #3b82f6;">
-                <div class="stat-card-top">
-                    <div>
-                        <small class="detail-label text-primary">Live</small>
-                        <h3 id="count-live" class="fw-bold m-0 text-primary">0</h3>
-                    </div>
-                    <span class="stat-icon"><i class="fa-solid fa-bullhorn"></i></span>
                 </div>
             </div>
         </div>
@@ -779,7 +779,17 @@
                 </div>
             </div>
         </div>
-        <!-- Under DLP is now the 5th card on the right -->
+        <div class="col-md col-6" onclick="filterData('Live Tender')">
+            <div class="card card-stats p-3" data-filter="Live Tender" style="--stat-color: #3b82f6;">
+                <div class="stat-card-top">
+                    <div>
+                        <small class="detail-label text-primary">Live</small>
+                        <h3 id="count-live" class="fw-bold m-0 text-primary">0</h3>
+                    </div>
+                    <span class="stat-icon"><i class="fa-solid fa-bullhorn"></i></span>
+                </div>
+            </div>
+        </div>
         <div class="col-md col-6" onclick="filterData('Under DLP')">
             <div class="card card-stats p-3" data-filter="Under DLP" style="--stat-color: #6366f1;">
                 <div class="stat-card-top">
@@ -865,6 +875,9 @@
                 </button>
                 <button id="editToggleBtn" type="button" class="btn btn-dark px-4 py-2 rounded-3 fw-bold hidden" onclick="enableEditMode()">
                     <i class="fa fa-edit me-2"></i>Edit Details
+                </button>
+                <button id="unlockFieldsBtn" type="button" class="btn btn-outline-primary unlock-fields-btn hidden" onclick="unlockLockedFields()" title="Unlock locked fields" aria-label="Unlock locked fields">
+                    <i class="fa-solid fa-key"></i>
                 </button>
                 <button id="saveBtn" type="button" class="btn btn-primary px-5 py-2 rounded-3 fw-bold hidden" onclick="saveDetails()">
                     <i class="fa fa-save me-2"></i>Save Changes
@@ -1302,6 +1315,7 @@
         "E_TENDERID": ["E_TenderID", "Tender ID", "TenderID"],
         "Agency_Name": ["Agency Name", "AGENCY_NAME"]
     };
+    const LOCKED_FIELDS_PIN = '0557';
     let modalHistoryDepth = 0;
     let suppressNextPopClose = false;
     let closingModalFromHistory = false;
@@ -1421,7 +1435,7 @@
             const touch = event.touches[0];
             startX = touch.clientX;
             startY = touch.clientY;
-            tracking = startX <= 44;
+            tracking = true;
         }, { passive: true });
 
         document.addEventListener('touchmove', event => {
@@ -1438,7 +1452,7 @@
             const touch = event.changedTouches[0];
             const dx = touch.clientX - startX;
             const dy = touch.clientY - startY;
-            if (dx > 86 && Math.abs(dy) < 58) closeTopSubPage();
+            if (Math.abs(dx) > 86 && Math.abs(dy) < 58) closeTopSubPage();
         }, { passive: true });
 
         document.addEventListener('touchcancel', () => {
@@ -2852,6 +2866,7 @@
         document.querySelectorAll('.field-edit').forEach(el => el.classList.add('hidden'));
         document.getElementById('editToggleBtn').classList.add('hidden');
         document.getElementById('saveBtn').classList.add('hidden');
+        document.getElementById('unlockFieldsBtn').classList.add('hidden');
         document.getElementById('shareBtn').classList.remove('hidden');
         document.getElementById('bgDetailsBtn').classList.remove('hidden');
 
@@ -2867,6 +2882,30 @@
         document.getElementById('shareBtn').classList.add('hidden');
         document.getElementById('bgDetailsBtn').classList.add('hidden');
         document.getElementById('saveBtn').classList.remove('hidden');
+        updateUnlockButtonState();
+    }
+
+    function updateUnlockButtonState() {
+        const unlockBtn = document.getElementById('unlockFieldsBtn');
+        if (!unlockBtn) return;
+        const hasLockedFields = Boolean(document.querySelector('#editForm .field-edit[readonly]'));
+        unlockBtn.classList.toggle('hidden', !hasLockedFields);
+    }
+
+    function unlockLockedFields() {
+        const pin = prompt('Locked fields unlock karne ke liye PIN enter karein');
+        if (pin === null) return;
+
+        if (pin.trim() !== LOCKED_FIELDS_PIN) {
+            alert('Wrong PIN. Locked fields abhi locked rahenge.');
+            return;
+        }
+
+        document.querySelectorAll('#editForm .field-edit[readonly]').forEach(input => {
+            input.removeAttribute('readonly');
+            input.classList.add('unlocked-field');
+        });
+        updateUnlockButtonState();
     }
 
     function filterData(f) {
