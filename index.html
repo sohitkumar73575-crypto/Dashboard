@@ -377,6 +377,8 @@
             justify-content: center;
             padding: 0;
         }
+        .pin-unlock-dialog { max-width: 360px; margin-left: auto; margin-right: auto; }
+        .pin-unlock-error { min-height: 1.25rem; font-size: 0.82rem; font-weight: 700; color: var(--danger); }
 
         .btn { border-radius: var(--radius) !important; }
         .fab-add-work {
@@ -887,6 +889,28 @@
     </div>
 </div>
 
+<!-- PIN Unlock Modal -->
+<div class="modal fade" id="pinUnlockModal" tabindex="-1" aria-labelledby="pinUnlockTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered pin-unlock-dialog">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header border-0 pb-0 px-4 pt-4">
+                <h5 class="modal-title fw-bold text-dark" id="pinUnlockTitle">Enter PIN to continue</h5>
+                <button type="button" class="modal-close-red" data-bs-dismiss="modal" aria-label="Close">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="modal-body px-4 pb-2">
+                <input id="pinUnlockInput" type="password" inputmode="numeric" autocomplete="one-time-code" class="edit-input mb-1" aria-describedby="pinUnlockError">
+                <div id="pinUnlockError" class="pin-unlock-error" aria-live="polite"></div>
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4 pt-2 justify-content-end">
+                <button type="button" class="btn btn-light fw-bold px-4" data-bs-dismiss="modal">Cancel</button>
+                <button id="confirmPinUnlockBtn" type="button" class="btn btn-primary fw-bold px-4" onclick="confirmPinUnlock()">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- BG Details Modal -->
 <div class="modal fade" id="bgDetailsModal" tabindex="-1">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
@@ -1324,10 +1348,36 @@
 
     async function initApp() {
         initSwipeBackGesture();
+        initPinUnlockModal();
         await fetchData();
         if (window.location.hash === '#add-work') {
             openAddWorkModal();
         }
+    }
+
+    function initPinUnlockModal() {
+        const pinInput = document.getElementById('pinUnlockInput');
+        const pinModal = document.getElementById('pinUnlockModal');
+        if (!pinInput || !pinModal) return;
+
+        pinInput.addEventListener('keydown', event => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                confirmPinUnlock();
+            }
+        });
+
+        pinModal.addEventListener('shown.bs.modal', () => {
+            pinInput.focus();
+        });
+
+        pinModal.addEventListener('hidden.bs.modal', () => {
+            pinInput.value = '';
+            const error = document.getElementById('pinUnlockError');
+            if (error) error.innerText = '';
+            const unlockBtn = document.getElementById('unlockFieldsBtn');
+            if (unlockBtn && !unlockBtn.classList.contains('hidden')) unlockBtn.focus();
+        });
     }
 
     function getTopOpenModal() {
@@ -1423,7 +1473,7 @@
 
         let startX = 0;
         let startY = 0;
-        let tracking = false;
+        let swipeState = 'idle';
         const interactiveSelector = 'input, textarea, select, button, a, label, video, [contenteditable="true"]';
 
         document.addEventListener('touchstart', event => {
@@ -1435,28 +1485,45 @@
             const touch = event.touches[0];
             startX = touch.clientX;
             startY = touch.clientY;
-            tracking = true;
+            swipeState = 'pending';
         }, { passive: true });
 
         document.addEventListener('touchmove', event => {
-            if (!tracking || event.touches.length !== 1) return;
+            if (swipeState === 'idle' || swipeState === 'vertical' || event.touches.length !== 1) return;
             const touch = event.touches[0];
             const dx = touch.clientX - startX;
             const dy = touch.clientY - startY;
-            if (Math.abs(dy) > 42 && Math.abs(dy) > Math.abs(dx)) tracking = false;
-        }, { passive: true });
+            const absDx = Math.abs(dx);
+            const absDy = Math.abs(dy);
+
+            if (swipeState === 'pending') {
+                if (absDy > 18 && absDy > absDx) {
+                    swipeState = 'vertical';
+                    return;
+                }
+                if (absDx > 18 && absDx > absDy) {
+                    swipeState = 'horizontal';
+                }
+            }
+
+            if (swipeState === 'horizontal') event.preventDefault();
+        }, { passive: false });
 
         document.addEventListener('touchend', event => {
-            if (!tracking) return;
-            tracking = false;
+            if (swipeState === 'idle' || swipeState === 'vertical') {
+                swipeState = 'idle';
+                return;
+            }
             const touch = event.changedTouches[0];
             const dx = touch.clientX - startX;
             const dy = touch.clientY - startY;
-            if (Math.abs(dx) > 86 && Math.abs(dy) < 58) closeTopSubPage();
+            const shouldGoBack = swipeState === 'horizontal' && Math.abs(dx) > 86 && Math.abs(dy) < 58;
+            swipeState = 'idle';
+            if (shouldGoBack) closeTopSubPage();
         }, { passive: true });
 
         document.addEventListener('touchcancel', () => {
-            tracking = false;
+            swipeState = 'idle';
         }, { passive: true });
 
         window.addEventListener('popstate', () => {
@@ -2893,11 +2960,25 @@
     }
 
     function unlockLockedFields() {
-        const pin = prompt('Locked fields unlock karne ke liye PIN enter karein');
-        if (pin === null) return;
+        const pinInput = document.getElementById('pinUnlockInput');
+        const pinError = document.getElementById('pinUnlockError');
+        const pinModal = document.getElementById('pinUnlockModal');
+        if (!pinInput || !pinError || !pinModal) return;
 
-        if (pin.trim() !== LOCKED_FIELDS_PIN) {
-            alert('Wrong PIN. Locked fields abhi locked rahenge.');
+        pinInput.value = '';
+        pinError.innerText = '';
+        bootstrap.Modal.getOrCreateInstance(pinModal).show();
+    }
+
+    function confirmPinUnlock() {
+        const pinInput = document.getElementById('pinUnlockInput');
+        const pinError = document.getElementById('pinUnlockError');
+        const pinModal = document.getElementById('pinUnlockModal');
+        if (!pinInput || !pinError || !pinModal) return;
+
+        if (pinInput.value.trim() !== LOCKED_FIELDS_PIN) {
+            pinError.innerText = 'Wrong PIN';
+            pinInput.select();
             return;
         }
 
@@ -2906,6 +2987,7 @@
             input.classList.add('unlocked-field');
         });
         updateUnlockButtonState();
+        bootstrap.Modal.getOrCreateInstance(pinModal).hide();
     }
 
     function filterData(f) {
