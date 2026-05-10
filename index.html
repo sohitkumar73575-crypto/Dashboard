@@ -630,6 +630,50 @@
             color: var(--muted);
             font-weight: 700;
         }
+        .quick-upload-actions {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.75rem;
+        }
+        .quick-preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+            gap: 0.75rem;
+        }
+        .quick-preview-card {
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background: #f8fafc;
+            min-height: 112px;
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+        }
+        .quick-preview-card img {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            object-fit: cover;
+            display: block;
+            background: #e2e8f0;
+        }
+        .quick-preview-label {
+            padding: 0.45rem 0.5rem;
+            font-size: 0.72rem;
+            font-weight: 800;
+            color: var(--text);
+            overflow-wrap: anywhere;
+        }
+        .quick-pdf-card {
+            border: 1px solid #bfdbfe;
+            border-radius: var(--radius);
+            background: #eff6ff;
+            padding: 0.75rem;
+            color: #1e3a8a;
+            font-weight: 850;
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            overflow-wrap: anywhere;
+        }
         .view-detail-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -669,6 +713,7 @@
                 gap: 0.65rem;
             }
             .photo-action-grid { grid-template-columns: 1fr 1fr; }
+            .quick-upload-actions { grid-template-columns: 1fr 1fr; }
         }
 
         /* ===== CAMERA PDF ===== */
@@ -1072,6 +1117,48 @@
     </div>
 </div>
 
+<!-- View BG Photo Upload Modal -->
+<div class="modal fade" id="pbgQuickUploadModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg overflow-hidden">
+            <div class="modal-header border-0 px-4 pt-4 pb-2">
+                <div class="d-flex align-items-center gap-3">
+                    <span class="add-work-title-icon"><i class="fa-solid fa-file-image"></i></span>
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark mb-0">PBG Photo Upload</h5>
+                        <small class="text-secondary fw-semibold" id="pbgQuickTenderLabel">BG_Register File</small>
+                    </div>
+                </div>
+                <button type="button" class="modal-close-red" data-bs-dismiss="modal" aria-label="Close">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="modal-body p-4">
+                <input id="pbgQuickGalleryInput" type="file" accept="image/*,application/pdf,.pdf" multiple class="hidden" onchange="handlePbgQuickGallerySelected(event)">
+                <div class="quick-upload-actions mb-3">
+                    <button type="button" class="btn btn-success fw-bold py-2" onclick="openDocScanner('quick')">
+                        <i class="fa-solid fa-camera-rotate me-2"></i>Open Camera
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary fw-bold py-2" onclick="document.getElementById('pbgQuickGalleryInput').click()">
+                        <i class="fa-solid fa-image me-2"></i>Gallery
+                    </button>
+                </div>
+                <div id="pbgQuickStatus" class="photo-hint mb-2">No photo selected</div>
+                <div id="pbgQuickPdfWrap" class="quick-pdf-card hidden mb-3">
+                    <i class="fa-solid fa-file-pdf"></i>
+                    <span id="pbgQuickPdfName">PDF selected</span>
+                </div>
+                <div id="pbgQuickPreviewGrid" class="quick-preview-grid"></div>
+            </div>
+            <div class="modal-footer border-0 justify-content-center p-4 pt-0">
+                <button id="savePbgQuickUploadBtn" type="button" class="btn btn-primary px-5 py-2 rounded-3 fw-bold" onclick="savePbgQuickUpload()">
+                    <i class="fa-solid fa-cloud-arrow-up me-2"></i>Save Photo PDF
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Upload PBG Details Modal -->
 <div class="modal fade" id="pbgUploadModal" tabindex="-1">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
@@ -1328,6 +1415,11 @@
     let currentTenderId = null;
     let currentFilter = 'All';
     let pbgSelectedImageFiles = [];
+    let pbgQuickUploadDetails = null;
+    let pbgQuickImageFiles = [];
+    let pbgQuickPdfFile = null;
+    let pbgQuickPreviewUrls = [];
+    let scannerReturnContext = 'form';
     let bgRegisterMap = {};
     let bgRegisterIndexLoaded = false;
     let bgRegisterIndexPromise = null;
@@ -3450,7 +3542,7 @@
             photoLink.href = details.fileUrl;
             photoLink.classList.remove('hidden');
             noFileText.classList.add('hidden');
-            uploadFileBtn.classList.add('hidden');
+            uploadFileBtn.classList.remove('hidden');
         } else {
             photoLink.removeAttribute('href');
             photoLink.classList.add('hidden');
@@ -3458,7 +3550,7 @@
             uploadFileBtn.classList.remove('hidden');
         }
 
-        showSubPageModal(document.getElementById('viewBgDetailsModal'), { replaceOpen: false });
+        showSubPageModal(document.getElementById('viewBgDetailsModal'), { replaceOpen: true });
     }
 
     function toRegisterDate(value) {
@@ -3701,7 +3793,166 @@
             return;
         }
 
-        openPbgUploadForm(details);
+        openPbgQuickUpload(details);
+    }
+
+    function resetPbgQuickUploadState() {
+        pbgQuickImageFiles = [];
+        pbgQuickPdfFile = null;
+        pbgQuickPreviewUrls.forEach(url => URL.revokeObjectURL(url));
+        pbgQuickPreviewUrls = [];
+        const input = document.getElementById('pbgQuickGalleryInput');
+        if (input) input.value = '';
+        renderPbgQuickPreview();
+    }
+
+    function openPbgQuickUpload(details) {
+        pbgQuickUploadDetails = { ...details };
+        document.getElementById('pbgQuickTenderLabel').innerText = `Tender ID: ${details.tenderId || '-'}`;
+        resetPbgQuickUploadState();
+        showSubPageModal(document.getElementById('pbgQuickUploadModal'), {
+            replaceOpen: false,
+            keepIds: ['viewBgDetailsModal']
+        });
+    }
+
+    function renderPbgQuickPreview() {
+        const grid = document.getElementById('pbgQuickPreviewGrid');
+        const status = document.getElementById('pbgQuickStatus');
+        const pdfWrap = document.getElementById('pbgQuickPdfWrap');
+        const pdfName = document.getElementById('pbgQuickPdfName');
+        if (!grid || !status || !pdfWrap || !pdfName) return;
+
+        grid.innerHTML = '';
+        if (pbgQuickPdfFile) {
+            pdfName.innerText = pbgQuickPdfFile.name || 'PDF selected';
+            pdfWrap.classList.remove('hidden');
+            status.innerText = 'PDF ready for upload';
+            return;
+        }
+
+        pdfWrap.classList.add('hidden');
+        if (!pbgQuickImageFiles.length) {
+            status.innerText = 'No photo selected';
+            return;
+        }
+
+        status.innerText = `${pbgQuickImageFiles.length} photo${pbgQuickImageFiles.length === 1 ? '' : 's'} selected`;
+        pbgQuickImageFiles.forEach((file, index) => {
+            const src = typeof file === 'string' ? file : URL.createObjectURL(file);
+            if (typeof file !== 'string') pbgQuickPreviewUrls.push(src);
+            const card = document.createElement('div');
+            card.className = 'quick-preview-card';
+            card.innerHTML = `
+                <img src="${src}" alt="PBG photo ${index + 1}">
+                <div class="quick-preview-label">Page ${index + 1}</div>
+            `;
+            grid.appendChild(card);
+        });
+    }
+
+    async function handlePbgQuickGallerySelected(event) {
+        const files = Array.from(event.target.files || []);
+        if (!files.length) return;
+
+        const pdfFile = files.find(file => file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'));
+        if (pdfFile) {
+            pbgQuickImageFiles = [];
+            pbgQuickPdfFile = pdfFile;
+            pbgQuickPreviewUrls.forEach(url => URL.revokeObjectURL(url));
+            pbgQuickPreviewUrls = [];
+            renderPbgQuickPreview();
+            event.target.value = '';
+            return;
+        }
+
+        const imageFiles = files.filter(file => file.type.startsWith('image/'));
+        if (!imageFiles.length) {
+            document.getElementById('pbgQuickStatus').innerText = 'Image ya PDF select karo';
+            event.target.value = '';
+            return;
+        }
+
+        pbgQuickPdfFile = null;
+        pbgQuickImageFiles = [...pbgQuickImageFiles, ...imageFiles];
+        pbgQuickPreviewUrls.forEach(url => URL.revokeObjectURL(url));
+        pbgQuickPreviewUrls = [];
+        renderPbgQuickPreview();
+        event.target.value = '';
+    }
+
+    async function savePbgQuickUpload() {
+        if (!pbgQuickUploadDetails) {
+            alert("BG details not found");
+            return;
+        }
+        if (!pbgQuickPdfFile && !pbgQuickImageFiles.length) {
+            alert("Please add PBG photo");
+            return;
+        }
+
+        const btn = document.getElementById('savePbgQuickUploadBtn');
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Uploading...';
+
+        try {
+            const baseName = `PBG_${safeFilePart(currentTenderId || pbgQuickUploadDetails.tenderId || 'photos')}`;
+            let fileName = '';
+            let fileData = '';
+            let fileMimeType = '';
+
+            if (pbgQuickPdfFile) {
+                const dataUrl = await readFileAsDataUrl(pbgQuickPdfFile);
+                fileName = `${baseName}_uploaded.pdf`;
+                fileData = dataUrl.split(',')[1] || '';
+                fileMimeType = 'application/pdf';
+            } else {
+                const statusEl = document.getElementById('pbgQuickStatus');
+                statusEl.innerText = 'Preparing PDF...';
+                const pdfDataUrl = await buildPdfFromImages(pbgQuickImageFiles, { statusElementId: 'pbgQuickStatus' });
+                const pageCount = pbgQuickImageFiles.length;
+                const pageWord = pageCount === 1 ? 'page' : 'pages';
+                fileName = `${baseName}_photos_${pageCount}_${pageWord}.pdf`;
+                fileData = pdfDataUrl.split(',')[1] || '';
+                fileMimeType = 'application/pdf';
+            }
+
+            const payload = {
+                ...pbgQuickUploadDetails,
+                pbgSubDate: toRegisterDate(formatDateInputValue(pbgQuickUploadDetails.pbgSubDate) || pbgQuickUploadDetails.pbgSubDate),
+                pbgValid: toRegisterDate(formatDateInputValue(pbgQuickUploadDetails.pbgValid) || pbgQuickUploadDetails.pbgValid),
+                addSubDate: toRegisterDate(formatDateInputValue(pbgQuickUploadDetails.addSubDate) || pbgQuickUploadDetails.addSubDate),
+                addValid: toRegisterDate(formatDateInputValue(pbgQuickUploadDetails.addValid) || pbgQuickUploadDetails.addValid),
+                fileName,
+                fileData,
+                fileMimeType
+            };
+
+            const resp = await postJson({
+                method: 'uploadToRegister',
+                formData: payload
+            });
+
+            if (!isSuccessResponse(resp)) {
+                throw new Error(resp?.message || resp?.error || "PBG upload failed");
+            }
+
+            payload.fileUrl = resp.fileUrl || resp.fileLink || '';
+            const item = masterData.find(d => getTenderId(d) == currentTenderId);
+            setBgRegisterDetails(payload.tenderId, payload, item);
+            if (item) updateBgRegisterAction(item);
+
+            const quickModalEl = document.getElementById('pbgQuickUploadModal');
+            quickModalEl.addEventListener('hidden.bs.modal', () => openStoredBgDetails(payload), { once: true });
+            bootstrap.Modal.getOrCreateInstance(quickModalEl).hide();
+        } catch (e) {
+            console.error("PBG file upload failed", e);
+            alert(e.message || "PBG upload failed");
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        }
     }
 
     async function uploadPbgDetails() {
@@ -3929,14 +4180,18 @@ function updateScannerHint(text, color = '#fbbf24') {
     hint.style.color = color;
 }
 
-async function openDocScanner() {
+async function openDocScanner(context = 'form') {
+    scannerReturnContext = context;
     currentScanDataUrl = null;
     scannerCaptureInProgress = false;
     const modalEl = document.getElementById('docScannerModal');
     modalEl.addEventListener('shown.bs.modal', startScannerCamera, { once: true });
+    const keepIds = context === 'quick'
+        ? ['viewBgDetailsModal', 'pbgQuickUploadModal']
+        : ['viewBgDetailsModal'];
     showSubPageModal(modalEl, {
         replaceOpen: true,
-        keepIds: ['viewBgDetailsModal'],
+        keepIds,
         modalOptions: { backdrop: 'static' }
     });
 }
@@ -4005,9 +4260,12 @@ async function captureDocScan() {
 function showScanPreview() {
     document.getElementById('scanPreviewImg').src = currentScanDataUrl;
     document.getElementById('scanProcessingMsg').textContent = '';
+    const keepIds = scannerReturnContext === 'quick'
+        ? ['viewBgDetailsModal', 'pbgQuickUploadModal']
+        : ['viewBgDetailsModal'];
     showSubPageModal(document.getElementById('scanPreviewModal'), {
         replaceOpen: true,
-        keepIds: ['viewBgDetailsModal'],
+        keepIds,
         modalOptions: { backdrop: 'static' }
     });
 }
@@ -4026,6 +4284,22 @@ async function confirmScan() {
     const response = await fetch(currentScanDataUrl);
     const blob = await response.blob();
     const file = new File([blob], `photo_${Date.now()}.jpg`, { type: 'image/jpeg' });
+
+    if (scannerReturnContext === 'quick') {
+        pbgQuickPdfFile = null;
+        pbgQuickImageFiles = [...pbgQuickImageFiles, file];
+        pbgQuickPreviewUrls.forEach(url => URL.revokeObjectURL(url));
+        pbgQuickPreviewUrls = [];
+        renderPbgQuickPreview();
+        setTimeout(() => {
+            showSubPageModal(document.getElementById('pbgQuickUploadModal'), {
+                replaceOpen: true,
+                keepIds: ['viewBgDetailsModal']
+            });
+        }, 220);
+        return;
+    }
+
     pbgSelectedImageFiles = [...pbgSelectedImageFiles, file];
 
     const baseName = `PBG_${safeFilePart(currentTenderId || 'scan')}`;
