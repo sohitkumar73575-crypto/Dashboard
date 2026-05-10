@@ -551,6 +551,32 @@
         .view-bg-actions .btn-light {
             grid-column: 1 / -1;
         }
+        .file-status-badge {
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background: #f8fafc;
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding: 0.65rem 0.75rem;
+            box-shadow: var(--shadow-sm);
+        }
+        .file-status-text {
+            min-width: 0;
+            font-weight: 800;
+            color: var(--text);
+        }
+        .file-upload-mini {
+            width: 38px;
+            min-width: 38px;
+            height: 38px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
         .photo-upload-box {
             border: 1px dashed #93c5fd;
             border-radius: var(--radius);
@@ -1023,10 +1049,14 @@
                 <div id="viewBgContent" class="view-detail-grid"></div>
                 <div id="viewBgPhotoWrap" class="mt-3 hidden">
                     <label class="detail-label">Uploaded Photo</label>
-                    <div>
+                    <div class="file-status-badge">
                         <a id="viewBgPhotoLink" class="btn btn-outline-primary fw-bold" target="_blank" rel="noopener">
-                            <i class="fa-solid fa-image me-2"></i>Open Photo
+                            <i class="fa-solid fa-image me-2"></i><span>Open Photo</span>
                         </a>
+                        <span id="viewBgNoFileText" class="file-status-text hidden">No file available</span>
+                        <button id="viewBgUploadFileBtn" type="button" class="btn btn-outline-primary file-upload-mini hidden" onclick="openPbgFileUploadOnly()" title="Upload file" aria-label="Upload file">
+                            <i class="fa-solid fa-file-arrow-up"></i>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -2843,8 +2873,7 @@
             String(details.pbgNo || '').trim() &&
             String(details.pbgSubDate || '').trim() &&
             String(details.pbgValid || '').trim() &&
-            String(details.bankName || '').trim() &&
-            (String(details.fileUrl || '').trim() || String(details.fileName || '').trim())
+            String(details.bankName || '').trim()
         );
 
         if (!bg1Complete) return false;
@@ -3414,12 +3443,19 @@
 
         const photoWrap = document.getElementById('viewBgPhotoWrap');
         const photoLink = document.getElementById('viewBgPhotoLink');
+        const noFileText = document.getElementById('viewBgNoFileText');
+        const uploadFileBtn = document.getElementById('viewBgUploadFileBtn');
+        photoWrap.classList.remove('hidden');
         if (details.fileUrl) {
-            photoWrap.classList.remove('hidden');
             photoLink.href = details.fileUrl;
+            photoLink.classList.remove('hidden');
+            noFileText.classList.add('hidden');
+            uploadFileBtn.classList.add('hidden');
         } else {
-            photoWrap.classList.add('hidden');
             photoLink.removeAttribute('href');
+            photoLink.classList.add('hidden');
+            noFileText.classList.remove('hidden');
+            uploadFileBtn.classList.remove('hidden');
         }
 
         showSubPageModal(document.getElementById('viewBgDetailsModal'), { replaceOpen: false });
@@ -3599,7 +3635,24 @@
         event.target.value = '';
     }
 
-    function openPbgUploadForm() {
+    function fillPbgUploadFormFromDetails(details) {
+        if (!details) return;
+
+        document.getElementById('pbgWorkName').value = details.workName || document.getElementById('pbgWorkName').value;
+        document.getElementById('pbgTenderId').value = details.tenderId || document.getElementById('pbgTenderId').value;
+        document.getElementById('pbgAgencyName').value = details.agencyName || document.getElementById('pbgAgencyName').value;
+        document.getElementById('pbgAmt').value = parseCurrencyAmount(details.pbgAmt) || details.pbgAmt || '';
+        document.getElementById('pbgNo').value = details.pbgNo || '';
+        document.getElementById('pbgSubDate').value = formatDateInputValue(details.pbgSubDate);
+        document.getElementById('pbgValid').value = formatDateInputValue(details.pbgValid);
+        document.getElementById('addAmt').value = details.addAmt ? (parseCurrencyAmount(details.addAmt) || details.addAmt) : document.getElementById('addAmt').value;
+        document.getElementById('addNo').value = details.addNo || '';
+        document.getElementById('addSubDate').value = formatDateInputValue(details.addSubDate);
+        document.getElementById('addValid').value = formatDateInputValue(details.addValid);
+        document.getElementById('bankName').value = details.bankName || '';
+    }
+
+    function openPbgUploadForm(prefillDetails = null) {
         const item = masterData.find(d => getTenderId(d) == currentTenderId);
 
         if (!item) {
@@ -3627,11 +3680,28 @@
         document.getElementById('pbgPhotoInput').value = '';
         setPbgPhotoState('', '', '', 'No photo selected', '', '');
         setAdditionalPbgVisibility(bg.additional > 0);
+        fillPbgUploadFormFromDetails(prefillDetails);
 
         showSubPageModal(document.getElementById('pbgUploadModal'), {
             replaceOpen: true,
             keepIds: ['viewBgDetailsModal']
         });
+    }
+
+    async function openPbgFileUploadOnly() {
+        const item = masterData.find(d => getTenderId(d) == currentTenderId);
+        if (!item) {
+            alert("Work details not found");
+            return;
+        }
+
+        const details = await getBgRegisterDetails(getTenderId(item), item);
+        if (!details) {
+            openPbgUploadForm();
+            return;
+        }
+
+        openPbgUploadForm(details);
     }
 
     async function uploadPbgDetails() {
