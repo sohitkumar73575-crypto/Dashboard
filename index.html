@@ -121,6 +121,13 @@
         .report-dropdown-menu.hidden {
             display: none;
         }
+        .report-dropdown-heading {
+            padding: 0.45rem 0.75rem 0.35rem;
+            color: var(--muted);
+            font-size: 0.74rem;
+            font-weight: 900;
+            text-transform: uppercase;
+        }
         .report-dropdown-item {
             width: 100%;
             border: 0;
@@ -141,6 +148,14 @@
         }
         .report-dropdown-item .pdf-icon {
             color: #dc2626;
+            font-size: 1.05rem;
+        }
+        .report-dropdown-item .excel-icon {
+            color: #15803d;
+            font-size: 1.05rem;
+        }
+        .report-dropdown-item .bg-icon {
+            color: #0f766e;
             font-size: 1.05rem;
         }
         .report-option-card {
@@ -822,9 +837,14 @@
             <i class="fa-solid fa-bars"></i>
         </button>
         <div id="reportDropdownMenu" class="report-dropdown-menu hidden">
-            <button class="report-dropdown-item" type="button" onclick="openReportModalFromMenu()">
-                <i class="fa-solid fa-file-pdf pdf-icon"></i>
-                <span>Get Reports</span>
+            <div class="report-dropdown-heading">Reports</div>
+            <button class="report-dropdown-item" type="button" onclick="openDevelopmentReportModalFromMenu()">
+                <i class="fa-solid fa-file-excel excel-icon"></i>
+                <span>Development Works</span>
+            </button>
+            <button class="report-dropdown-item" type="button" onclick="openBgReportModalFromMenu()">
+                <i class="fa-solid fa-building-shield bg-icon"></i>
+                <span>BG Details</span>
             </button>
         </div>
     </div>
@@ -1093,12 +1113,12 @@
             <div class="modal-body p-4">
                 <div id="viewBgContent" class="view-detail-grid"></div>
                 <div id="viewBgPhotoWrap" class="mt-3 hidden">
-                    <label class="detail-label">Uploaded Photo</label>
+                    <label class="detail-label">Uploaded Document</label>
                     <div class="file-status-badge">
                         <a id="viewBgPhotoLink" class="btn btn-outline-primary fw-bold" target="_blank" rel="noopener">
-                            <i class="fa-solid fa-image me-2"></i><span>Open Photo</span>
+                            <i class="fa-solid fa-file-pdf me-2"></i><span>Open Document</span>
                         </a>
-                        <span id="viewBgNoFileText" class="file-status-text hidden">No file available</span>
+                        <span id="viewBgNoFileText" class="file-status-text hidden">No document available</span>
                         <button id="viewBgUploadFileBtn" type="button" class="btn btn-outline-primary file-upload-mini hidden" onclick="openPbgFileUploadOnly()" title="Upload file" aria-label="Upload file">
                             <i class="fa-solid fa-file-arrow-up"></i>
                         </button>
@@ -1117,15 +1137,15 @@
     </div>
 </div>
 
-<!-- View BG Photo Upload Modal -->
+<!-- View BG Document Upload Modal -->
 <div class="modal fade" id="pbgQuickUploadModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content border-0 shadow-lg overflow-hidden">
             <div class="modal-header border-0 px-4 pt-4 pb-2">
                 <div class="d-flex align-items-center gap-3">
-                    <span class="add-work-title-icon"><i class="fa-solid fa-file-image"></i></span>
+                    <span class="add-work-title-icon"><i class="fa-solid fa-file-pdf"></i></span>
                     <div>
-                        <h5 class="modal-title fw-bold text-dark mb-0">PBG Photo Upload</h5>
+                        <h5 class="modal-title fw-bold text-dark mb-0">PBG Document Upload</h5>
                         <small class="text-secondary fw-semibold" id="pbgQuickTenderLabel">BG_Register File</small>
                     </div>
                 </div>
@@ -1140,10 +1160,10 @@
                         <i class="fa-solid fa-camera-rotate me-2"></i>Open Camera
                     </button>
                     <button type="button" class="btn btn-outline-secondary fw-bold py-2" onclick="document.getElementById('pbgQuickGalleryInput').click()">
-                        <i class="fa-solid fa-image me-2"></i>Gallery
+                        <i class="fa-solid fa-file-arrow-up me-2"></i>Add Document
                     </button>
                 </div>
-                <div id="pbgQuickStatus" class="photo-hint mb-2">No photo selected</div>
+                <div id="pbgQuickStatus" class="photo-hint mb-2">No document selected</div>
                 <div id="pbgQuickPdfWrap" class="quick-pdf-card hidden mb-3">
                     <i class="fa-solid fa-file-pdf"></i>
                     <span id="pbgQuickPdfName">PDF selected</span>
@@ -1152,7 +1172,7 @@
             </div>
             <div class="modal-footer border-0 justify-content-center p-4 pt-0">
                 <button id="savePbgQuickUploadBtn" type="button" class="btn btn-primary px-5 py-2 rounded-3 fw-bold" onclick="savePbgQuickUpload()">
-                    <i class="fa-solid fa-cloud-arrow-up me-2"></i>Save Photo PDF
+                    <i class="fa-solid fa-cloud-arrow-up me-2"></i>Save Document PDF
                 </button>
             </div>
         </div>
@@ -1265,7 +1285,7 @@
                             </datalist>
                                 </div>
                                 <div class="col-md-6">
-                            <label class="detail-label">PBG Photo</label>
+                            <label class="detail-label">PBG Document</label>
                             <div class="photo-upload-box">
                                 <input id="pbgPhotoInput" type="file" accept="image/*,application/pdf,.pdf" multiple class="hidden" onchange="handlePbgPhotoSelected(event)">
                                 <div class="photo-action-grid">
@@ -1273,17 +1293,17 @@
                                         <i class="fa-solid fa-camera-rotate me-2"></i>Open Camera
                                     </button>
                                     <button type="button" class="btn btn-outline-secondary fw-bold px-3 py-2 photo-action-btn" onclick="document.getElementById('pbgPhotoInput').click()">
-                                        <i class="fa-solid fa-image me-2"></i>Gallery
+                                        <i class="fa-solid fa-file-arrow-up me-2"></i>Add Document
                                     </button>
                                 </div>
                                 <input id="fileName" name="fileName" type="hidden" required>
                                 <input id="fileData" name="fileData" type="hidden">
                                 <input id="fileMimeType" name="fileMimeType" type="hidden">
                                 <div class="min-width-0">
-                                    <div id="pbgPhotoName" class="photo-name">No photo selected</div>
+                                    <div id="pbgPhotoName" class="photo-name">No document selected</div>
                                     <div id="pbgPhotoHint" class="photo-hint"></div>
                                 </div>
-                                <img id="pbgPhotoPreview" class="photo-preview hidden" alt="PBG photo preview">
+                                <img id="pbgPhotoPreview" class="photo-preview hidden" alt="PBG document preview">
                             </div>
                                 </div>
                             </div>
@@ -1387,12 +1407,7 @@
                         </div>
                     </div>
                 </div>
-
-                <div class="modal-highlight p-3 mt-4">
-                    <small class="detail-label text-primary">Workbook Sheets</small>
-                    <div class="fw-bold text-dark mt-1">Summary, Tendered, Allotted, Completed, In Progress</div>
-                    <div class="small text-secondary mt-2" id="reportRangePreview"></div>
-                </div>
+                <div class="small text-secondary mt-3" id="reportRangePreview"></div>
             </div>
 
             <div class="modal-footer border-0 justify-content-center p-4 pt-0">
@@ -1401,6 +1416,39 @@
                 </button>
                 <button id="reportPdfBtn" type="button" class="btn btn-danger px-4 py-2 rounded-3 fw-bold" onclick="downloadWorksReportPdf()">
                     <i class="fa-solid fa-file-pdf me-2"></i>Generate Report in PDF
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- BG Report Modal -->
+<div class="modal fade" id="bgReportModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg overflow-hidden">
+            <div class="modal-header border-0 px-4 pt-4 pb-2 align-items-start gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <span class="add-work-title-icon"><i class="fa-solid fa-building-shield"></i></span>
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark mb-0">BG Details Report</h5>
+                        <small class="text-secondary fw-semibold">Performance Security & Additional Security</small>
+                    </div>
+                </div>
+                <button type="button" class="modal-close-red" data-bs-dismiss="modal" aria-label="Close">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="modal-body p-4">
+                <div class="small text-secondary" id="bgReportPreview"></div>
+            </div>
+
+            <div class="modal-footer border-0 justify-content-center p-4 pt-0">
+                <button id="bgReportXlsxBtn" type="button" class="btn btn-success px-4 py-2 rounded-3 fw-bold" onclick="downloadBgReportXlsx()">
+                    <i class="fa-solid fa-file-excel me-2"></i>Generate BG Report in XLSX
+                </button>
+                <button id="bgReportPdfBtn" type="button" class="btn btn-danger px-4 py-2 rounded-3 fw-bold" onclick="downloadBgReportPdf()">
+                    <i class="fa-solid fa-file-pdf me-2"></i>Generate BG Report in PDF
                 </button>
             </div>
         </div>
@@ -2035,15 +2083,371 @@
         if (!event.target.closest('.report-dropdown')) closeReportMenu();
     });
 
-    function openReportModalFromMenu() {
+    function openDevelopmentReportModalFromMenu() {
         closeReportMenu();
         openReportModal();
+    }
+
+    function openReportModalFromMenu() {
+        openDevelopmentReportModalFromMenu();
     }
 
     function openReportModal() {
         setDefaultReportFields();
         syncReportModeFields();
         showSubPageModal(document.getElementById('reportModal'));
+    }
+
+    function openBgReportModalFromMenu() {
+        closeReportMenu();
+        const preview = document.getElementById('bgReportPreview');
+        if (preview) {
+            preview.innerText = `Report generated as on ${formatReportDateDisplay(new Date())}`;
+        }
+        showSubPageModal(document.getElementById('bgReportModal'));
+    }
+
+    function isPerformanceBgComplete(details) {
+        return Boolean(details &&
+            String(details.tenderId || '').trim() &&
+            String(details.pbgAmt || '').trim() &&
+            String(details.pbgNo || '').trim() &&
+            String(details.pbgSubDate || '').trim() &&
+            String(details.pbgValid || '').trim() &&
+            String(details.bankName || '').trim());
+    }
+
+    function isAdditionalBgComplete(details) {
+        return Boolean(details &&
+            String(details.addAmt || '').trim() &&
+            String(details.addNo || '').trim() &&
+            String(details.addSubDate || '').trim() &&
+            String(details.addValid || '').trim());
+    }
+
+    function normalizeGroupText(value) {
+        return String(value || '')
+            .toLowerCase()
+            .replace(/&/g, 'and')
+            .replace(/\b(private|pvt|limited|ltd|company|co|the)\b/g, '')
+            .replace(/[^a-z0-9]/g, '')
+            .trim();
+    }
+
+    function normalizeBankName(value) {
+        let key = normalizeGroupText(value);
+        key = key.replace(/banks?$/g, '');
+        return key || 'unknown';
+    }
+
+    function formatCanonicalName(value, fallback = 'Unknown') {
+        const text = String(value || '').replace(/\s+/g, ' ').trim();
+        if (!text) return fallback;
+        return text
+            .toLowerCase()
+            .split(' ')
+            .map(part => {
+                const upper = part.toUpperCase();
+                return ['HDFC', 'ICICI', 'SBI', 'PNB', 'IDBI', 'BOB', 'UCO', 'AXIS'].includes(upper)
+                    ? upper
+                    : part.charAt(0).toUpperCase() + part.slice(1);
+            })
+            .join(' ');
+    }
+
+    function formatCanonicalBankName(value) {
+        const compact = String(value || '').replace(/[^a-z0-9]/gi, '').toLowerCase();
+        if (compact.endsWith('bank') && !/\bbank\b/i.test(String(value || ''))) {
+            const stem = compact.slice(0, -4);
+            const known = { hdfc: 'HDFC', icici: 'ICICI', sbi: 'SBI', pnb: 'PNB', idbi: 'IDBI', bob: 'BOB', uco: 'UCO' };
+            return `${known[stem] || formatCanonicalName(stem, 'Unknown')} Bank`;
+        }
+        const display = formatCanonicalName(value, 'Unknown Bank');
+        return /\bbank\b/i.test(display) ? display : `${display} Bank`;
+    }
+
+    function formatBgReportDate(value) {
+        const date = parseReportDate(value);
+        return date ? formatReportDateDisplay(date) : (value || '');
+    }
+
+    function formatBgValidity(start, end) {
+        const from = formatBgReportDate(start) || '-';
+        const to = formatBgReportDate(end) || '-';
+        return `${from} to ${to}`;
+    }
+
+    function makeBgReportRow(base, type, number, amount, validity) {
+        return {
+            sr: '',
+            workName: base.workName,
+            tenderId: base.tenderId,
+            agencyName: base.agencyName,
+            bankName: base.bankName,
+            bgType: type,
+            bgNo: number,
+            amount: parseCurrencyAmount(amount),
+            amountDisplay: formatIndianNumber(parseCurrencyAmount(amount)),
+            validity
+        };
+    }
+
+    async function fetchBgReportMap() {
+        const resp = await postJson({
+            method: 'getBgReportIndex',
+            action: 'getBgReportIndex'
+        }, 25000);
+
+        if (isSuccessResponse(resp) && resp.bgRegisterMap) {
+            return resp.bgRegisterMap;
+        }
+
+        throw new Error(resp?.message || resp?.error || 'BG report data load nahi ho paya.');
+    }
+
+    async function buildBgReportContext() {
+        const bgMap = await fetchBgReportMap();
+        const workByTender = new Map((Array.isArray(masterData) ? masterData : [])
+            .map(item => [String(getTenderId(item) || '').trim(), item])
+            .filter(([tenderId]) => tenderId));
+
+        const works = Object.values(bgMap)
+            .filter(isPerformanceBgComplete)
+            .map(details => {
+                const tenderId = String(details.tenderId || '').trim();
+                const item = workByTender.get(tenderId) || null;
+                const additionalRequired = typeof details.additionalRequired === 'boolean'
+                    ? details.additionalRequired
+                    : (item ? calculateBgForItem(item).additional > 0 : parseCurrencyAmount(details.addAmt) > 0);
+                return {
+                    workName: details.workName || (item ? getWorkName(item) : ''),
+                    tenderId,
+                    agencyName: details.agencyName || (item ? getAgencyName(item) : ''),
+                    bankName: details.bankName || '',
+                    pbgAmt: details.pbgAmt,
+                    pbgNo: details.pbgNo,
+                    pbgSubDate: details.pbgSubDate,
+                    pbgValid: details.pbgValid,
+                    addAmt: details.addAmt,
+                    addNo: details.addNo,
+                    addSubDate: details.addSubDate,
+                    addValid: details.addValid,
+                    additionalRequired,
+                    additionalSubmitted: additionalRequired && isAdditionalBgComplete(details)
+                };
+            })
+            .sort((a, b) => (a.workName || '').localeCompare(b.workName || '') || (a.tenderId || '').localeCompare(b.tenderId || ''));
+
+        if (!works.length) {
+            throw new Error('Performance BG submitted works report ke liye available nahi hain.');
+        }
+
+        const detailEntries = [];
+        let totalPerformance = 0;
+        let totalAdditional = 0;
+        let missingAdditionalCount = 0;
+
+        works.forEach(work => {
+            const performanceAmount = parseCurrencyAmount(work.pbgAmt);
+            totalPerformance += performanceAmount;
+            detailEntries.push({
+                type: 'row',
+                row: makeBgReportRow(
+                    work,
+                    'Performance Security',
+                    work.pbgNo,
+                    performanceAmount,
+                    formatBgValidity(work.pbgSubDate, work.pbgValid)
+                )
+            });
+
+            if (work.additionalSubmitted) {
+                const additionalAmount = parseCurrencyAmount(work.addAmt);
+                totalAdditional += additionalAmount;
+                detailEntries.push({
+                    type: 'row',
+                    row: makeBgReportRow(
+                        work,
+                        'Additional Security',
+                        work.addNo,
+                        additionalAmount,
+                        formatBgValidity(work.addSubDate, work.addValid)
+                    )
+                });
+            } else if (work.additionalRequired) {
+                missingAdditionalCount += 1;
+                detailEntries.push({
+                    type: 'note',
+                    text: 'Additional BG not submitted for this work',
+                    work
+                });
+            }
+        });
+
+        const generatedDate = new Date();
+        return {
+            generatedDate,
+            reportTitle: `MC Dadri BG Details Report As On ${formatReportDateDisplay(generatedDate)}`,
+            fileBase: `MC_Dadri_BG_Details_Report_${toDateInputValue(generatedDate)}`,
+            works,
+            detailEntries,
+            totals: {
+                totalPerformance,
+                totalAdditional,
+                workCount: works.length,
+                performanceCount: works.length,
+                submittedAdditionalCount: works.filter(work => work.additionalSubmitted).length,
+                missingAdditionalCount
+            }
+        };
+    }
+
+    function getBgReportColumns() {
+        return [
+            { header: 'Sr No.', key: 'sr' },
+            { header: 'Work Name', key: 'workName' },
+            { header: 'E-Tender ID', key: 'tenderId' },
+            { header: 'Agency Name', key: 'agencyName' },
+            { header: 'Bank Name', key: 'bankName' },
+            { header: 'BG Type', key: 'bgType' },
+            { header: 'BG No.', key: 'bgNo' },
+            { header: 'Amount', key: 'amount' },
+            { header: 'Validity', key: 'validity' }
+        ];
+    }
+
+    function makeBgSummaryWorksheet(context) {
+        const rows = [
+            [context.reportTitle],
+            ['Particular', 'Value'],
+            ['Generated Date', formatReportDateDisplay(context.generatedDate)],
+            ['Total Works with Performance BG', context.totals.workCount],
+            ['Performance BG Count', context.totals.performanceCount],
+            ['Submitted Additional BG Count', context.totals.submittedAdditionalCount],
+            ['Missing Additional BG Count', context.totals.missingAdditionalCount],
+            ['Total Performance Security Amount', formatIndianNumber(context.totals.totalPerformance)],
+            ['Total Additional Security Amount', formatIndianNumber(context.totals.totalAdditional)]
+        ];
+        const ws = XLSX.utils.aoa_to_sheet(rows);
+        styleWorksheetRange(ws, [
+            { header: 'Particular', key: 'label' },
+            { header: 'Value', key: 'amount' }
+        ], rows, { headerRows: [1], titleMergeEndColumn: 1 });
+        return ws;
+    }
+
+    function makeBgEntryRows(entries, includeSr = true, startSr = 1) {
+        let sr = startSr;
+        return entries.map(entry => {
+            if (entry.type === 'note') {
+                return {
+                    kind: 'note',
+                    values: [entry.text, '', '', '', '', '', '', '', '']
+                };
+            }
+
+            const row = entry.row;
+            const values = [
+                includeSr ? sr++ : '',
+                row.workName,
+                row.tenderId,
+                row.agencyName,
+                row.bankName,
+                row.bgType,
+                row.bgNo,
+                row.amountDisplay,
+                row.validity
+            ];
+            return { kind: 'row', values, amount: row.amount };
+        });
+    }
+
+    function makeBgDetailsWorksheet(title, entries, context) {
+        const columns = getBgReportColumns();
+        const headers = columns.map(column => column.header);
+        const entryRows = makeBgEntryRows(entries);
+        const rows = [
+            [title],
+            headers,
+            ...entryRows.map(row => row.values),
+            ['Grand Total', '', '', '', '', '', '', formatIndianNumber(getBgEntriesTotal(entries)), '']
+        ];
+        const noteRows = entryRows
+            .map((row, index) => row.kind === 'note' ? index + 2 : -1)
+            .filter(index => index >= 0);
+        const totalRow = rows.length - 1;
+        const ws = XLSX.utils.aoa_to_sheet(rows);
+        styleWorksheetRange(ws, columns, rows, {
+            headerRows: [1],
+            noteRows,
+            sectionRows: [totalRow],
+            extraMerges: [
+                ...noteRows.map(rowIndex => ({ s: { r: rowIndex, c: 0 }, e: { r: rowIndex, c: headers.length - 1 } })),
+                { s: { r: totalRow, c: 0 }, e: { r: totalRow, c: 6 } }
+            ]
+        });
+        return ws;
+    }
+
+    function getBgEntriesTotal(entries) {
+        return entries.reduce((sum, entry) => sum + (entry.type === 'row' ? parseCurrencyAmount(entry.row.amount) : 0), 0);
+    }
+
+    function groupBgEntries(entries, keyFn, displayFn) {
+        const groups = new Map();
+        entries.forEach(entry => {
+            if (entry.type !== 'row') return;
+            const key = keyFn(entry.row);
+            if (!groups.has(key)) {
+                groups.set(key, { name: displayFn(entry.row), entries: [] });
+            }
+            const display = displayFn(entry.row);
+            if (groups.get(key).name.length > display.length && display) {
+                groups.get(key).name = display;
+            }
+            groups.get(key).entries.push(entry);
+        });
+        return Array.from(groups.values()).sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    function makeBgGroupedWorksheet(title, groups) {
+        const columns = getBgReportColumns();
+        const headers = columns.map(column => column.header);
+        const rows = [[title]];
+        const sectionRows = [];
+        const headerRows = [];
+        const extraMerges = [];
+
+        groups.forEach(group => {
+            const sectionRow = rows.length;
+            rows.push([group.name, '', '', '', '', '', '', '', '']);
+            sectionRows.push(sectionRow);
+            extraMerges.push({ s: { r: sectionRow, c: 0 }, e: { r: sectionRow, c: headers.length - 1 } });
+
+            const headerRow = rows.length;
+            rows.push(headers);
+            headerRows.push(headerRow);
+
+            makeBgEntryRows(group.entries).forEach(row => rows.push(row.values));
+
+            const totalRow = rows.length;
+            rows.push([`${group.name} Total`, '', '', '', '', '', '', formatIndianNumber(getBgEntriesTotal(group.entries)), '']);
+            sectionRows.push(totalRow);
+            extraMerges.push({ s: { r: totalRow, c: 0 }, e: { r: totalRow, c: 6 } });
+        });
+
+        const grandTotalRow = rows.length;
+        rows.push(['Grand Total', '', '', '', '', '', '', formatIndianNumber(groups.reduce((sum, group) => sum + getBgEntriesTotal(group.entries), 0)), '']);
+        sectionRows.push(grandTotalRow);
+        extraMerges.push({ s: { r: grandTotalRow, c: 0 }, e: { r: grandTotalRow, c: 6 } });
+
+        const ws = XLSX.utils.aoa_to_sheet(rows);
+        styleWorksheetRange(ws, columns, rows, {
+            headerRows,
+            sectionRows,
+            extraMerges
+        });
+        return ws;
     }
 
     function parseNumericAmount(value) {
@@ -2786,6 +3190,241 @@
         });
 
         doc.save(`${context.fileBase}.pdf`);
+    }
+
+    function setBgReportButtonsLoading(loading) {
+        ['bgReportXlsxBtn', 'bgReportPdfBtn'].forEach(id => {
+            const btn = document.getElementById(id);
+            if (btn) btn.disabled = loading;
+        });
+    }
+
+    async function downloadBgReportXlsx() {
+        if (!window.XLSX) {
+            alert('XLSX library load nahi hui. Internet/CDN check karke dobara try karo.');
+            return;
+        }
+
+        setBgReportButtonsLoading(true);
+        try {
+            const context = await buildBgReportContext();
+            const bankGroups = groupBgEntries(
+                context.detailEntries,
+                row => normalizeBankName(row.bankName),
+                row => formatCanonicalBankName(row.bankName)
+            );
+            const agencyGroups = groupBgEntries(
+                context.detailEntries,
+                row => normalizeGroupText(row.agencyName) || 'unknown',
+                row => formatCanonicalName(row.agencyName, 'Unknown Agency')
+            );
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, makeBgSummaryWorksheet(context), 'Summary');
+            XLSX.utils.book_append_sheet(wb, makeBgDetailsWorksheet('All BG Details', context.detailEntries, context), 'All BG Details');
+            XLSX.utils.book_append_sheet(wb, makeBgGroupedWorksheet('Bank Wise BG', bankGroups), 'Bank Wise BG');
+            XLSX.utils.book_append_sheet(wb, makeBgGroupedWorksheet('Agency Wise BG', agencyGroups), 'Agency Wise BG');
+            XLSX.writeFile(wb, `${context.fileBase}.xlsx`);
+        } catch (e) {
+            console.error('BG XLSX report failed', e);
+            alert(e.message || 'BG report generate nahi ho payi.');
+        } finally {
+            setBgReportButtonsLoading(false);
+        }
+    }
+
+    function getBgPdfHeaders() {
+        return getBgReportColumns().map(column => column.header);
+    }
+
+    function makeBgPdfBody(entries, includeGrandTotal = true, totalLabel = 'Grand Total') {
+        const body = [];
+        let sr = 1;
+        entries.forEach(entry => {
+            if (entry.type === 'note') {
+                body.push([{ content: entry.text, colSpan: 9, styles: { fontStyle: 'italic', textColor: [124, 90, 0], fillColor: [255, 242, 204] } }]);
+                return;
+            }
+
+            const row = entry.row;
+            body.push([
+                sr++,
+                row.workName,
+                row.tenderId,
+                row.agencyName,
+                row.bankName,
+                row.bgType,
+                row.bgNo,
+                row.amountDisplay,
+                row.validity
+            ]);
+        });
+
+        if (includeGrandTotal) {
+            body.push([
+                { content: totalLabel, colSpan: 7, styles: { fontStyle: 'bold', halign: 'right', fillColor: [15, 118, 110], textColor: [255, 255, 255] } },
+                { content: formatIndianNumber(getBgEntriesTotal(entries)), styles: { fontStyle: 'bold', halign: 'right', fillColor: [15, 118, 110], textColor: [255, 255, 255] } },
+                { content: '', styles: { fillColor: [15, 118, 110] } }
+            ]);
+        }
+
+        return body;
+    }
+
+    function getBgPdfColumnStyles() {
+        return {
+            0: { cellWidth: 10, halign: 'center' },
+            1: { cellWidth: 58 },
+            2: { cellWidth: 25 },
+            3: { cellWidth: 34 },
+            4: { cellWidth: 28 },
+            5: { cellWidth: 28 },
+            6: { cellWidth: 25 },
+            7: { cellWidth: 24, halign: 'right' },
+            8: { cellWidth: 34, halign: 'center' }
+        };
+    }
+
+    function drawBgPdfTable(doc, title, entries, startY, reportTitle, options = {}) {
+        const y = drawPdfSectionHeading(doc, title, startY, reportTitle, { headingX: 10 });
+        doc.autoTable({
+            head: [getBgPdfHeaders()],
+            body: makeBgPdfBody(entries, options.includeGrandTotal !== false, options.totalLabel || 'Grand Total'),
+            startY: y,
+            margin: { top: 22, right: 8, bottom: 12, left: 8 },
+            theme: 'grid',
+            showHead: 'everyPage',
+            rowPageBreak: 'avoid',
+            styles: {
+                font: 'helvetica',
+                fontSize: 6.6,
+                cellPadding: 1.5,
+                overflow: 'linebreak',
+                valign: 'top',
+                lineColor: [180, 180, 180],
+                lineWidth: 0.1,
+                textColor: [17, 24, 39]
+            },
+            headStyles: {
+                fillColor: [68, 114, 196],
+                textColor: [255, 255, 255],
+                fontStyle: 'bold',
+                halign: 'center',
+                valign: 'middle',
+                fontSize: 6.6
+            },
+            alternateRowStyles: { fillColor: [248, 250, 252] },
+            columnStyles: getBgPdfColumnStyles(),
+            didDrawPage() {
+                drawReportPdfTitle(doc, reportTitle);
+            }
+        });
+        return (doc.lastAutoTable && doc.lastAutoTable.finalY ? doc.lastAutoTable.finalY : y) + 6;
+    }
+
+    function drawBgPdfGrandTotal(doc, title, amount, startY, reportTitle) {
+        const y = drawPdfSectionHeading(doc, title, startY, reportTitle, { headingX: 10 });
+        doc.autoTable({
+            head: [['Particular', 'Amount']],
+            body: [['Grand Total', formatIndianNumber(amount)]],
+            startY: y,
+            margin: { top: 22, right: 100, bottom: 12, left: 10 },
+            theme: 'grid',
+            styles: {
+                font: 'helvetica',
+                fontSize: 8,
+                cellPadding: 2,
+                lineColor: [180, 180, 180],
+                lineWidth: 0.1
+            },
+            headStyles: {
+                fillColor: [68, 114, 196],
+                textColor: [255, 255, 255],
+                fontStyle: 'bold',
+                halign: 'center'
+            },
+            columnStyles: {
+                0: { cellWidth: 55, fontStyle: 'bold' },
+                1: { cellWidth: 35, halign: 'right', fontStyle: 'bold' }
+            },
+            didDrawPage() {
+                drawReportPdfTitle(doc, reportTitle);
+            }
+        });
+        return (doc.lastAutoTable && doc.lastAutoTable.finalY ? doc.lastAutoTable.finalY : y) + 6;
+    }
+
+    function drawBgPdfGroupedTables(doc, title, groups, startY, reportTitle) {
+        let y = drawPdfSectionHeading(doc, title, startY, reportTitle, { headingX: 10 });
+        groups.forEach(group => {
+            y = drawBgPdfTable(doc, group.name, group.entries, y + 2, reportTitle, {
+                totalLabel: `${group.name} Total`
+            });
+        });
+        const grandTotal = groups.reduce((sum, group) => sum + getBgEntriesTotal(group.entries), 0);
+        return drawBgPdfGrandTotal(doc, `${title} Grand Total`, grandTotal, y + 2, reportTitle);
+    }
+
+    async function downloadBgReportPdf() {
+        if (!window.jspdf || !window.jspdf.jsPDF || !window.jspdf.jsPDF.API.autoTable) {
+            alert('PDF table library load nahi hui. Internet/CDN check karke dobara try karo.');
+            return;
+        }
+
+        setBgReportButtonsLoading(true);
+        try {
+            const context = await buildBgReportContext();
+            const bankGroups = groupBgEntries(
+                context.detailEntries,
+                row => normalizeBankName(row.bankName),
+                row => formatCanonicalBankName(row.bankName)
+            );
+            const agencyGroups = groupBgEntries(
+                context.detailEntries,
+                row => normalizeGroupText(row.agencyName) || 'unknown',
+                row => formatCanonicalName(row.agencyName, 'Unknown Agency')
+            );
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const summaryRows = [
+                { label: 'Generated Date', value: formatReportDateDisplay(context.generatedDate) },
+                { label: 'Total Works with Performance BG', value: context.totals.workCount },
+                { label: 'Performance BG Count', value: context.totals.performanceCount },
+                { label: 'Submitted Additional BG Count', value: context.totals.submittedAdditionalCount },
+                { label: 'Missing Additional BG Count', value: context.totals.missingAdditionalCount },
+                { label: 'Total Performance Security Amount', value: formatIndianNumber(context.totals.totalPerformance) },
+                { label: 'Total Additional Security Amount', value: formatIndianNumber(context.totals.totalAdditional) }
+            ];
+
+            let y = drawPdfAutoTable(doc, 'Summary', [
+                { header: 'Particular', dataKey: 'label', sourceKey: 'label' },
+                { header: 'Value', dataKey: 'value', sourceKey: 'amount' }
+            ], summaryRows, {
+                startY: 24,
+                reportTitle: context.reportTitle,
+                fontSize: 8.5,
+                headFontSize: 8.5,
+                tableWidth: 122,
+                marginLeft: 44,
+                marginRight: 44,
+                headingX: 44
+            });
+
+            y = startNewPdfSection(doc, 'landscape');
+            y = drawBgPdfTable(doc, 'All BG Details', context.detailEntries, y, context.reportTitle);
+            y = startNewPdfSection(doc, 'landscape');
+            y = drawBgPdfGroupedTables(doc, 'Bank Wise BG', bankGroups, y, context.reportTitle);
+            y = startNewPdfSection(doc, 'landscape');
+            drawBgPdfGroupedTables(doc, 'Agency Wise BG', agencyGroups, y, context.reportTitle);
+
+            doc.save(`${context.fileBase}.pdf`);
+        } catch (e) {
+            console.error('BG PDF report failed', e);
+            alert(e.message || 'BG report generate nahi ho payi.');
+        } finally {
+            setBgReportButtonsLoading(false);
+        }
     }
 
     function numberToWordsIndian(num) {
@@ -3542,7 +4181,7 @@
             photoLink.href = details.fileUrl;
             photoLink.classList.remove('hidden');
             noFileText.classList.add('hidden');
-            uploadFileBtn.classList.remove('hidden');
+            uploadFileBtn.classList.add('hidden');
         } else {
             photoLink.removeAttribute('href');
             photoLink.classList.add('hidden');
@@ -3587,7 +4226,7 @@
         document.getElementById('fileName').value = fileName;
         document.getElementById('fileData').value = fileData || '';
         document.getElementById('fileMimeType').value = mimeType || '';
-        document.getElementById('pbgPhotoName').innerText = displayName || fileName || 'No photo selected';
+        document.getElementById('pbgPhotoName').innerText = displayName || fileName || 'No document selected';
         document.getElementById('pbgPhotoHint').innerText = hint || '';
 
         const preview = document.getElementById('pbgPhotoPreview');
@@ -3686,7 +4325,7 @@
 
         const pdfFile = files.find(file => file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'));
         const imageFiles = files.filter(file => file.type.startsWith('image/'));
-        const baseName = `PBG_${safeFilePart(currentTenderId || 'photos')}`;
+        const baseName = `PBG_${safeFilePart(currentTenderId || 'documents')}`;
 
         if (pdfFile) {
             pbgSelectedImageFiles = [];
@@ -3704,7 +4343,7 @@
         }
 
         if (!imageFiles.length) {
-            setPbgPhotoState('', '', '', 'No supported file selected', 'Image ya PDF select karo', '');
+            setPbgPhotoState('', '', '', 'No supported document selected', 'PDF ya image document select karo', '');
             event.target.value = '';
             return;
         }
@@ -3717,11 +4356,11 @@
         const pageWord = pageCount === 1 ? 'page' : 'pages';
 
         setPbgPhotoState(
-            `${baseName}_photos_${pageCount}_${pageWord}.pdf`,
+            `${baseName}_documents_${pageCount}_${pageWord}.pdf`,
             pdfDataUrl.split(',')[1] || '',
             'application/pdf',
             `${pageCount} ${pageWord} PDF ready`,
-            'Add File again to add more pages',
+            'Add Document again to add more pages',
             preview
         );
         event.target.value = '';
@@ -3770,7 +4409,7 @@
         document.getElementById('addAmt').value = bg.additional || '';
         pbgSelectedImageFiles = [];
         document.getElementById('pbgPhotoInput').value = '';
-        setPbgPhotoState('', '', '', 'No photo selected', '', '');
+        setPbgPhotoState('', '', '', 'No document selected', '', '');
         setAdditionalPbgVisibility(bg.additional > 0);
         fillPbgUploadFormFromDetails(prefillDetails);
 
@@ -3833,18 +4472,18 @@
 
         pdfWrap.classList.add('hidden');
         if (!pbgQuickImageFiles.length) {
-            status.innerText = 'No photo selected';
+            status.innerText = 'No document selected';
             return;
         }
 
-        status.innerText = `${pbgQuickImageFiles.length} photo${pbgQuickImageFiles.length === 1 ? '' : 's'} selected`;
+        status.innerText = `${pbgQuickImageFiles.length} document page${pbgQuickImageFiles.length === 1 ? '' : 's'} selected`;
         pbgQuickImageFiles.forEach((file, index) => {
             const src = typeof file === 'string' ? file : URL.createObjectURL(file);
             if (typeof file !== 'string') pbgQuickPreviewUrls.push(src);
             const card = document.createElement('div');
             card.className = 'quick-preview-card';
             card.innerHTML = `
-                <img src="${src}" alt="PBG photo ${index + 1}">
+                <img src="${src}" alt="PBG document page ${index + 1}">
                 <div class="quick-preview-label">Page ${index + 1}</div>
             `;
             grid.appendChild(card);
@@ -3868,7 +4507,7 @@
 
         const imageFiles = files.filter(file => file.type.startsWith('image/'));
         if (!imageFiles.length) {
-            document.getElementById('pbgQuickStatus').innerText = 'Image ya PDF select karo';
+            document.getElementById('pbgQuickStatus').innerText = 'PDF ya image document select karo';
             event.target.value = '';
             return;
         }
@@ -3887,7 +4526,7 @@
             return;
         }
         if (!pbgQuickPdfFile && !pbgQuickImageFiles.length) {
-            alert("Please add PBG photo");
+            alert("Please add PBG document");
             return;
         }
 
@@ -3897,7 +4536,7 @@
         btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Uploading...';
 
         try {
-            const baseName = `PBG_${safeFilePart(currentTenderId || pbgQuickUploadDetails.tenderId || 'photos')}`;
+            const baseName = `PBG_${safeFilePart(currentTenderId || pbgQuickUploadDetails.tenderId || 'documents')}`;
             let fileName = '';
             let fileData = '';
             let fileMimeType = '';
@@ -3913,7 +4552,7 @@
                 const pdfDataUrl = await buildPdfFromImages(pbgQuickImageFiles, { statusElementId: 'pbgQuickStatus' });
                 const pageCount = pbgQuickImageFiles.length;
                 const pageWord = pageCount === 1 ? 'page' : 'pages';
-                fileName = `${baseName}_photos_${pageCount}_${pageWord}.pdf`;
+                fileName = `${baseName}_documents_${pageCount}_${pageWord}.pdf`;
                 fileData = pdfDataUrl.split(',')[1] || '';
                 fileMimeType = 'application/pdf';
             }
@@ -3971,7 +4610,7 @@
         payload.addValid = toRegisterDate(payload.addValid);
 
         if (!payload.fileName || !payload.fileData) {
-            alert("Please add PBG photo");
+            alert("Please add PBG document");
             return;
         }
 
@@ -4127,7 +4766,7 @@
       <div id="scannerControls">
         <div id="scannerHint" class="scanner-status">Camera ready</div>
         <div aria-hidden="true"></div>
-        <button id="scannerCaptureBtn" class="btn-capture" type="button" onclick="captureDocScan()" aria-label="Capture photo">
+        <button id="scannerCaptureBtn" class="btn-capture" type="button" onclick="captureDocScan()" aria-label="Capture document">
           <i class="fa-solid fa-camera"></i>
         </button>
         <div class="scanner-tools">
@@ -4242,7 +4881,7 @@ async function captureDocScan() {
     if (!video?.videoWidth) return;
 
     scannerCaptureInProgress = true;
-    updateScannerHint('Processing photo...', '#4ade80');
+    updateScannerHint('Processing document...', '#4ade80');
 
     const canvas = document.createElement('canvas');
     canvas.width = video.videoWidth;
@@ -4283,7 +4922,7 @@ async function confirmScan() {
 
     const response = await fetch(currentScanDataUrl);
     const blob = await response.blob();
-    const file = new File([blob], `photo_${Date.now()}.jpg`, { type: 'image/jpeg' });
+    const file = new File([blob], `document_${Date.now()}.jpg`, { type: 'image/jpeg' });
 
     if (scannerReturnContext === 'quick') {
         pbgQuickPdfFile = null;
@@ -4313,7 +4952,7 @@ async function confirmScan() {
             statusElementId: 'pbgPhotoHint'
         });
         setPbgPhotoState(
-            `${baseName}_photos_${pageCount}_${pageWord}.pdf`,
+            `${baseName}_documents_${pageCount}_${pageWord}.pdf`,
             pdfDataUrl.split(',')[1] || '',
             'application/pdf',
             `${pageCount} ${pageWord} PDF ready`,
@@ -4326,7 +4965,7 @@ async function confirmScan() {
         });
     } catch (e) {
         console.error('PDF build failed', e);
-        setPbgPhotoState('', '', '', 'PDF failed', 'Photo se PDF nahi ban payi', currentScanDataUrl);
+        setPbgPhotoState('', '', '', 'PDF failed', 'Document se PDF nahi ban payi', currentScanDataUrl);
         showSubPageModal(document.getElementById('pbgUploadModal'), {
             replaceOpen: true,
             keepIds: ['viewBgDetailsModal']
