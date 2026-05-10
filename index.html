@@ -2192,6 +2192,58 @@
         };
     }
 
+    function normalizeBgBranchName(value) {
+        const text = String(value || '').replace(/\s+/g, ' ').trim();
+        if (!text) return '';
+        return formatCanonicalName(
+            text.replace(/\bch\.?\s*dadri\b/ig, 'Charkhi Dadri'),
+            ''
+        ).replace(/\bCharkhi Dadri\b/i, 'Charkhi Dadri');
+    }
+
+    function getBankBranchInfo(value) {
+        const original = String(value || '').replace(/\s+/g, ' ').trim();
+        if (!original) {
+            return { bankName: 'Unknown Bank', branchName: '', branchLabel: '', displayName: 'Unknown Bank', key: 'unknown' };
+        }
+
+        const patterns = [
+            { re: /^(?:state\s+bank\s+of\s+india|sbi)\b/i, bank: 'SBI Bank' },
+            { re: /^haryana\s+gramin\s+bank\b/i, bank: 'Haryana Gramin Bank' },
+            { re: /^union\s+bank(?:\s+of\s+india)?\b/i, bank: 'Union Bank' },
+            { re: /^hdfc(?:\s+bank)?\b/i, bank: 'HDFC Bank' },
+            { re: /^au\s+small\s+finance(?:\s+bank)?\b/i, bank: 'AU Small Finance Bank' },
+            { re: /^punjab\s+national\s+bank\b|^pnb\b/i, bank: 'PNB Bank' },
+            { re: /^icici(?:\s+bank)?\b/i, bank: 'ICICI Bank' },
+            { re: /^axis(?:\s+bank)?\b/i, bank: 'Axis Bank' },
+            { re: /^idbi(?:\s+bank)?\b/i, bank: 'IDBI Bank' },
+            { re: /^uco(?:\s+bank)?\b/i, bank: 'UCO Bank' }
+        ];
+
+        for (const item of patterns) {
+            const match = original.match(item.re);
+            if (!match) continue;
+            const branchName = normalizeBgBranchName(original.slice(match[0].length));
+            const branchLabel = branchName ? `${item.bank.replace(/\s+Bank$/i, '')} ${branchName}` : '';
+            return {
+                bankName: item.bank,
+                branchName,
+                branchLabel,
+                displayName: branchName ? `${item.bank} - ${branchName}` : item.bank,
+                key: normalizeGroupText(item.bank)
+            };
+        }
+
+        const bankName = formatCanonicalBankName(original);
+        return {
+            bankName,
+            branchName: '',
+            branchLabel: '',
+            displayName: bankName,
+            key: normalizeBankName(bankName)
+        };
+    }
+
     async function fetchBgReportMap() {
         const resp = await postJson({
             method: 'getBgReportIndex',
@@ -2242,7 +2294,7 @@
             throw new Error('Performance BG submitted works report ke liye available nahi hain.');
         }
 
-        const detailEntries = [];
+        const detailBlocks = [];
         let totalPerformance = 0;
         let totalAdditional = 0;
         let missingAdditionalCount = 0;
@@ -2250,7 +2302,7 @@
         works.forEach(work => {
             const performanceAmount = parseCurrencyAmount(work.pbgAmt);
             totalPerformance += performanceAmount;
-            detailEntries.push({
+            const rows = [{
                 type: 'row',
                 row: makeBgReportRow(
                     work,
@@ -2259,12 +2311,12 @@
                     performanceAmount,
                     formatBgValidity(work.pbgSubDate, work.pbgValid)
                 )
-            });
+            }];
 
             if (work.additionalSubmitted) {
                 const additionalAmount = parseCurrencyAmount(work.addAmt);
                 totalAdditional += additionalAmount;
-                detailEntries.push({
+                rows.push({
                     type: 'row',
                     row: makeBgReportRow(
                         work,
@@ -2276,12 +2328,18 @@
                 });
             } else if (work.additionalRequired) {
                 missingAdditionalCount += 1;
-                detailEntries.push({
+                rows.push({
                     type: 'note',
                     text: 'Additional BG not submitted for this work',
                     work
                 });
             }
+
+            detailBlocks.push({
+                work,
+                bank: getBankBranchInfo(work.bankName),
+                rows
+            });
         });
 
         const generatedDate = new Date();
@@ -2290,10 +2348,11 @@
             reportTitle: `MC Dadri BG Details Report As On ${formatReportDateDisplay(generatedDate)}`,
             fileBase: `MC_Dadri_BG_Details_Report_${toDateInputValue(generatedDate)}`,
             works,
-            detailEntries,
+            detailBlocks,
             totals: {
                 totalPerformance,
                 totalAdditional,
+                totalAmount: totalPerformance + totalAdditional,
                 workCount: works.length,
                 performanceCount: works.length,
                 submittedAdditionalCount: works.filter(work => work.additionalSubmitted).length,
@@ -2326,7 +2385,8 @@
             ['Submitted Additional BG Count', context.totals.submittedAdditionalCount],
             ['Missing Additional BG Count', context.totals.missingAdditionalCount],
             ['Total Performance Security Amount', formatIndianNumber(context.totals.totalPerformance)],
-            ['Total Additional Security Amount', formatIndianNumber(context.totals.totalAdditional)]
+            ['Total Additional Security Amount', formatIndianNumber(context.totals.totalAdditional)],
+            ['Total Amount Performance Security + Additional Performance Security', formatIndianNumber(context.totals.totalAmount)]
         ];
         const ws = XLSX.utils.aoa_to_sheet(rows);
         styleWorksheetRange(ws, [
@@ -2336,76 +2396,105 @@
         return ws;
     }
 
-    function makeBgEntryRows(entries, includeSr = true, startSr = 1) {
-        let sr = startSr;
-        return entries.map(entry => {
-            if (entry.type === 'note') {
-                return {
-                    kind: 'note',
-                    values: [entry.text, '', '', '', '', '', '', '', '']
-                };
-            }
-
-            const row = entry.row;
-            const values = [
-                includeSr ? sr++ : '',
-                row.workName,
-                row.tenderId,
-                row.agencyName,
-                row.bankName,
-                row.bgType,
-                row.bgNo,
-                row.amountDisplay,
-                row.validity
-            ];
-            return { kind: 'row', values, amount: row.amount };
-        });
+    function getBgBlockTotal(block) {
+        return (block.rows || []).reduce((sum, entry) => {
+            return sum + (entry.type === 'row' ? parseCurrencyAmount(entry.row.amount) : 0);
+        }, 0);
     }
 
-    function makeBgDetailsWorksheet(title, entries, context) {
+    function getBgBlocksTotal(blocks) {
+        return (blocks || []).reduce((sum, block) => sum + getBgBlockTotal(block), 0);
+    }
+
+    function makeBgBlockWorksheetRows(blocks, options = {}) {
+        const rowOffset = options.rowOffset || 0;
+        let sr = options.startSr || 1;
+        const rows = [];
+        const noteRows = [];
+        const extraMerges = [];
+
+        (blocks || []).forEach(block => {
+            const firstRow = rowOffset + rows.length;
+            const blockRows = block.rows && block.rows.length ? block.rows : [];
+            blockRows.forEach((entry, index) => {
+                if (entry.type === 'note') {
+                    const rowIndex = rowOffset + rows.length;
+                    rows.push(['', '', '', '', '', entry.text, '', '', '']);
+                    noteRows.push(rowIndex);
+                    extraMerges.push({ s: { r: rowIndex, c: 5 }, e: { r: rowIndex, c: 8 } });
+                    return;
+                }
+
+                const row = entry.row;
+                rows.push([
+                    index === 0 ? sr : '',
+                    index === 0 ? row.workName : '',
+                    index === 0 ? row.tenderId : '',
+                    index === 0 ? row.agencyName : '',
+                    index === 0 ? row.bankName : '',
+                    row.bgType,
+                    row.bgNo,
+                    row.amountDisplay,
+                    row.validity
+                ]);
+            });
+
+            const lastRow = rowOffset + rows.length - 1;
+            if (lastRow > firstRow) {
+                [0, 1, 2, 3, 4].forEach(column => {
+                    extraMerges.push({ s: { r: firstRow, c: column }, e: { r: lastRow, c: column } });
+                });
+            }
+            sr += 1;
+        });
+
+        return { rows, noteRows, extraMerges, nextSr: sr };
+    }
+
+    function makeBgDetailsWorksheet(title, blocks, context) {
         const columns = getBgReportColumns();
         const headers = columns.map(column => column.header);
-        const entryRows = makeBgEntryRows(entries);
+        const blockRows = makeBgBlockWorksheetRows(blocks, { rowOffset: 2, startSr: 1 });
         const rows = [
             [title],
             headers,
-            ...entryRows.map(row => row.values),
-            ['Grand Total', '', '', '', '', '', '', formatIndianNumber(getBgEntriesTotal(entries)), '']
+            ...blockRows.rows,
+            ['Grand Total', '', '', '', '', '', '', formatIndianNumber(getBgBlocksTotal(blocks)), '']
         ];
-        const noteRows = entryRows
-            .map((row, index) => row.kind === 'note' ? index + 2 : -1)
-            .filter(index => index >= 0);
         const totalRow = rows.length - 1;
         const ws = XLSX.utils.aoa_to_sheet(rows);
         styleWorksheetRange(ws, columns, rows, {
             headerRows: [1],
-            noteRows,
+            noteRows: blockRows.noteRows,
             sectionRows: [totalRow],
             extraMerges: [
-                ...noteRows.map(rowIndex => ({ s: { r: rowIndex, c: 0 }, e: { r: rowIndex, c: headers.length - 1 } })),
+                ...blockRows.extraMerges,
                 { s: { r: totalRow, c: 0 }, e: { r: totalRow, c: 6 } }
             ]
         });
         return ws;
     }
 
-    function getBgEntriesTotal(entries) {
-        return entries.reduce((sum, entry) => sum + (entry.type === 'row' ? parseCurrencyAmount(entry.row.amount) : 0), 0);
-    }
-
-    function groupBgEntries(entries, keyFn, displayFn) {
+    function groupBgBlocks(blocks, keyFn, displayFn, extraFn = null) {
         const groups = new Map();
-        entries.forEach(entry => {
-            if (entry.type !== 'row') return;
-            const key = keyFn(entry.row);
+        (blocks || []).forEach(block => {
+            const key = keyFn(block);
             if (!groups.has(key)) {
-                groups.set(key, { name: displayFn(entry.row), entries: [] });
+                groups.set(key, { name: displayFn(block), blocks: [], ...(extraFn ? extraFn(block) : {}) });
             }
-            const display = displayFn(entry.row);
+            const display = displayFn(block);
             if (groups.get(key).name.length > display.length && display) {
                 groups.get(key).name = display;
             }
-            groups.get(key).entries.push(entry);
+            if (extraFn) {
+                const extra = extraFn(block) || {};
+                if (extra.branchName && groups.get(key).branchName && !groups.get(key).branchName.includes(extra.branchName)) {
+                    groups.get(key).branchName = `${groups.get(key).branchName}, ${extra.branchName}`;
+                } else if (extra.branchName && !groups.get(key).branchName) {
+                    groups.get(key).branchName = extra.branchName;
+                }
+            }
+            groups.get(key).blocks.push(block);
         });
         return Array.from(groups.values()).sort((a, b) => a.name.localeCompare(b.name));
     }
@@ -2416,6 +2505,7 @@
         const rows = [[title]];
         const sectionRows = [];
         const headerRows = [];
+        const noteRows = [];
         const extraMerges = [];
 
         groups.forEach(group => {
@@ -2423,28 +2513,33 @@
             rows.push([group.name, '', '', '', '', '', '', '', '']);
             sectionRows.push(sectionRow);
             extraMerges.push({ s: { r: sectionRow, c: 0 }, e: { r: sectionRow, c: headers.length - 1 } });
+            if (group.branchName) {
+                const branchRow = rows.length;
+                rows.push([group.branchName, '', '', '', '', '', '', '', '']);
+                sectionRows.push(branchRow);
+                extraMerges.push({ s: { r: branchRow, c: 0 }, e: { r: branchRow, c: headers.length - 1 } });
+            }
 
             const headerRow = rows.length;
             rows.push(headers);
             headerRows.push(headerRow);
 
-            makeBgEntryRows(group.entries).forEach(row => rows.push(row.values));
+            const blockRows = makeBgBlockWorksheetRows(group.blocks, { rowOffset: rows.length, startSr: 1 });
+            rows.push(...blockRows.rows);
+            blockRows.noteRows.forEach(row => noteRows.push(row));
+            blockRows.extraMerges.forEach(merge => extraMerges.push(merge));
 
             const totalRow = rows.length;
-            rows.push([`${group.name} Total`, '', '', '', '', '', '', formatIndianNumber(getBgEntriesTotal(group.entries)), '']);
+            rows.push([`${group.name} Total`, '', '', '', '', '', '', formatIndianNumber(getBgBlocksTotal(group.blocks)), '']);
             sectionRows.push(totalRow);
             extraMerges.push({ s: { r: totalRow, c: 0 }, e: { r: totalRow, c: 6 } });
         });
-
-        const grandTotalRow = rows.length;
-        rows.push(['Grand Total', '', '', '', '', '', '', formatIndianNumber(groups.reduce((sum, group) => sum + getBgEntriesTotal(group.entries), 0)), '']);
-        sectionRows.push(grandTotalRow);
-        extraMerges.push({ s: { r: grandTotalRow, c: 0 }, e: { r: grandTotalRow, c: 6 } });
 
         const ws = XLSX.utils.aoa_to_sheet(rows);
         styleWorksheetRange(ws, columns, rows, {
             headerRows,
             sectionRows,
+            noteRows,
             extraMerges
         });
         return ws;
@@ -3208,20 +3303,21 @@
         setBgReportButtonsLoading(true);
         try {
             const context = await buildBgReportContext();
-            const bankGroups = groupBgEntries(
-                context.detailEntries,
-                row => normalizeBankName(row.bankName),
-                row => formatCanonicalBankName(row.bankName)
+            const bankGroups = groupBgBlocks(
+                context.detailBlocks,
+                block => block.bank.key,
+                block => block.bank.bankName,
+                block => ({ branchName: block.bank.branchLabel || block.bank.branchName })
             );
-            const agencyGroups = groupBgEntries(
-                context.detailEntries,
-                row => normalizeGroupText(row.agencyName) || 'unknown',
-                row => formatCanonicalName(row.agencyName, 'Unknown Agency')
+            const agencyGroups = groupBgBlocks(
+                context.detailBlocks,
+                block => normalizeGroupText(block.work.agencyName) || 'unknown',
+                block => formatCanonicalName(block.work.agencyName, 'Unknown Agency')
             );
 
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, makeBgSummaryWorksheet(context), 'Summary');
-            XLSX.utils.book_append_sheet(wb, makeBgDetailsWorksheet('All BG Details', context.detailEntries, context), 'All BG Details');
+            XLSX.utils.book_append_sheet(wb, makeBgDetailsWorksheet('All BG Details', context.detailBlocks, context), 'All BG Details');
             XLSX.utils.book_append_sheet(wb, makeBgGroupedWorksheet('Bank Wise BG', bankGroups), 'Bank Wise BG');
             XLSX.utils.book_append_sheet(wb, makeBgGroupedWorksheet('Agency Wise BG', agencyGroups), 'Agency Wise BG');
             XLSX.writeFile(wb, `${context.fileBase}.xlsx`);
@@ -3237,33 +3333,45 @@
         return getBgReportColumns().map(column => column.header);
     }
 
-    function makeBgPdfBody(entries, includeGrandTotal = true, totalLabel = 'Grand Total') {
+    function makeBgPdfBody(blocks, includeGrandTotal = true, totalLabel = 'Grand Total') {
         const body = [];
         let sr = 1;
-        entries.forEach(entry => {
-            if (entry.type === 'note') {
-                body.push([{ content: entry.text, colSpan: 9, styles: { fontStyle: 'italic', textColor: [124, 90, 0], fillColor: [255, 242, 204] } }]);
-                return;
-            }
+        (blocks || []).forEach(block => {
+            const blockRows = block.rows && block.rows.length ? block.rows : [];
+            const rowSpan = Math.max(blockRows.length, 1);
+            blockRows.forEach((entry, index) => {
+                const workCells = index === 0 ? [
+                    { content: sr, rowSpan, styles: { halign: 'center', valign: 'middle' } },
+                    { content: block.work.workName, rowSpan, styles: { valign: 'middle' } },
+                    { content: block.work.tenderId, rowSpan, styles: { valign: 'middle' } },
+                    { content: block.work.agencyName, rowSpan, styles: { valign: 'middle' } },
+                    { content: block.work.bankName, rowSpan, styles: { valign: 'middle' } }
+                ] : [];
 
-            const row = entry.row;
-            body.push([
-                sr++,
-                row.workName,
-                row.tenderId,
-                row.agencyName,
-                row.bankName,
-                row.bgType,
-                row.bgNo,
-                row.amountDisplay,
-                row.validity
-            ]);
+                if (entry.type === 'note') {
+                    body.push([
+                        ...workCells,
+                        { content: entry.text, colSpan: 4, styles: { fontStyle: 'italic', halign: 'center', textColor: [124, 90, 0], fillColor: [255, 242, 204] } }
+                    ]);
+                    return;
+                }
+
+                const row = entry.row;
+                body.push([
+                    ...workCells,
+                    row.bgType,
+                    row.bgNo,
+                    row.amountDisplay,
+                    row.validity
+                ]);
+            });
+            sr += 1;
         });
 
         if (includeGrandTotal) {
             body.push([
                 { content: totalLabel, colSpan: 7, styles: { fontStyle: 'bold', halign: 'right', fillColor: [15, 118, 110], textColor: [255, 255, 255] } },
-                { content: formatIndianNumber(getBgEntriesTotal(entries)), styles: { fontStyle: 'bold', halign: 'right', fillColor: [15, 118, 110], textColor: [255, 255, 255] } },
+                { content: formatIndianNumber(getBgBlocksTotal(blocks)), styles: { fontStyle: 'bold', halign: 'right', fillColor: [15, 118, 110], textColor: [255, 255, 255] } },
                 { content: '', styles: { fillColor: [15, 118, 110] } }
             ]);
         }
@@ -3285,11 +3393,37 @@
         };
     }
 
-    function drawBgPdfTable(doc, title, entries, startY, reportTitle, options = {}) {
-        const y = drawPdfSectionHeading(doc, title, startY, reportTitle, { headingX: 10 });
+    function estimateBgPdfGroupHeight(group) {
+        const blockCount = (group.blocks || []).length;
+        const rowCount = (group.blocks || []).reduce((sum, block) => sum + Math.max((block.rows || []).length, 1), 0);
+        return 18 + (group.branchName ? 6 : 0) + (blockCount * 9) + (rowCount * 8);
+    }
+
+    function ensureBgPdfSpace(doc, y, neededHeight, reportTitle) {
+        const pageHeight = doc.internal.pageSize.getHeight();
+        if (y + neededHeight <= pageHeight - 12) return y;
+        doc.addPage('a4', 'landscape');
+        drawReportPdfTitle(doc, reportTitle);
+        return 24;
+    }
+
+    function drawBgPdfSubheading(doc, text, startY, reportTitle) {
+        let y = ensureBgPdfSpace(doc, startY, 8, reportTitle);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(68, 68, 68);
+        doc.text(text, 10, y);
+        return y + 4;
+    }
+
+    function drawBgPdfTable(doc, title, blocks, startY, reportTitle, options = {}) {
+        let y = drawPdfSectionHeading(doc, title, startY, reportTitle, { headingX: 10 });
+        if (options.subheading) {
+            y = drawBgPdfSubheading(doc, options.subheading, y, reportTitle);
+        }
         doc.autoTable({
             head: [getBgPdfHeaders()],
-            body: makeBgPdfBody(entries, options.includeGrandTotal !== false, options.totalLabel || 'Grand Total'),
+            body: makeBgPdfBody(blocks, options.includeGrandTotal !== false, options.totalLabel || 'Grand Total'),
             startY: y,
             margin: { top: 22, right: 8, bottom: 12, left: 8 },
             theme: 'grid',
@@ -3354,15 +3488,22 @@
         return (doc.lastAutoTable && doc.lastAutoTable.finalY ? doc.lastAutoTable.finalY : y) + 6;
     }
 
-    function drawBgPdfGroupedTables(doc, title, groups, startY, reportTitle) {
+    function drawBgPdfGroupedTables(doc, title, groups, startY, reportTitle, options = {}) {
         let y = drawPdfSectionHeading(doc, title, startY, reportTitle, { headingX: 10 });
-        groups.forEach(group => {
-            y = drawBgPdfTable(doc, group.name, group.entries, y + 2, reportTitle, {
+        groups.forEach((group, index) => {
+            if (options.forceGroupPageBreak && index > 0) {
+                doc.addPage('a4', 'landscape');
+                drawReportPdfTitle(doc, reportTitle);
+                y = 24;
+            } else if (!options.forceGroupPageBreak) {
+                y = ensureBgPdfSpace(doc, y + 2, estimateBgPdfGroupHeight(group), reportTitle);
+            }
+            y = drawBgPdfTable(doc, group.name, group.blocks, y + 2, reportTitle, {
+                subheading: group.branchName || '',
                 totalLabel: `${group.name} Total`
             });
         });
-        const grandTotal = groups.reduce((sum, group) => sum + getBgEntriesTotal(group.entries), 0);
-        return drawBgPdfGrandTotal(doc, `${title} Grand Total`, grandTotal, y + 2, reportTitle);
+        return y;
     }
 
     async function downloadBgReportPdf() {
@@ -3374,15 +3515,16 @@
         setBgReportButtonsLoading(true);
         try {
             const context = await buildBgReportContext();
-            const bankGroups = groupBgEntries(
-                context.detailEntries,
-                row => normalizeBankName(row.bankName),
-                row => formatCanonicalBankName(row.bankName)
+            const bankGroups = groupBgBlocks(
+                context.detailBlocks,
+                block => block.bank.key,
+                block => block.bank.bankName,
+                block => ({ branchName: block.bank.branchLabel || block.bank.branchName })
             );
-            const agencyGroups = groupBgEntries(
-                context.detailEntries,
-                row => normalizeGroupText(row.agencyName) || 'unknown',
-                row => formatCanonicalName(row.agencyName, 'Unknown Agency')
+            const agencyGroups = groupBgBlocks(
+                context.detailBlocks,
+                block => normalizeGroupText(block.work.agencyName) || 'unknown',
+                block => formatCanonicalName(block.work.agencyName, 'Unknown Agency')
             );
 
             const { jsPDF } = window.jspdf;
@@ -3394,7 +3536,8 @@
                 { label: 'Submitted Additional BG Count', value: context.totals.submittedAdditionalCount },
                 { label: 'Missing Additional BG Count', value: context.totals.missingAdditionalCount },
                 { label: 'Total Performance Security Amount', value: formatIndianNumber(context.totals.totalPerformance) },
-                { label: 'Total Additional Security Amount', value: formatIndianNumber(context.totals.totalAdditional) }
+                { label: 'Total Additional Security Amount', value: formatIndianNumber(context.totals.totalAdditional) },
+                { label: 'Total Amount Performance Security + Additional Performance Security', value: formatIndianNumber(context.totals.totalAmount) }
             ];
 
             let y = drawPdfAutoTable(doc, 'Summary', [
@@ -3412,9 +3555,9 @@
             });
 
             y = startNewPdfSection(doc, 'landscape');
-            y = drawBgPdfTable(doc, 'All BG Details', context.detailEntries, y, context.reportTitle);
+            y = drawBgPdfTable(doc, 'All BG Details', context.detailBlocks, y, context.reportTitle);
             y = startNewPdfSection(doc, 'landscape');
-            y = drawBgPdfGroupedTables(doc, 'Bank Wise BG', bankGroups, y, context.reportTitle);
+            y = drawBgPdfGroupedTables(doc, 'Bank Wise BG', bankGroups, y, context.reportTitle, { forceGroupPageBreak: true });
             y = startNewPdfSection(doc, 'landscape');
             drawBgPdfGroupedTables(doc, 'Agency Wise BG', agencyGroups, y, context.reportTitle);
 
