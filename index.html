@@ -431,9 +431,19 @@
         .hidden { display: none !important; }
 
         .modal-content { border-radius: var(--radius) !important; }
-        .dashboard-shell,
         .modal,
         .modal-content { touch-action: pan-y; }
+        .modal-edge-swipe-guard {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            width: 34px;
+            z-index: 1065;
+            background: transparent;
+            touch-action: none;
+        }
+        .modal-edge-swipe-guard.left { left: 0; }
+        .modal-edge-swipe-guard.right { right: 0; }
         .modal-body { max-height: 70vh; overflow-y: auto; overflow-x: hidden; }
         .modal-header, .modal-footer { background: white; }
         .modal-header { align-items: center !important; }
@@ -894,24 +904,6 @@
     </div>
 </div>
 
-<!-- Exit Confirm Modal -->
-<div class="modal fade" id="exitConfirmModal" tabindex="-1" aria-labelledby="exitConfirmTitle" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered pin-unlock-dialog">
-        <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header border-0 pb-0 px-4 pt-4">
-                <h5 class="modal-title fw-bold text-dark" id="exitConfirmTitle">Are you sure you want to exit?</h5>
-                <button type="button" class="modal-close-red" data-bs-dismiss="modal" aria-label="Close">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
-            </div>
-            <div class="modal-footer border-0 px-4 pb-4 pt-4 justify-content-end">
-                <button type="button" class="btn btn-light fw-bold px-4" data-bs-dismiss="modal">Cancel</button>
-                <button id="confirmExitBtn" type="button" class="btn btn-danger fw-bold px-4" onclick="confirmExitApp()">Exit</button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <!-- PIN Unlock Modal -->
 <div class="modal fade" id="pinUnlockModal" tabindex="-1" aria-labelledby="pinUnlockTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered pin-unlock-dialog">
@@ -1366,8 +1358,6 @@
     let modalHistoryDepth = 0;
     let suppressNextPopClose = false;
     let closingModalFromHistory = false;
-    let allowExitNavigation = false;
-    let exitConfirmOpen = false;
 
     window.onload = initApp;
 
@@ -1384,11 +1374,13 @@
     function initModalGestureLock() {
         document.addEventListener('shown.bs.modal', () => {
             document.body.classList.add('modal-gesture-lock');
+            ensureModalEdgeGuards();
         });
 
         document.addEventListener('hidden.bs.modal', () => {
             if (!document.querySelector('.modal.show')) {
                 document.body.classList.remove('modal-gesture-lock');
+                removeModalEdgeGuards();
             }
         });
     }
@@ -1505,30 +1497,52 @@
         showModalWithHistory(modalEl, modalOptions);
     }
 
-    function showExitConfirm() {
-        if (exitConfirmOpen || getTopOpenModal()) return;
-        const modalEl = document.getElementById('exitConfirmModal');
-        if (!modalEl) return;
-        exitConfirmOpen = true;
-        modalEl.addEventListener('hidden.bs.modal', () => {
-            exitConfirmOpen = false;
-        }, { once: true });
-        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    function ensureModalEdgeGuards() {
+        if (document.querySelector('.modal-edge-swipe-guard')) return;
+
+        ['left', 'right'].forEach(side => {
+            const guard = document.createElement('div');
+            guard.className = `modal-edge-swipe-guard ${side}`;
+            initEdgeSwipeGuard(guard);
+            document.body.appendChild(guard);
+        });
     }
 
-    function confirmExitApp() {
-        allowExitNavigation = true;
-        const modalEl = document.getElementById('exitConfirmModal');
-        const instance = modalEl ? bootstrap.Modal.getInstance(modalEl) : null;
-        if (instance) instance.hide();
+    function removeModalEdgeGuards() {
+        document.querySelectorAll('.modal-edge-swipe-guard').forEach(guard => guard.remove());
+    }
 
-        setTimeout(() => {
-            if (window.history.length > 1) {
-                window.history.back();
-            } else {
-                window.close();
-            }
-        }, 80);
+    function initEdgeSwipeGuard(guard) {
+        let startX = 0;
+        let startY = 0;
+        let active = false;
+
+        guard.addEventListener('touchstart', event => {
+            if (!getTopOpenModal() || event.touches.length !== 1) return;
+            const touch = event.touches[0];
+            startX = touch.clientX;
+            startY = touch.clientY;
+            active = true;
+            if (event.cancelable) event.preventDefault();
+        }, { passive: false });
+
+        guard.addEventListener('touchmove', event => {
+            if (!active || event.touches.length !== 1) return;
+            if (event.cancelable) event.preventDefault();
+        }, { passive: false });
+
+        guard.addEventListener('touchend', event => {
+            if (!active) return;
+            active = false;
+            const touch = event.changedTouches[0];
+            const dx = touch.clientX - startX;
+            const dy = touch.clientY - startY;
+            if (Math.abs(dx) > 72 && Math.abs(dy) < 58) closeTopSubPage();
+        }, { passive: true });
+
+        guard.addEventListener('touchcancel', () => {
+            active = false;
+        }, { passive: true });
     }
 
     function initSwipeBackGesture() {
@@ -1538,21 +1552,18 @@
         let startX = 0;
         let startY = 0;
         let swipeState = 'idle';
-        let swipeHadModal = false;
-        const edgeSwipeWidth = 52;
         const interactiveSelector = 'input, textarea, select, button, a, label, video, [contenteditable="true"]';
 
         document.addEventListener('touchstart', event => {
             if (!window.matchMedia('(pointer: coarse), (max-width: 768px)').matches) return;
+            if (!getTopOpenModal()) return;
             if (event.touches.length !== 1) return;
             if (event.target.closest(interactiveSelector)) return;
 
             const touch = event.touches[0];
             startX = touch.clientX;
             startY = touch.clientY;
-            swipeHadModal = Boolean(getTopOpenModal());
-            swipeState = startX <= edgeSwipeWidth ? 'edge-pending' : 'pending';
-            if (swipeState === 'edge-pending' && event.cancelable) event.preventDefault();
+            swipeState = 'pending';
         }, { passive: false, capture: true });
 
         document.addEventListener('touchmove', event => {
@@ -1563,7 +1574,7 @@
             const absDx = Math.abs(dx);
             const absDy = Math.abs(dy);
 
-            if (swipeState === 'pending' || swipeState === 'edge-pending') {
+            if (swipeState === 'pending') {
                 if (absDy > 18 && absDy > absDx) {
                     swipeState = 'vertical';
                     return;
@@ -1573,7 +1584,7 @@
                 }
             }
 
-            if ((swipeState === 'edge-pending' || swipeState === 'horizontal') && event.cancelable) event.preventDefault();
+            if (swipeState === 'horizontal' && event.cancelable) event.preventDefault();
         }, { passive: false, capture: true });
 
         document.addEventListener('touchend', event => {
@@ -1584,14 +1595,10 @@
             const touch = event.changedTouches[0];
             const dx = touch.clientX - startX;
             const dy = touch.clientY - startY;
-            const shouldHandleSwipe = (swipeState === 'horizontal' || swipeState === 'edge-pending') && Math.abs(dx) > 86 && Math.abs(dy) < 58;
+            const shouldHandleSwipe = swipeState === 'horizontal' && Math.abs(dx) > 86 && Math.abs(dy) < 58;
             swipeState = 'idle';
             if (!shouldHandleSwipe) return;
-            if (swipeHadModal) {
-                closeTopSubPage();
-            } else {
-                showExitConfirm();
-            }
+            closeTopSubPage();
         }, { passive: true, capture: true });
 
         document.addEventListener('touchcancel', () => {
@@ -1599,10 +1606,6 @@
         }, { passive: true, capture: true });
 
         window.addEventListener('popstate', () => {
-            if (allowExitNavigation) {
-                allowExitNavigation = false;
-                return;
-            }
             if (suppressNextPopClose) {
                 suppressNextPopClose = false;
                 return;
