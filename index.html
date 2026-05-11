@@ -709,6 +709,63 @@
             font-weight: 850;
             background: #f8fafc;
         }
+        .letter-search-wrap {
+            position: relative;
+        }
+        .letter-results {
+            position: absolute;
+            z-index: 1400;
+            left: 0;
+            right: 0;
+            top: calc(100% + 0.35rem);
+            max-height: 260px;
+            overflow-y: auto;
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background: #fff;
+            box-shadow: var(--shadow);
+            padding: 0.35rem;
+        }
+        .letter-results.hidden {
+            display: none;
+        }
+        .letter-result-item {
+            width: 100%;
+            border: 0;
+            background: transparent;
+            border-radius: var(--radius-sm);
+            padding: 0.65rem 0.75rem;
+            text-align: left;
+            font-weight: 800;
+            color: var(--text);
+        }
+        .letter-result-item:hover,
+        .letter-result-item:focus {
+            background: #f1f5f9;
+            outline: none;
+        }
+        .modal-header-actions {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .modal-icon-btn {
+            width: 38px;
+            height: 38px;
+            border-radius: 999px;
+            border: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            background: var(--success);
+        }
+        .modal-icon-btn:hover,
+        .modal-icon-btn:focus {
+            background: #15803d;
+            color: #fff;
+            outline: none;
+        }
         .file-upload-mini {
             width: 38px;
             min-width: 38px;
@@ -832,8 +889,9 @@
             .bg-print-btn { flex: 1 1 190px; justify-content: center; }
             .view-bg-actions {
                 width: 100%;
-                grid-template-columns: 1fr;
+                justify-content: center;
             }
+            .letter-choice-grid { grid-template-columns: 1fr; }
         }
 
         @media (max-width: 576px) {
@@ -1098,9 +1156,14 @@
                     <div>
                         <h5 class="modal-title fw-bold text-dark" id="modalHeaderTitle">Work Details</h5>
                     </div>
-                    <button type="button" class="modal-close-red" data-bs-dismiss="modal" id="closeModalBtn" aria-label="Close">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
+                    <div class="modal-header-actions">
+                        <button id="shareHeaderBtn" type="button" class="modal-icon-btn" onclick="shareWorkDetails()" title="Share Status" aria-label="Share Status">
+                            <i class="fa-solid fa-share-nodes"></i>
+                        </button>
+                        <button type="button" class="modal-close-red" data-bs-dismiss="modal" id="closeModalBtn" aria-label="Close">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="modal-body p-4">
@@ -1118,7 +1181,7 @@
                 <button id="bgDetailsBtn" type="button" class="btn btn-info px-4 py-2 rounded-3 fw-bold text-white" onclick="openBgDetails()">
                     <i class="fa-solid fa-building-shield me-2"></i>BG Details
                 </button>
-                <button id="shareBtn" type="button" class="btn btn-success px-4 py-2 rounded-3 fw-bold" onclick="shareWorkDetails()">
+                <button id="shareBtn" type="button" class="btn btn-success px-4 py-2 rounded-3 fw-bold hidden" onclick="shareWorkDetails()">
                     <i class="fa-brands fa-whatsapp me-2"></i>Share Status
                 </button>
                 <button id="editToggleBtn" type="button" class="btn btn-dark px-4 py-2 rounded-3 fw-bold hidden" onclick="enableEditMode()">
@@ -1265,7 +1328,7 @@
                     </div>
                 </div>
             </div>
-            <div class="modal-footer border-0 p-4 pt-0 view-bg-actions">
+            <div id="viewBgActions" class="modal-footer border-0 p-4 pt-0 view-bg-actions hidden">
                 <button type="button" class="btn btn-dark icon-action-btn" onclick="editCurrentBgDetails()" title="Force edit" aria-label="Force edit">
                     <i class="fa-solid fa-key"></i>
                 </button>
@@ -1295,8 +1358,10 @@
             </div>
             <div class="modal-body p-4">
                 <label class="detail-label" for="letterWorkSearch">Work</label>
-                <input id="letterWorkSearch" class="edit-input" list="letterWorkOptions" placeholder="Search Tender ID or Work Name" oninput="syncSelectedLetterWork()">
-                <datalist id="letterWorkOptions"></datalist>
+                <div class="letter-search-wrap">
+                    <input id="letterWorkSearch" class="edit-input" placeholder="Search Tender ID or Work Name" autocomplete="off" oninput="handleLetterSearchInput()" onfocus="renderLetterDropdown()">
+                    <div id="letterWorkResults" class="letter-results hidden"></div>
+                </div>
                 <input id="letterTenderId" type="hidden">
                 <div id="letterSelectedWork" class="photo-hint mt-2 mb-3">No work selected</div>
 
@@ -1718,6 +1783,11 @@
     let pendingBgUploads = {};
     let currentViewBgDetails = null;
     let currentReleaseDetails = null;
+    let currentBgDetailsSource = 'work';
+    let bgPortalLoadPromise = null;
+    let bgPortalLoaded = false;
+    let bgPortalRefreshing = false;
+    let letterWorkChoices = [];
     let appToastTimer = null;
     const BG_REGISTER_STORE_KEY = 'dadriworksBgRegisterDetails';
     const RUPEE = String.fromCharCode(8377);
@@ -1788,6 +1858,8 @@
         initPinUnlockModal();
         await fetchData();
         await loadBgRegisterIndex();
+        seedBgPortalMapFromRegister();
+        startBgPortalPreload().catch(() => {});
         if (window.location.hash === '#add-work') {
             openAddWorkModal();
         }
@@ -2333,8 +2405,10 @@
 
     document.addEventListener('click', event => {
         const menu = document.getElementById('reportDropdownMenu');
-        if (!menu || menu.classList.contains('hidden')) return;
-        if (!event.target.closest('.report-dropdown')) closeReportMenu();
+        if (menu && !menu.classList.contains('hidden') && !event.target.closest('.report-dropdown')) closeReportMenu();
+        if (!event.target.closest('.letter-search-wrap')) {
+            document.getElementById('letterWorkResults')?.classList.add('hidden');
+        }
     });
 
     function openDevelopmentReportModalFromMenu() {
@@ -2385,29 +2459,52 @@
         document.getElementById('letterWorkSearch').value = '';
         document.getElementById('letterTenderId').value = '';
         document.getElementById('letterSelectedWork').innerText = 'No work selected';
+        document.getElementById('letterWorkResults').classList.add('hidden');
         document.getElementById('letterAgreementCheck').checked = false;
         document.getElementById('letterBgCheck').checked = false;
         document.getElementById('letterDownloadStatus').innerText = '';
         showSubPageModal(document.getElementById('generateLettersModal'));
     }
 
-    async function openBgPortalFromMenu() {
+    function seedBgPortalMapFromRegister() {
+        bgPortalMap = { ...(bgRegisterMap || {}), ...(bgPortalMap || {}) };
+    }
+
+    function startBgPortalPreload(force = false) {
+        if (bgPortalLoadPromise && !force) return bgPortalLoadPromise;
+        bgPortalRefreshing = true;
+        bgPortalLoadPromise = fetchBgReportMap()
+            .then(map => {
+                bgPortalMap = { ...(bgPortalMap || {}), ...(map || {}) };
+                bgPortalLoaded = true;
+                return bgPortalMap;
+            })
+            .catch(e => {
+                console.error('BG Portal background load failed', e);
+                throw e;
+            })
+            .finally(() => {
+                bgPortalRefreshing = false;
+                bgPortalLoadPromise = null;
+                if (currentAppView === 'bgPortal') renderDeck();
+            });
+        return bgPortalLoadPromise;
+    }
+
+    function openBgPortalFromMenu() {
         closeReportMenu();
         currentAppView = 'bgPortal';
         currentFilter = 'All';
-        document.getElementById('loadingOverlay').classList.remove('hidden');
-        try {
-            bgPortalMap = await fetchBgReportMap();
-            document.getElementById('viewTitle').innerText = 'BG Portal';
-            setDashboardChromeForView('bgPortal');
-            setActiveFilter();
-            renderDeck();
-        } catch (e) {
-            console.error('BG Portal load failed', e);
-            alert(e.message || 'BG Portal load nahi ho paya.');
-        } finally {
-            document.getElementById('loadingOverlay').classList.add('hidden');
-        }
+        seedBgPortalMapFromRegister();
+        document.getElementById('viewTitle').innerText = 'BG Portal';
+        setDashboardChromeForView('bgPortal');
+        setActiveFilter();
+        renderDeck();
+        startBgPortalPreload(true).catch(e => {
+            if (!Object.keys(bgPortalMap || {}).length) {
+                alert(e.message || 'BG Portal load nahi ho paya.');
+            }
+        });
     }
 
     function getSelectedBgReportSections() {
@@ -4345,30 +4442,12 @@
                             <div class="bg-card-amount-value">${escapeHtml(details.addAmt ? formatCurrency(details.addAmt) : `${RUPEE}0.00`)}</div>
                         </div>
                     </div>
-
-                    <div class="work-footer mt-3">
-                        <div class="detail-label m-0">Open BG Details</div>
-                        <div class="bg-card-actions">
-                            <button type="button" class="btn btn-dark icon-action-btn edit-card-btn" title="Force edit" aria-label="Force edit"><i class="fa-solid fa-key"></i></button>
-                            <button type="button" class="btn bg-release-btn icon-action-btn release-card-btn" title="Release BG" aria-label="Release BG"><i class="fa-solid fa-lock-open"></i></button>
-                        </div>
-                    </div>
                 </div>
             </div>`;
 
         card.querySelector('.work-card').addEventListener('click', () => {
             currentTenderId = details.tenderId;
-            openStoredBgDetails(details);
-        });
-        card.querySelector('.edit-card-btn').addEventListener('click', event => {
-            event.stopPropagation();
-            currentTenderId = details.tenderId;
-            openPbgUploadForm(details);
-        });
-        card.querySelector('.release-card-btn').addEventListener('click', event => {
-            event.stopPropagation();
-            currentTenderId = details.tenderId;
-            openReleaseBgModal();
+            openStoredBgDetails(details, 'bgPortal');
         });
         return card;
     }
@@ -4429,7 +4508,7 @@
         if (currentAppView === 'bgPortal') {
             const bgItems = getBgPortalItems();
             if (!bgItems.length) {
-                deck.innerHTML = `<div class="col-12"><div class="empty-state">No BG found</div></div>`;
+                deck.innerHTML = `<div class="col-12"><div class="empty-state">${bgPortalRefreshing ? 'Refreshing BG data...' : 'No BG found'}</div></div>`;
                 return;
             }
             bgItems.forEach(details => deck.appendChild(createBgPortalCard(details)));
@@ -4494,7 +4573,8 @@
         document.getElementById('editToggleBtn').classList.add('hidden');
         document.getElementById('saveBtn').classList.add('hidden');
         document.getElementById('unlockFieldsBtn').classList.add('hidden');
-        document.getElementById('shareBtn').classList.remove('hidden');
+        document.getElementById('shareBtn').classList.add('hidden');
+        document.getElementById('shareHeaderBtn').classList.remove('hidden');
         document.getElementById('bgDetailsBtn').classList.remove('hidden');
 
         if (startEdit) enableEditMode();
@@ -4507,6 +4587,7 @@
         document.querySelectorAll('.field-edit').forEach(el => el.classList.remove('hidden'));
         document.getElementById('editToggleBtn').classList.add('hidden');
         document.getElementById('shareBtn').classList.add('hidden');
+        document.getElementById('shareHeaderBtn').classList.add('hidden');
         document.getElementById('bgDetailsBtn').classList.add('hidden');
         document.getElementById('saveBtn').classList.remove('hidden');
         updateUnlockButtonState();
@@ -4815,28 +4896,98 @@
     }
 
     function populateLetterWorkOptions() {
-        const list = document.getElementById('letterWorkOptions');
-        if (!list) return;
-        list.innerHTML = (Array.isArray(masterData) ? masterData : [])
+        letterWorkChoices = (Array.isArray(masterData) ? masterData : [])
             .filter(item => String(getTenderId(item) || '').trim())
-            .map(item => `<option value="${escapeHtml(getLetterWorkLabel(item))}"></option>`)
-            .join('');
+            .map(item => {
+                const tenderId = String(getTenderId(item) || '').trim();
+                const label = getLetterWorkLabel(item);
+                return {
+                    tenderId,
+                    label,
+                    item,
+                    search: `${tenderId} ${getWorkName(item)}`.toLowerCase()
+                };
+            });
+        renderLetterDropdown();
+    }
+
+    function getFilteredLetterChoices() {
+        const input = document.getElementById('letterWorkSearch');
+        const typed = String(input.value || '').trim();
+        const query = typed.toLowerCase();
+        if (!query) return letterWorkChoices.slice(0, 40);
+        return letterWorkChoices
+            .filter(choice => choice.search.includes(query) || choice.label.toLowerCase().includes(query))
+            .slice(0, 40);
+    }
+
+    function renderLetterDropdown() {
+        const results = document.getElementById('letterWorkResults');
+        if (!results) return;
+        const choices = getFilteredLetterChoices();
+        if (!choices.length) {
+            results.innerHTML = `<div class="photo-hint px-2 py-2">No work found</div>`;
+            results.classList.remove('hidden');
+            return;
+        }
+
+        results.innerHTML = choices.map(choice => `
+            <button type="button" class="letter-result-item" data-tender-id="${escapeHtml(choice.tenderId)}">
+                ${escapeHtml(choice.label)}
+            </button>
+        `).join('');
+        results.querySelectorAll('.letter-result-item').forEach(btn => {
+            btn.addEventListener('click', () => selectLetterWork(btn.dataset.tenderId));
+        });
+        results.classList.remove('hidden');
+    }
+
+    function selectLetterWork(tenderId) {
+        const choice = letterWorkChoices.find(item => item.tenderId === String(tenderId || '').trim());
+        if (!choice) return null;
+        document.getElementById('letterTenderId').value = choice.tenderId;
+        document.getElementById('letterWorkSearch').value = choice.label;
+        document.getElementById('letterSelectedWork').innerText = choice.label;
+        document.getElementById('letterWorkResults').classList.add('hidden');
+        return choice;
+    }
+
+    function handleLetterSearchInput() {
+        document.getElementById('letterTenderId').value = '';
+        document.getElementById('letterSelectedWork').innerText = 'No work selected';
+        renderLetterDropdown();
     }
 
     function syncSelectedLetterWork() {
-        const input = document.getElementById('letterWorkSearch');
         const hidden = document.getElementById('letterTenderId');
-        const label = document.getElementById('letterSelectedWork');
-        const typed = String(input.value || '').trim();
-        const item = masterData.find(work => getLetterWorkLabel(work) === typed)
-            || masterData.find(work => String(getTenderId(work) || '').trim() === typed);
-        hidden.value = item ? String(getTenderId(item) || '').trim() : '';
-        label.innerText = item ? getLetterWorkLabel(item) : 'No work selected';
+        if (hidden.value) return letterWorkChoices.find(choice => choice.tenderId === hidden.value) || null;
+        const typed = String(document.getElementById('letterWorkSearch').value || '').trim().toLowerCase();
+        if (!typed) return null;
+        const exact = letterWorkChoices.find(choice =>
+            choice.label.toLowerCase() === typed ||
+            choice.tenderId.toLowerCase() === typed
+        );
+        if (exact) return selectLetterWork(exact.tenderId);
+        const matches = getFilteredLetterChoices();
+        if (matches.length === 1) return selectLetterWork(matches[0].tenderId);
+        return null;
+    }
+
+    function openSelectedWorkBgUpload(item, details = null) {
+        if (!item) {
+            document.getElementById('letterDownloadStatus').innerText = 'Work details not found.';
+            return;
+        }
+        currentTenderId = getTenderId(item);
+        showAppToast('Upload BG first');
+        const modalEl = document.getElementById('generateLettersModal');
+        modalEl.addEventListener('hidden.bs.modal', () => openPbgUploadForm(details), { once: true });
+        bootstrap.Modal.getOrCreateInstance(modalEl).hide();
     }
 
     async function downloadSelectedLetters() {
-        syncSelectedLetterWork();
-        const tenderId = document.getElementById('letterTenderId').value;
+        const selected = syncSelectedLetterWork();
+        const tenderId = selected?.tenderId || document.getElementById('letterTenderId').value;
         const wantsAgreement = document.getElementById('letterAgreementCheck').checked;
         const wantsBg = document.getElementById('letterBgCheck').checked;
         const status = document.getElementById('letterDownloadStatus');
@@ -4852,10 +5003,11 @@
             return;
         }
 
-        const item = masterData.find(d => String(getTenderId(d) || '').trim() === tenderId);
+        const item = selected?.item || masterData.find(d => String(getTenderId(d) || '').trim() === tenderId);
         const details = await getBgRegisterDetails(tenderId, item);
         if (!details) {
-            status.innerText = 'Pehle BG details upload karo.';
+            status.innerText = 'Upload BG first';
+            openSelectedWorkBgUpload(item, bgRegisterMap[tenderId] || bgPortalMap[tenderId] || null);
             return;
         }
 
@@ -4925,7 +5077,7 @@
         if (knownState === 'saved') {
             const saved = await getBgRegisterDetails(tenderId, item);
             if (saved) {
-                openStoredBgDetails(saved);
+                openStoredBgDetails(saved, 'work');
                 return;
             }
         }
@@ -4936,7 +5088,7 @@
         try {
             const saved = await getBgRegisterDetails(tenderId, item);
             if (saved) {
-                openStoredBgDetails(saved);
+                openStoredBgDetails(saved, 'work');
                 return;
             }
 
@@ -4948,9 +5100,10 @@
         }
     }
 
-    function openStoredBgDetails(details) {
+    function openStoredBgDetails(details, source = 'work') {
         currentTenderId = details.tenderId || currentTenderId;
         currentViewBgDetails = details;
+        currentBgDetailsSource = source === 'bgPortal' ? 'bgPortal' : 'work';
         const pbgRelease = getBgReleaseInfo(details, 'pbg');
         const addRelease = getBgReleaseInfo(details, 'additional');
         document.getElementById('viewBgTenderLabel').innerText = `Tender ID: ${details.tenderId || '-'}`;
@@ -5018,6 +5171,7 @@
             uploadFileBtn.classList.remove('hidden');
         }
 
+        document.getElementById('viewBgActions').classList.toggle('hidden', currentBgDetailsSource !== 'bgPortal');
         showSubPageModal(document.getElementById('viewBgDetailsModal'), { replaceOpen: true });
     }
 
@@ -5122,7 +5276,7 @@
             writeStoredBgRegisterDetails();
             const releaseModalEl = document.getElementById('releaseBgModal');
             releaseModalEl.addEventListener('hidden.bs.modal', () => {
-                openStoredBgDetails(resp.details);
+                openStoredBgDetails(resp.details, currentBgDetailsSource);
                 renderDeck();
             }, { once: true });
             bootstrap.Modal.getOrCreateInstance(releaseModalEl).hide();
@@ -5587,7 +5741,7 @@
             if (item) updateBgRegisterAction(item);
 
             const quickModalEl = document.getElementById('pbgQuickUploadModal');
-            quickModalEl.addEventListener('hidden.bs.modal', () => openStoredBgDetails(payload), { once: true });
+            quickModalEl.addEventListener('hidden.bs.modal', () => openStoredBgDetails(payload, currentBgDetailsSource), { once: true });
             bootstrap.Modal.getOrCreateInstance(quickModalEl).hide();
         } catch (e) {
             console.error("PBG file upload failed", e);
@@ -5610,11 +5764,11 @@
         const bgModalEl = document.getElementById('bgDetailsModal');
         const openSavedBgDetails = () => {
             if (bgModalEl.classList.contains('show')) {
-                bgModalEl.addEventListener('hidden.bs.modal', () => openStoredBgDetails(payload), { once: true });
+                bgModalEl.addEventListener('hidden.bs.modal', () => openStoredBgDetails(payload, 'work'), { once: true });
                 bootstrap.Modal.getOrCreateInstance(bgModalEl).hide();
                 return;
             }
-            openStoredBgDetails(payload);
+            openStoredBgDetails(payload, 'work');
         };
 
         uploadModalEl.addEventListener('hidden.bs.modal', openSavedBgDetails, { once: true });
@@ -5642,12 +5796,12 @@
             delete pendingBgUploads[tenderId];
             setBgRegisterDetails(tenderId, saved, item);
             if (item) updateBgRegisterAction(item);
-            if (String(currentTenderId || '').trim() === tenderId) openStoredBgDetails(bgRegisterMap[tenderId] || saved);
+            if (String(currentTenderId || '').trim() === tenderId) openStoredBgDetails(bgRegisterMap[tenderId] || saved, currentBgDetailsSource);
             if (currentAppView === 'bgPortal') renderDeck();
         }).catch(e => {
             console.error('Background PBG upload failed', e);
             pendingBgUploads[tenderId] = { status: 'error', payload, error: e.message || 'PBG upload failed' };
-            if (String(currentTenderId || '').trim() === tenderId) openStoredBgDetails(bgRegisterMap[tenderId] || payload);
+            if (String(currentTenderId || '').trim() === tenderId) openStoredBgDetails(bgRegisterMap[tenderId] || payload, currentBgDetailsSource);
         });
     }
 
@@ -5734,10 +5888,12 @@
         const capture = document.getElementById('modalCaptureArea');
         const actions = document.getElementById('actionArea');
         const close = document.getElementById('closeModalBtn');
+        const shareHeader = document.getElementById('shareHeaderBtn');
 
         modal.classList.add('capturing');
         actions.style.display = 'none';
         close.style.opacity = '0';
+        if (shareHeader) shareHeader.style.opacity = '0';
 
         try {
             const canvas = await html2canvas(capture, {
@@ -5765,6 +5921,7 @@
             modal.classList.remove('capturing');
             actions.style.display = 'flex';
             close.style.opacity = '1';
+            if (shareHeader) shareHeader.style.opacity = '1';
         }
     }
 
