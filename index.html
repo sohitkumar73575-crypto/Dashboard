@@ -723,6 +723,13 @@
         }
         .letter-search-wrap {
             position: relative;
+            z-index: 5;
+        }
+        #generateLettersModal .modal-body {
+            overflow: visible;
+        }
+        #generateLettersModal.keyboard-lift .modal-dialog {
+            transform: translateY(-8vh) !important;
         }
         .letter-results {
             position: absolute;
@@ -737,12 +744,6 @@
             background: #fff;
             box-shadow: var(--shadow);
             padding: 0.35rem;
-        }
-        .letter-results.is-floating {
-            position: fixed;
-            right: auto;
-            bottom: auto;
-            max-height: min(260px, 42vh);
         }
         .letter-results.hidden {
             display: none;
@@ -932,6 +933,12 @@
             .photo-action-grid { grid-template-columns: 1fr 1fr; }
             .quick-upload-actions { grid-template-columns: 1fr 1fr; }
             .modal.show .pin-unlock-dialog { transform: translateY(-14vh); }
+            #generateLettersModal.keyboard-lift .modal-dialog {
+                transform: translateY(-22vh) !important;
+            }
+            #generateLettersModal .letter-results {
+                max-height: 180px;
+            }
         }
 
         /* ===== CAMERA PDF ===== */
@@ -1378,7 +1385,7 @@
             <div class="modal-body p-4">
                 <label class="detail-label" for="letterWorkSearch">Work</label>
                 <div class="letter-search-wrap">
-                    <input id="letterWorkSearch" class="edit-input" placeholder="Search Tender ID or Work Name" autocomplete="off" oninput="handleLetterSearchInput()" onfocus="renderLetterDropdown()">
+                    <input id="letterWorkSearch" class="edit-input" placeholder="Search Tender ID or Work Name" autocomplete="off" oninput="handleLetterSearchInput()" onfocus="handleLetterSearchFocus()">
                     <div id="letterWorkResults" class="letter-results hidden"></div>
                 </div>
                 <input id="letterTenderId" type="hidden">
@@ -2442,14 +2449,9 @@
         if (!event.target.closest('.letter-search-wrap')) {
             const results = document.getElementById('letterWorkResults');
             results?.classList.add('hidden');
-            results?.classList.remove('is-floating');
             results?.removeAttribute('style');
         }
     });
-
-    window.visualViewport?.addEventListener('resize', positionLetterDropdown);
-    window.visualViewport?.addEventListener('scroll', positionLetterDropdown);
-    window.addEventListener('resize', positionLetterDropdown);
 
     function openDevelopmentReportModalFromMenu() {
         closeReportMenu();
@@ -2512,9 +2514,12 @@
         document.getElementById('letterSelectedWork').innerText = 'No work selected';
         const results = document.getElementById('letterWorkResults');
         results.classList.add('hidden');
-        results.classList.remove('is-floating');
         results.removeAttribute('style');
         document.getElementById('letterDownloadStatus').innerText = '';
+        document.getElementById('generateLettersModal').classList.remove('keyboard-lift');
+        document.getElementById('generateLettersModal').addEventListener('hidden.bs.modal', () => {
+            document.getElementById('generateLettersModal').classList.remove('keyboard-lift');
+        }, { once: true });
         showSubPageModal(document.getElementById('generateLettersModal'));
     }
 
@@ -4972,7 +4977,8 @@
                 throw new Error(resp?.message || resp?.error || 'PDF generate nahi ho paya.');
             }
 
-            openPdfFromUrl(resp.pdfUrl);
+            const fileName = `${isAgreement ? 'Agreement' : 'BG_Letter'}_${tenderId}.pdf`;
+            downloadPdfFromUrl(resp.pdfUrl, fileName);
         } catch (e) {
             console.error('PDF download failed', e);
             alert(e.message || 'PDF generate/download nahi ho paya.');
@@ -5037,27 +5043,14 @@
     }
 
     function positionLetterDropdown() {
-        const input = document.getElementById('letterWorkSearch');
         const results = document.getElementById('letterWorkResults');
-        if (!input || !results || results.classList.contains('hidden')) return;
+        if (!results) return;
+        results.removeAttribute('style');
+    }
 
-        const rect = input.getBoundingClientRect();
-        const viewport = window.visualViewport || { offsetTop: 0, height: window.innerHeight, width: window.innerWidth };
-        const viewportTop = viewport.offsetTop || 0;
-        const viewportBottom = viewportTop + viewport.height;
-        const margin = 12;
-        const maxHeight = Math.min(260, Math.max(150, viewport.height * 0.42));
-        const spaceBelow = viewportBottom - rect.bottom - margin;
-        const spaceAbove = rect.top - viewportTop - margin;
-        const top = spaceBelow >= 150 || spaceBelow >= spaceAbove
-            ? Math.min(rect.bottom + 6, viewportBottom - maxHeight - margin)
-            : Math.max(viewportTop + margin, rect.top - maxHeight - 6);
-
-        results.classList.add('is-floating');
-        results.style.left = `${Math.max(margin, rect.left)}px`;
-        results.style.top = `${Math.max(viewportTop + margin, top)}px`;
-        results.style.width = `${Math.min(rect.width, viewport.width - (margin * 2))}px`;
-        results.style.maxHeight = `${maxHeight}px`;
+    function handleLetterSearchFocus() {
+        document.getElementById('generateLettersModal')?.classList.add('keyboard-lift');
+        renderLetterDropdown();
     }
 
     function selectLetterWork(tenderId) {
@@ -5068,7 +5061,6 @@
         document.getElementById('letterSelectedWork').innerText = choice.label;
         const results = document.getElementById('letterWorkResults');
         results.classList.add('hidden');
-        results.classList.remove('is-floating');
         results.removeAttribute('style');
         return choice;
     }
@@ -5136,8 +5128,9 @@
             if (!isSuccessResponse(resp) || !resp.pdfUrl) {
                 throw new Error(resp?.message || resp?.error || 'PDF generate nahi ho paya.');
             }
-            openPdfFromUrl(resp.pdfUrl);
-            status.innerText = 'PDF opened in Drive.';
+            const fileName = `${isAgreement ? 'Agreement' : 'BG_Letter'}_${tenderId}.pdf`;
+            downloadPdfFromUrl(resp.pdfUrl, fileName);
+            status.innerText = 'Download started.';
         } catch (e) {
             console.error('Letter download failed', e);
             status.innerText = e.message || 'PDF generate/download nahi ho paya.';
@@ -6013,8 +6006,9 @@
         if (shareHeader) shareHeader.style.opacity = '0';
 
         try {
+            const captureScale = Math.max(3, Math.min(4, (window.devicePixelRatio || 1) * 2));
             const canvas = await html2canvas(capture, {
-                scale: 2,
+                scale: captureScale,
                 useCORS: true,
                 backgroundColor: "#ffffff",
                 height: capture.scrollHeight,
