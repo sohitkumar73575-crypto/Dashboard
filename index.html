@@ -146,6 +146,14 @@
             background: #f1f5f9;
             outline: none;
         }
+        .report-submenu {
+            border-top: 1px solid var(--line);
+            margin-top: 0.35rem;
+            padding-top: 0.35rem;
+        }
+        .report-submenu.hidden {
+            display: none;
+        }
         .report-dropdown-item .pdf-icon {
             color: #dc2626;
             font-size: 1.05rem;
@@ -590,16 +598,30 @@
             color: #fff;
         }
         .view-bg-actions {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+        .view-bg-actions .icon-action-btn,
+        .bg-card-actions .icon-action-btn {
+            width: 44px;
+            height: 44px;
+            min-height: 44px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
+        .bg-card-actions {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
             gap: 0.75rem;
         }
         .view-bg-actions .btn {
-            width: 100%;
-            min-height: 52px;
-        }
-        .view-bg-actions .btn-light {
-            grid-column: 1 / -1;
+            min-height: 44px;
         }
         .bg-release-btn {
             background: #7c3aed;
@@ -649,6 +671,43 @@
             min-width: 0;
             font-weight: 800;
             color: var(--text);
+        }
+        .file-status-text.error { color: var(--danger); }
+        .file-status-text.success { color: var(--success); }
+        .app-toast {
+            position: fixed;
+            left: 50%;
+            bottom: 24px;
+            transform: translateX(-50%);
+            z-index: 3000;
+            background: #0f172a;
+            color: #fff;
+            border-radius: 999px;
+            padding: 0.75rem 1rem;
+            font-weight: 850;
+            box-shadow: 0 18px 40px rgba(15, 23, 42, 0.25);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.18s ease, transform 0.18s ease;
+        }
+        .app-toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(-4px);
+        }
+        .letter-choice-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.75rem;
+        }
+        .letter-choice-card {
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 0.9rem;
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            font-weight: 850;
+            background: #f8fafc;
         }
         .file-upload-mini {
             width: 38px;
@@ -904,23 +963,29 @@
             <i class="fa-solid fa-bars"></i>
         </button>
         <div id="reportDropdownMenu" class="report-dropdown-menu hidden">
-            <div class="report-dropdown-heading">Reports</div>
-            <button class="report-dropdown-item" type="button" onclick="openWorksDashboardFromMenu()">
-                <i class="fa-solid fa-layer-group bg-icon"></i>
-                <span>Works Dashboard</span>
-            </button>
-            <button class="report-dropdown-item" type="button" onclick="openDevelopmentReportModalFromMenu()">
-                <i class="fa-solid fa-file-excel excel-icon"></i>
-                <span>Development Works</span>
-            </button>
-            <button class="report-dropdown-item" type="button" onclick="openBgReportModalFromMenu()">
-                <i class="fa-solid fa-building-shield bg-icon"></i>
-                <span>BG Details</span>
-            </button>
             <button class="report-dropdown-item" type="button" onclick="openBgPortalFromMenu()">
                 <i class="fa-solid fa-table-cells-large bg-icon"></i>
                 <span>BG Portal</span>
             </button>
+            <button class="report-dropdown-item" type="button" onclick="openGenerateLettersFromMenu()">
+                <i class="fa-solid fa-file-pdf pdf-icon"></i>
+                <span>Generate Letters</span>
+            </button>
+            <button class="report-dropdown-item" type="button" onclick="toggleGenerateReportsMenu(event)">
+                <i class="fa-solid fa-chart-simple bg-icon"></i>
+                <span>Generate Reports</span>
+                <i class="fa-solid fa-chevron-down ms-auto"></i>
+            </button>
+            <div id="generateReportsSubmenu" class="report-submenu hidden">
+                <button class="report-dropdown-item" type="button" onclick="openDevelopmentReportModalFromMenu()">
+                    <i class="fa-solid fa-file-excel excel-icon"></i>
+                    <span>Development Works</span>
+                </button>
+                <button class="report-dropdown-item" type="button" onclick="openBgReportModalFromMenu()">
+                    <i class="fa-solid fa-building-shield bg-icon"></i>
+                    <span>BG Register</span>
+                </button>
+            </div>
         </div>
     </div>
 </nav>
@@ -1201,17 +1266,55 @@
                 </div>
             </div>
             <div class="modal-footer border-0 p-4 pt-0 view-bg-actions">
-                <button type="button" class="btn btn-dark px-3 py-2" onclick="editCurrentBgDetails()">
-                    <i class="fa-solid fa-pen-to-square"></i><span>Edit BG Details</span>
+                <button type="button" class="btn btn-dark icon-action-btn" onclick="editCurrentBgDetails()" title="Force edit" aria-label="Force edit">
+                    <i class="fa-solid fa-key"></i>
                 </button>
-                <button type="button" class="btn bg-release-btn px-3 py-2" onclick="openReleaseBgModal()">
-                    <i class="fa-solid fa-lock-open"></i><span>Release BG</span>
+                <button type="button" class="btn bg-release-btn icon-action-btn" onclick="openReleaseBgModal()" title="Release BG" aria-label="Release BG">
+                    <i class="fa-solid fa-lock-open"></i>
                 </button>
-                <button type="button" class="btn bg-print-btn letter px-3 py-2" onclick="printBgDocument('letter', this)">
-                    <i class="fa-solid fa-file-pdf"></i><span>Download BG Letter PDF</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Generate Letters Modal -->
+<div class="modal fade" id="generateLettersModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg overflow-hidden">
+            <div class="modal-header border-0 px-4 pt-4 pb-2">
+                <div class="d-flex align-items-center gap-3">
+                    <span class="add-work-title-icon"><i class="fa-solid fa-file-pdf"></i></span>
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark mb-0">Generate Letters</h5>
+                        <small class="text-secondary fw-semibold">Agreement and BG Verification Letter</small>
+                    </div>
+                </div>
+                <button type="button" class="modal-close-red" data-bs-dismiss="modal" aria-label="Close">
+                    <i class="fa-solid fa-xmark"></i>
                 </button>
-                <button type="button" class="btn bg-print-btn agreement px-3 py-2" onclick="printBgDocument('agreement', this)">
-                    <i class="fa-solid fa-file-pdf"></i><span>Download Agreement PDF</span>
+            </div>
+            <div class="modal-body p-4">
+                <label class="detail-label" for="letterWorkSearch">Work</label>
+                <input id="letterWorkSearch" class="edit-input" list="letterWorkOptions" placeholder="Search Tender ID or Work Name" oninput="syncSelectedLetterWork()">
+                <datalist id="letterWorkOptions"></datalist>
+                <input id="letterTenderId" type="hidden">
+                <div id="letterSelectedWork" class="photo-hint mt-2 mb-3">No work selected</div>
+
+                <div class="letter-choice-grid">
+                    <label class="letter-choice-card">
+                        <input id="letterAgreementCheck" type="checkbox">
+                        <span>Agreement</span>
+                    </label>
+                    <label class="letter-choice-card">
+                        <input id="letterBgCheck" type="checkbox">
+                        <span>BG Verification Letter</span>
+                    </label>
+                </div>
+                <div id="letterDownloadStatus" class="photo-hint mt-3"></div>
+            </div>
+            <div class="modal-footer border-0 justify-content-center p-4 pt-0">
+                <button id="downloadLettersBtn" type="button" class="btn btn-primary px-5 py-2 rounded-3 fw-bold" onclick="downloadSelectedLetters()">
+                    <i class="fa-solid fa-download me-2"></i>Download PDF
                 </button>
             </div>
         </div>
@@ -1236,8 +1339,11 @@
             </div>
             <div class="modal-body p-4">
                 <form id="releaseBgForm" onsubmit="event.preventDefault(); saveReleaseBg();">
+                    <label class="detail-label" for="releaseBgType">Release BG</label>
+                    <select id="releaseBgType" name="releaseBgType" class="edit-input" required onchange="updateReleaseWarning()"></select>
                     <label class="detail-label" for="releaseBgDate">Release Date</label>
-                    <input id="releaseBgDate" name="releaseDate" type="date" class="edit-input" required>
+                    <input id="releaseBgDate" name="releaseDate" type="date" class="edit-input" required onchange="updateReleaseWarning()">
+                    <div id="releaseBgWarning" class="photo-hint mb-2"></div>
                     <label class="detail-label" for="releaseBgRemarks">Release Remarks</label>
                     <textarea id="releaseBgRemarks" name="releaseRemarks" class="edit-input" rows="4" required></textarea>
                 </form>
@@ -1609,6 +1715,10 @@
     let bgRegisterMap = {};
     let bgRegisterIndexLoaded = false;
     let bgRegisterIndexPromise = null;
+    let pendingBgUploads = {};
+    let currentViewBgDetails = null;
+    let currentReleaseDetails = null;
+    let appToastTimer = null;
     const BG_REGISTER_STORE_KEY = 'dadriworksBgRegisterDetails';
     const RUPEE = String.fromCharCode(8377);
     const MAJOR_WORK_THRESHOLD = 10000000;
@@ -2212,7 +2322,13 @@
         const menu = document.getElementById('reportDropdownMenu');
         const button = document.querySelector('.report-menu-btn');
         if (menu) menu.classList.add('hidden');
+        document.getElementById('generateReportsSubmenu')?.classList.add('hidden');
         if (button) button.setAttribute('aria-expanded', 'false');
+    }
+
+    function toggleGenerateReportsMenu(event) {
+        if (event) event.stopPropagation();
+        document.getElementById('generateReportsSubmenu')?.classList.toggle('hidden');
     }
 
     document.addEventListener('click', event => {
@@ -2261,6 +2377,18 @@
         closeReportMenu();
         updateBgReportPreview();
         showSubPageModal(document.getElementById('bgReportModal'));
+    }
+
+    function openGenerateLettersFromMenu() {
+        closeReportMenu();
+        populateLetterWorkOptions();
+        document.getElementById('letterWorkSearch').value = '';
+        document.getElementById('letterTenderId').value = '';
+        document.getElementById('letterSelectedWork').innerText = 'No work selected';
+        document.getElementById('letterAgreementCheck').checked = false;
+        document.getElementById('letterBgCheck').checked = false;
+        document.getElementById('letterDownloadStatus').innerText = '';
+        showSubPageModal(document.getElementById('generateLettersModal'));
     }
 
     async function openBgPortalFromMenu() {
@@ -2385,6 +2513,7 @@
     }
 
     function makeBgReportRow(base, type, number, amount, validity) {
+        const release = getBgReleaseInfo(base, type);
         return {
             sr: '',
             workName: base.workName,
@@ -2396,9 +2525,9 @@
             amount: parseCurrencyAmount(amount),
             amountDisplay: formatIndianNumber(parseCurrencyAmount(amount)),
             validity,
-            releaseStatus: base.releaseStatus || '',
-            releaseDate: formatBgReportDate(base.releaseDate) || '',
-            releaseRemarks: base.releaseRemarks || ''
+            releaseStatus: release.status || '',
+            releaseDate: formatBgReportDate(release.date) || '',
+            releaseRemarks: release.remarks || ''
         };
     }
 
@@ -2498,7 +2627,13 @@
                     additionalSubmitted: additionalRequired && isAdditionalBgComplete(details),
                     releaseStatus: details.releaseStatus || '',
                     releaseDate: details.releaseDate || '',
-                    releaseRemarks: details.releaseRemarks || ''
+                    releaseRemarks: details.releaseRemarks || '',
+                    pbgReleaseStatus: details.pbgReleaseStatus || '',
+                    pbgReleaseDate: details.pbgReleaseDate || '',
+                    pbgReleaseRemarks: details.pbgReleaseRemarks || '',
+                    addReleaseStatus: details.addReleaseStatus || '',
+                    addReleaseDate: details.addReleaseDate || '',
+                    addReleaseRemarks: details.addReleaseRemarks || ''
                 };
             })
             .sort((a, b) => (a.workName || '').localeCompare(b.workName || '') || (a.tenderId || '').localeCompare(b.tenderId || ''));
@@ -3942,11 +4077,24 @@
         link.remove();
     }
 
-    function clearStoredBgRegisterDetails() {
+    function readStoredBgRegisterDetails() {
         try {
-            localStorage.removeItem(BG_REGISTER_STORE_KEY);
+            return JSON.parse(localStorage.getItem(BG_REGISTER_STORE_KEY) || '{}') || {};
         } catch (e) {
-            console.warn('Old BG_Register cache clear failed', e);
+            console.warn('BG_Register cache read failed', e);
+            return {};
+        }
+    }
+
+    function writeStoredBgRegisterDetails(map = bgRegisterMap) {
+        try {
+            const sanitized = {};
+            Object.entries(map || {}).forEach(([key, value]) => {
+                sanitized[key] = { ...(value || {}), fileData: '', fileMimeType: value?.fileMimeType || '' };
+            });
+            localStorage.setItem(BG_REGISTER_STORE_KEY, JSON.stringify(sanitized));
+        } catch (e) {
+            console.warn('BG_Register cache write failed', e);
         }
     }
 
@@ -3956,16 +4104,18 @@
 
         bgRegisterIndexPromise = (async () => {
             try {
-                clearStoredBgRegisterDetails();
+                const cachedMap = readStoredBgRegisterDetails();
                 const resp = await postJson({
                     method: 'getBgRegisterIndex',
                     action: 'getBgRegisterIndex'
                 }, 15000);
 
-                bgRegisterMap = isSuccessResponse(resp) && resp.bgRegisterMap ? resp.bgRegisterMap : {};
+                bgRegisterMap = isSuccessResponse(resp) && resp.bgRegisterMap
+                    ? { ...resp.bgRegisterMap, ...cachedMap }
+                    : cachedMap;
             } catch (e) {
                 console.error('BG_Register index load failed', e);
-                bgRegisterMap = {};
+                bgRegisterMap = readStoredBgRegisterDetails();
             } finally {
                 bgRegisterIndexLoaded = true;
                 bgRegisterIndexPromise = null;
@@ -4009,12 +4159,13 @@
         if (!key) return;
 
         if (isBgDetailsComplete(details, item)) {
-            bgRegisterMap[key] = details;
-            if (currentAppView === 'bgPortal' || bgPortalMap[key]) bgPortalMap[key] = details;
+            bgRegisterMap[key] = { ...(bgRegisterMap[key] || {}), ...details };
+            if (currentAppView === 'bgPortal' || bgPortalMap[key]) bgPortalMap[key] = { ...(bgPortalMap[key] || {}), ...bgRegisterMap[key] };
         } else {
             delete bgRegisterMap[key];
             if (bgPortalMap[key]) delete bgPortalMap[key];
         }
+        writeStoredBgRegisterDetails();
     }
 
     async function getBgRegisterDetails(tenderId, item = null) {
@@ -4093,7 +4244,7 @@
     }
 
     function isBgReleased(details) {
-        return String(details?.releaseStatus || '').trim().toLowerCase() === 'released';
+        return isBgPartReleased(details, 'pbg') && (!hasAdditionalBg(details) || isBgPartReleased(details, 'additional'));
     }
 
     function getBgStatusInfo(details) {
@@ -4166,7 +4317,6 @@
         card.innerHTML = `
             <div class="card work-card">
                 <div class="card-body p-4">
-                    <div class="bg-bank-heading">${escapeHtml(String(details.bankName || 'Unknown Bank').toUpperCase())}</div>
                     <div class="work-card-header">
                         <span class="tender-chip">#${escapeHtml(details.tenderId || '-')}</span>
                         <span class="status-badge ${escapeHtml(status.className)}">${escapeHtml(status.label)}</span>
@@ -4197,11 +4347,11 @@
                     </div>
 
                     <div class="work-footer mt-3">
-                        <div>
-                            <div class="detail-label" style="color:var(--accent); margin-bottom: 2px;">Valid Upto</div>
-                            <div class="fw-bold text-primary">${escapeHtml(details.addValid || details.pbgValid || '-')}</div>
+                        <div class="detail-label m-0">Open BG Details</div>
+                        <div class="bg-card-actions">
+                            <button type="button" class="btn btn-dark icon-action-btn edit-card-btn" title="Force edit" aria-label="Force edit"><i class="fa-solid fa-key"></i></button>
+                            <button type="button" class="btn bg-release-btn icon-action-btn release-card-btn" title="Release BG" aria-label="Release BG"><i class="fa-solid fa-lock-open"></i></button>
                         </div>
-                        <button type="button" class="arrow-pill edit-card-btn" title="Edit BG details" aria-label="Edit BG details"><i class="fa fa-edit"></i></button>
                     </div>
                 </div>
             </div>`;
@@ -4214,6 +4364,11 @@
             event.stopPropagation();
             currentTenderId = details.tenderId;
             openPbgUploadForm(details);
+        });
+        card.querySelector('.release-card-btn').addEventListener('click', event => {
+            event.stopPropagation();
+            currentTenderId = details.tenderId;
+            openReleaseBgModal();
         });
         return card;
     }
@@ -4388,6 +4543,7 @@
         }
 
         document.querySelectorAll('#editForm .field-edit[readonly], #pbgUploadForm .edit-input[readonly]').forEach(input => {
+            if (input.dataset.releaseLocked === 'true') return;
             input.removeAttribute('readonly');
             input.classList.add('unlocked-field');
         });
@@ -4526,6 +4682,51 @@
         return resp && (resp.status === 'success' || resp.success === true);
     }
 
+    function showAppToast(message, duration = 2200) {
+        let toast = document.getElementById('appToast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'appToast';
+            toast.className = 'app-toast';
+            document.body.appendChild(toast);
+        }
+        toast.innerText = message;
+        toast.classList.add('show');
+        clearTimeout(appToastTimer);
+        appToastTimer = setTimeout(() => toast.classList.remove('show'), duration);
+    }
+
+    function normalizeBgType(value) {
+        const text = String(value || '').toLowerCase();
+        return text.includes('add') ? 'additional' : 'pbg';
+    }
+
+    function getBgTypeLabel(type) {
+        return normalizeBgType(type) === 'additional' ? 'Additional PBG' : 'PBG';
+    }
+
+    function getBgReleaseInfo(details, type = 'pbg') {
+        const bgType = normalizeBgType(type);
+        const prefix = bgType === 'additional' ? 'add' : 'pbg';
+        return {
+            status: details?.[`${prefix}ReleaseStatus`] || details?.releaseStatus || '',
+            date: details?.[`${prefix}ReleaseDate`] || details?.releaseDate || '',
+            remarks: details?.[`${prefix}ReleaseRemarks`] || details?.releaseRemarks || ''
+        };
+    }
+
+    function isBgPartReleased(details, type = 'pbg') {
+        return String(getBgReleaseInfo(details, type).status || '').trim().toLowerCase() === 'released';
+    }
+
+    function getBgPartValidDate(details, type = 'pbg') {
+        return normalizeBgType(type) === 'additional' ? details?.addValid : details?.pbgValid;
+    }
+
+    function hasAdditionalBg(details) {
+        return Boolean(String(details?.addNo || '').trim() || parseCurrencyAmount(details?.addAmt) > 0);
+    }
+
     async function openBgDetails() {
         const item = masterData.find(d => getTenderId(d) == currentTenderId);
 
@@ -4609,6 +4810,81 @@
         }
     }
 
+    function getLetterWorkLabel(item) {
+        return `[${getTenderId(item) || '-'}] ${getWorkName(item)}`;
+    }
+
+    function populateLetterWorkOptions() {
+        const list = document.getElementById('letterWorkOptions');
+        if (!list) return;
+        list.innerHTML = (Array.isArray(masterData) ? masterData : [])
+            .filter(item => String(getTenderId(item) || '').trim())
+            .map(item => `<option value="${escapeHtml(getLetterWorkLabel(item))}"></option>`)
+            .join('');
+    }
+
+    function syncSelectedLetterWork() {
+        const input = document.getElementById('letterWorkSearch');
+        const hidden = document.getElementById('letterTenderId');
+        const label = document.getElementById('letterSelectedWork');
+        const typed = String(input.value || '').trim();
+        const item = masterData.find(work => getLetterWorkLabel(work) === typed)
+            || masterData.find(work => String(getTenderId(work) || '').trim() === typed);
+        hidden.value = item ? String(getTenderId(item) || '').trim() : '';
+        label.innerText = item ? getLetterWorkLabel(item) : 'No work selected';
+    }
+
+    async function downloadSelectedLetters() {
+        syncSelectedLetterWork();
+        const tenderId = document.getElementById('letterTenderId').value;
+        const wantsAgreement = document.getElementById('letterAgreementCheck').checked;
+        const wantsBg = document.getElementById('letterBgCheck').checked;
+        const status = document.getElementById('letterDownloadStatus');
+        const btn = document.getElementById('downloadLettersBtn');
+        const originalHtml = btn.innerHTML;
+
+        if (!tenderId) {
+            status.innerText = 'Please select work.';
+            return;
+        }
+        if (!wantsAgreement && !wantsBg) {
+            status.innerText = 'Agreement ya BG Verification Letter select karo.';
+            return;
+        }
+
+        const item = masterData.find(d => String(getTenderId(d) || '').trim() === tenderId);
+        const details = await getBgRegisterDetails(tenderId, item);
+        if (!details) {
+            status.innerText = 'Pehle BG details upload karo.';
+            return;
+        }
+
+        const jobs = [];
+        if (wantsAgreement) jobs.push({ method: 'generateAgreementPdf', fileName: `Agreement_${tenderId}.pdf` });
+        if (wantsBg) jobs.push({ method: 'generateBgLetterPdf', fileName: `BG_Letter_${tenderId}.pdf` });
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-download me-2"></i>Starting Download...';
+        status.innerText = 'Starting Download...';
+
+        try {
+            for (const job of jobs) {
+                const resp = await postJson({ method: job.method, tenderId }, 90000);
+                if (!isSuccessResponse(resp) || !resp.pdfUrl) {
+                    throw new Error(resp?.message || resp?.error || 'PDF generate nahi ho paya.');
+                }
+                downloadPdfFromUrl(resp.pdfUrl, job.fileName);
+            }
+            status.innerText = jobs.length === 2 ? 'Downloads started.' : 'Download started.';
+        } catch (e) {
+            console.error('Letter download failed', e);
+            status.innerText = e.message || 'PDF generate/download nahi ho paya.';
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        }
+    }
+
     async function updateBgRegisterAction(item) {
         const tenderId = getTenderId(item);
         const saved = await getBgRegisterDetails(tenderId, item);
@@ -4674,6 +4950,9 @@
 
     function openStoredBgDetails(details) {
         currentTenderId = details.tenderId || currentTenderId;
+        currentViewBgDetails = details;
+        const pbgRelease = getBgReleaseInfo(details, 'pbg');
+        const addRelease = getBgReleaseInfo(details, 'additional');
         document.getElementById('viewBgTenderLabel').innerText = `Tender ID: ${details.tenderId || '-'}`;
         const content = document.getElementById('viewBgContent');
         const rows = [
@@ -4688,9 +4967,12 @@
             ['Additional PBG Submission Date', details.addSubDate || '-'],
             ['Additional PBG Valid Upto', details.addValid || '-'],
             ['Bank Name', details.bankName],
-            ['Release Status', details.releaseStatus || '-'],
-            ['Release Date', details.releaseDate || '-'],
-            ['Release Remarks', details.releaseRemarks || '-'],
+            ['PBG Release Status', pbgRelease.status || '-'],
+            ['PBG Release Date', pbgRelease.date || '-'],
+            ['PBG Release Remarks', pbgRelease.remarks || '-'],
+            ['Additional PBG Release Status', hasAdditionalBg(details) ? (addRelease.status || '-') : '-'],
+            ['Additional PBG Release Date', hasAdditionalBg(details) ? (addRelease.date || '-') : '-'],
+            ['Additional PBG Release Remarks', hasAdditionalBg(details) ? (addRelease.remarks || '-') : '-'],
             ['File Name', details.fileName]
         ];
 
@@ -4706,15 +4988,33 @@
         const noFileText = document.getElementById('viewBgNoFileText');
         const uploadFileBtn = document.getElementById('viewBgUploadFileBtn');
         photoWrap.classList.remove('hidden');
-        if (details.fileUrl) {
+        const pending = pendingBgUploads[String(details.tenderId || '').trim()];
+        if (pending?.status === 'uploading') {
+            photoLink.classList.add('hidden');
+            noFileText.classList.remove('hidden');
+            noFileText.classList.remove('error');
+            noFileText.classList.add('success');
+            noFileText.innerText = 'Document upload background mein chal rahi hai...';
+            uploadFileBtn.classList.add('hidden');
+        } else if (pending?.status === 'error') {
+            photoLink.classList.add('hidden');
+            noFileText.classList.remove('hidden');
+            noFileText.classList.remove('success');
+            noFileText.classList.add('error');
+            noFileText.innerText = 'Document upload failed. Retry upload.';
+            uploadFileBtn.classList.remove('hidden');
+        } else if (details.fileUrl) {
             photoLink.href = details.fileUrl;
             photoLink.classList.remove('hidden');
             noFileText.classList.add('hidden');
+            noFileText.classList.remove('error', 'success');
             uploadFileBtn.classList.add('hidden');
         } else {
             photoLink.removeAttribute('href');
             photoLink.classList.add('hidden');
             noFileText.classList.remove('hidden');
+            noFileText.classList.remove('error', 'success');
+            noFileText.innerText = 'No document available';
             uploadFileBtn.classList.remove('hidden');
         }
 
@@ -4740,13 +5040,43 @@
             return;
         }
         const details = bgPortalMap[tenderId] || bgRegisterMap[tenderId] || {};
+        currentReleaseDetails = details;
+        const typeSelect = document.getElementById('releaseBgType');
+        const options = [{ value: 'pbg', label: 'PBG', disabled: isBgPartReleased(details, 'pbg') }];
+        if (hasAdditionalBg(details)) {
+            options.push({ value: 'additional', label: 'Additional PBG', disabled: isBgPartReleased(details, 'additional') });
+        }
+        typeSelect.innerHTML = options.map(option => `<option value="${option.value}" ${option.disabled ? 'disabled' : ''}>${option.label}${option.disabled ? ' - Released' : ''}</option>`).join('');
+        const firstOpen = options.find(option => !option.disabled);
+        if (!firstOpen) {
+            alert('All BG already released');
+            return;
+        }
+        typeSelect.value = firstOpen.value;
         document.getElementById('releaseBgTenderLabel').innerText = `Tender ID: ${tenderId}`;
-        document.getElementById('releaseBgDate').value = formatDateInputValue(details.releaseDate) || toDateInputValue(new Date());
-        document.getElementById('releaseBgRemarks').value = details.releaseRemarks || '';
+        document.getElementById('releaseBgDate').value = toDateInputValue(new Date());
+        document.getElementById('releaseBgRemarks').value = '';
+        updateReleaseWarning();
         showSubPageModal(document.getElementById('releaseBgModal'), {
             replaceOpen: false,
             keepIds: ['viewBgDetailsModal']
         });
+    }
+
+    function updateReleaseWarning() {
+        const warning = document.getElementById('releaseBgWarning');
+        if (!warning) return;
+        const type = document.getElementById('releaseBgType')?.value || 'pbg';
+        const releaseDate = parseReportDate(toRegisterDate(document.getElementById('releaseBgDate')?.value || ''));
+        const validDateText = getBgPartValidDate(currentReleaseDetails, type);
+        const validDate = parseReportDate(validDateText);
+        if (releaseDate && validDate && releaseDate < validDate) {
+            warning.innerText = `Validity se pehle release: Valid Upto Date - ${validDateText}`;
+            warning.classList.add('text-danger');
+        } else {
+            warning.innerText = '';
+            warning.classList.remove('text-danger');
+        }
     }
 
     async function saveReleaseBg() {
@@ -4759,6 +5089,16 @@
             return;
         }
 
+        const releaseType = document.getElementById('releaseBgType').value || 'pbg';
+        const releaseDateValue = toRegisterDate(document.getElementById('releaseBgDate').value);
+        const validDateText = getBgPartValidDate(currentReleaseDetails, releaseType);
+        const releaseDate = parseReportDate(releaseDateValue);
+        const validDate = parseReportDate(validDateText);
+        if (releaseDate && validDate && releaseDate < validDate) {
+            const ok = confirm(`Are you sure you want to release this ${getBgTypeLabel(releaseType)}? Valid Upto Date - ${validDateText}`);
+            if (!ok) return;
+        }
+
         const btn = document.getElementById('saveReleaseBgBtn');
         const originalHtml = btn.innerHTML;
         btn.disabled = true;
@@ -4768,7 +5108,8 @@
             const resp = await postJson({
                 method: 'releaseBg',
                 tenderId,
-                releaseDate: toRegisterDate(document.getElementById('releaseBgDate').value),
+                bgType: releaseType,
+                releaseDate: releaseDateValue,
                 releaseRemarks: document.getElementById('releaseBgRemarks').value.trim()
             });
 
@@ -4778,6 +5119,7 @@
 
             bgRegisterMap[tenderId] = resp.details;
             bgPortalMap[tenderId] = resp.details;
+            writeStoredBgRegisterDetails();
             const releaseModalEl = document.getElementById('releaseBgModal');
             releaseModalEl.addEventListener('hidden.bs.modal', () => {
                 openStoredBgDetails(resp.details);
@@ -4823,7 +5165,7 @@
         unlockBtn.classList.toggle('hidden', !hasLockedFields);
     }
 
-    function setPbgUploadFieldLocks(enabled) {
+    function setPbgUploadFieldLocks(enabled, details = null) {
         currentPbgEditingExisting = enabled;
         const lockableIds = [
             'pbgWorkName',
@@ -4844,8 +5186,14 @@
             const input = document.getElementById(id);
             if (!input) return;
             input.classList.remove('unlocked-field');
+            input.dataset.releaseLocked = 'false';
             const hasValue = String(input.value || '').trim() !== '';
-            if (enabled && hasValue) {
+            const pbgReleased = details && isBgPartReleased(details, 'pbg') && ['pbgAmt', 'pbgNo', 'pbgSubDate', 'pbgValid'].includes(id);
+            const addReleased = details && isBgPartReleased(details, 'additional') && ['addAmt', 'addNo', 'addSubDate', 'addValid'].includes(id);
+            if (pbgReleased || addReleased) {
+                input.setAttribute('readonly', 'readonly');
+                input.dataset.releaseLocked = 'true';
+            } else if (enabled && hasValue) {
                 input.setAttribute('readonly', 'readonly');
             } else {
                 input.removeAttribute('readonly');
@@ -5065,7 +5413,7 @@
         setPbgPhotoState('', '', '', 'No document selected', '', '');
         setAdditionalPbgVisibility(bg.additional > 0);
         fillPbgUploadFormFromDetails(prefillDetails);
-        setPbgUploadFieldLocks(Boolean(prefillDetails));
+        setPbgUploadFieldLocks(Boolean(prefillDetails), prefillDetails);
 
         showSubPageModal(document.getElementById('pbgUploadModal'), {
             replaceOpen: true,
@@ -5222,9 +5570,7 @@
                 fileMimeType
             };
             const existingRelease = bgPortalMap[String(payload.tenderId || '').trim()] || bgRegisterMap[String(payload.tenderId || '').trim()] || {};
-            payload.releaseStatus = existingRelease.releaseStatus || payload.releaseStatus || '';
-            payload.releaseDate = existingRelease.releaseDate || payload.releaseDate || '';
-            payload.releaseRemarks = existingRelease.releaseRemarks || payload.releaseRemarks || '';
+            mergeReleaseFields(payload, existingRelease);
 
             const resp = await postJson({
                 method: 'uploadToRegister',
@@ -5252,6 +5598,59 @@
         }
     }
 
+    function mergeReleaseFields(payload, existingRelease = {}) {
+        ['releaseStatus', 'releaseDate', 'releaseRemarks', 'pbgReleaseStatus', 'pbgReleaseDate', 'pbgReleaseRemarks', 'addReleaseStatus', 'addReleaseDate', 'addReleaseRemarks'].forEach(key => {
+            payload[key] = existingRelease[key] || payload[key] || '';
+        });
+        return payload;
+    }
+
+    function reopenSavedBgDetailsFromUpload(payload) {
+        const uploadModalEl = document.getElementById('pbgUploadModal');
+        const bgModalEl = document.getElementById('bgDetailsModal');
+        const openSavedBgDetails = () => {
+            if (bgModalEl.classList.contains('show')) {
+                bgModalEl.addEventListener('hidden.bs.modal', () => openStoredBgDetails(payload), { once: true });
+                bootstrap.Modal.getOrCreateInstance(bgModalEl).hide();
+                return;
+            }
+            openStoredBgDetails(payload);
+        };
+
+        uploadModalEl.addEventListener('hidden.bs.modal', openSavedBgDetails, { once: true });
+        bootstrap.Modal.getOrCreateInstance(uploadModalEl).hide();
+    }
+
+    function startBackgroundPbgUpload(payload) {
+        const tenderId = String(payload.tenderId || '').trim();
+        if (!tenderId) return;
+        pendingBgUploads[tenderId] = { status: 'uploading', payload };
+
+        postJson({
+            method: 'uploadToRegister',
+            formData: payload
+        }, 90000).then(resp => {
+            if (!isSuccessResponse(resp)) {
+                throw new Error(resp?.message || resp?.error || 'PBG upload failed');
+            }
+            const item = masterData.find(d => getTenderId(d) == tenderId);
+            const saved = {
+                ...payload,
+                fileUrl: resp.fileUrl || resp.fileLink || payload.fileUrl || '',
+                fileName: resp.fileUrl || resp.fileLink || payload.fileName || ''
+            };
+            delete pendingBgUploads[tenderId];
+            setBgRegisterDetails(tenderId, saved, item);
+            if (item) updateBgRegisterAction(item);
+            if (String(currentTenderId || '').trim() === tenderId) openStoredBgDetails(bgRegisterMap[tenderId] || saved);
+            if (currentAppView === 'bgPortal') renderDeck();
+        }).catch(e => {
+            console.error('Background PBG upload failed', e);
+            pendingBgUploads[tenderId] = { status: 'error', payload, error: e.message || 'PBG upload failed' };
+            if (String(currentTenderId || '').trim() === tenderId) openStoredBgDetails(bgRegisterMap[tenderId] || payload);
+        });
+    }
+
     async function uploadPbgDetails() {
         const form = document.getElementById('pbgUploadForm');
         if (!form.reportValidity()) return;
@@ -5267,9 +5666,7 @@
         payload.addSubDate = toRegisterDate(payload.addSubDate);
         payload.addValid = toRegisterDate(payload.addValid);
         const existingRelease = bgPortalMap[String(payload.tenderId || '').trim()] || bgRegisterMap[String(payload.tenderId || '').trim()] || {};
-        payload.releaseStatus = existingRelease.releaseStatus || '';
-        payload.releaseDate = existingRelease.releaseDate || '';
-        payload.releaseRemarks = existingRelease.releaseRemarks || '';
+        mergeReleaseFields(payload, existingRelease);
 
         if (!payload.fileName || (!payload.fileData && !/^https?:\/\//i.test(payload.fileName))) {
             alert("Please add PBG document");
@@ -5278,44 +5675,19 @@
 
         const btn = document.getElementById('submitPbgUploadBtn');
         btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Uploading...';
+        btn.innerHTML = '<i class="fa-solid fa-check me-2"></i>Saved';
 
-        try {
-            const resp = await postJson({
-                method: 'uploadToRegister',
-                formData: payload
-            });
-
-            if (isSuccessResponse(resp)) {
-                payload.fileUrl = resp.fileUrl || resp.fileLink || '';
-                const item = masterData.find(d => getTenderId(d) == currentTenderId);
-                setBgRegisterDetails(payload.tenderId, payload, item);
-                if (item) updateBgRegisterAction(item);
-
-                const uploadModalEl = document.getElementById('pbgUploadModal');
-                const bgModalEl = document.getElementById('bgDetailsModal');
-                const openSavedBgDetails = () => {
-                    if (bgModalEl.classList.contains('show')) {
-                        bgModalEl.addEventListener('hidden.bs.modal', () => openStoredBgDetails(payload), { once: true });
-                        bootstrap.Modal.getOrCreateInstance(bgModalEl).hide();
-                        return;
-                    }
-
-                    openStoredBgDetails(payload);
-                };
-
-                uploadModalEl.addEventListener('hidden.bs.modal', openSavedBgDetails, { once: true });
-                bootstrap.Modal.getOrCreateInstance(uploadModalEl).hide();
-            } else {
-                alert(resp?.message || resp?.error || "PBG upload failed");
-            }
-        } catch (e) {
-            console.error("PBG upload failed", e);
-            alert("PBG upload failed");
-        } finally {
+        const item = masterData.find(d => getTenderId(d) == currentTenderId);
+        payload.fileUrl = /^https?:\/\//i.test(payload.fileName) ? payload.fileName : payload.fileUrl || '';
+        setBgRegisterDetails(payload.tenderId, payload, item);
+        if (item) updateBgRegisterAction(item);
+        showAppToast('Bg Saved Successfully ✅');
+        reopenSavedBgDetailsFromUpload(payload);
+        startBackgroundPbgUpload(payload);
+        setTimeout(() => {
             btn.disabled = false;
             btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up me-2"></i>Save to BG Register';
-        }
+        }, 300);
     }
 
     async function saveNewWork() {
