@@ -25,6 +25,7 @@
             --accent-2: #0f766e;
             --warning: #c77700;
             --danger: #c9342f;
+            --success: #16a34a;
             --bg: #eef4f8;
             --surface: #ffffff;
             --surface-soft: #f6f9fc;
@@ -58,6 +59,11 @@
             z-index: 1000;
         }
         .navbar-brand {
+            border: 0;
+            background: transparent;
+            padding: 0;
+            text-align: left;
+            cursor: pointer;
             font-weight: 850;
             color: #f8fafc !important;
             display: flex;
@@ -84,6 +90,11 @@
             align-items: center;
             gap: 0.65rem;
             margin-left: auto;
+        }
+        .navbar-brand:focus-visible {
+            outline: 3px solid rgba(255,255,255,0.32);
+            outline-offset: 4px;
+            border-radius: var(--radius);
         }
         .report-menu-btn {
             width: 44px;
@@ -438,6 +449,7 @@
             padding: 0;
         }
         .pin-unlock-dialog { max-width: 360px; margin-left: auto; margin-right: auto; }
+        .modal.show .pin-unlock-dialog { transform: translateY(-8vh); }
         .pin-unlock-error { min-height: 1.25rem; font-size: 0.82rem; font-weight: 700; color: var(--danger); }
 
         .btn { border-radius: var(--radius) !important; }
@@ -726,6 +738,12 @@
             box-shadow: var(--shadow);
             padding: 0.35rem;
         }
+        .letter-results.is-floating {
+            position: fixed;
+            right: auto;
+            bottom: auto;
+            max-height: min(260px, 42vh);
+        }
         .letter-results.hidden {
             display: none;
         }
@@ -913,6 +931,7 @@
             }
             .photo-action-grid { grid-template-columns: 1fr 1fr; }
             .quick-upload-actions { grid-template-columns: 1fr 1fr; }
+            .modal.show .pin-unlock-dialog { transform: translateY(-14vh); }
         }
 
         /* ===== CAMERA PDF ===== */
@@ -1009,13 +1028,13 @@
 </div>
 
 <nav class="navbar navbar-dark">
-    <span class="navbar-brand m-0">
+    <button class="navbar-brand m-0" type="button" onclick="openWorksDashboardFromMenu()" title="Go to Works" aria-label="Go to Works homepage">
         <span class="brand-mark"><i class="fa-solid fa-building-columns"></i></span>
         <span>
             <span class="brand-kicker d-block">Work Management System</span>
             <span class="brand-title d-block">MC Charkhi Dadri</span>
         </span>
-    </span>
+    </button>
     <div class="navbar-actions report-dropdown">
         <button class="report-menu-btn" type="button" onclick="toggleReportMenu(event)" title="Reports menu" aria-label="Reports menu" aria-expanded="false">
             <i class="fa-solid fa-bars"></i>
@@ -1366,21 +1385,14 @@
                 <div id="letterSelectedWork" class="photo-hint mt-2 mb-3">No work selected</div>
 
                 <div class="letter-choice-grid">
-                    <label class="letter-choice-card">
-                        <input id="letterAgreementCheck" type="checkbox">
-                        <span>Agreement</span>
-                    </label>
-                    <label class="letter-choice-card">
-                        <input id="letterBgCheck" type="checkbox">
-                        <span>BG Verification Letter</span>
-                    </label>
+                    <button id="generateBgLetterBtn" type="button" class="btn btn-danger fw-bold py-3" onclick="generateSelectedLetter('bg', this)">
+                        <i class="fa-solid fa-file-shield me-2"></i>Generate BG Verification Letter
+                    </button>
+                    <button id="generateAgreementBtn" type="button" class="btn btn-primary fw-bold py-3" onclick="generateSelectedLetter('agreement', this)">
+                        <i class="fa-solid fa-file-contract me-2"></i>Generate Agreement
+                    </button>
                 </div>
                 <div id="letterDownloadStatus" class="photo-hint mt-3"></div>
-            </div>
-            <div class="modal-footer border-0 justify-content-center p-4 pt-0">
-                <button id="downloadLettersBtn" type="button" class="btn btn-primary px-5 py-2 rounded-3 fw-bold" onclick="downloadSelectedLetters()">
-                    <i class="fa-solid fa-download me-2"></i>Download PDF
-                </button>
             </div>
         </div>
     </div>
@@ -1788,6 +1800,9 @@
     let bgPortalLoaded = false;
     let bgPortalRefreshing = false;
     let letterWorkChoices = [];
+    let viewSearchValues = { works: '', bgPortal: '' };
+    let pendingPinAction = null;
+    let pendingForceBgDetails = null;
     let appToastTimer = null;
     const BG_REGISTER_STORE_KEY = 'dadriworksBgRegisterDetails';
     const RUPEE = String.fromCharCode(8377);
@@ -1893,12 +1908,15 @@
 
         pinModal.addEventListener('shown.bs.modal', () => {
             pinInput.focus();
+            setTimeout(() => pinInput.scrollIntoView({ block: 'center', behavior: 'smooth' }), 80);
         });
 
         pinModal.addEventListener('hidden.bs.modal', () => {
             pinInput.value = '';
             const error = document.getElementById('pinUnlockError');
             if (error) error.innerText = '';
+            const title = document.getElementById('pinUnlockTitle');
+            if (title) title.innerText = 'Enter PIN to continue';
             const unlockBtn = document.getElementById('unlockFieldsBtn');
             if (unlockBtn && !unlockBtn.classList.contains('hidden')) unlockBtn.focus();
         });
@@ -2150,6 +2168,11 @@
         }[char]));
     }
 
+    function hasDisplayValue(value) {
+        const text = String(value ?? '').trim();
+        return Boolean(text && text !== '-');
+    }
+
     function getTenderId(item) {
         return item.E_TENDERID || item.E_TenderID || item.TenderID || item["Tender ID"] || "";
     }
@@ -2398,6 +2421,16 @@
         if (button) button.setAttribute('aria-expanded', 'false');
     }
 
+    function closeAllSubPagesForHome() {
+        Array.from(document.querySelectorAll('.modal.show')).forEach(modalEl => {
+            modalEl.dataset.skipHistoryBack = '1';
+            hideModalElement(modalEl);
+        });
+        modalHistoryDepth = 0;
+        suppressNextPopClose = false;
+        closingModalFromHistory = false;
+    }
+
     function toggleGenerateReportsMenu(event) {
         if (event) event.stopPropagation();
         document.getElementById('generateReportsSubmenu')?.classList.toggle('hidden');
@@ -2407,9 +2440,16 @@
         const menu = document.getElementById('reportDropdownMenu');
         if (menu && !menu.classList.contains('hidden') && !event.target.closest('.report-dropdown')) closeReportMenu();
         if (!event.target.closest('.letter-search-wrap')) {
-            document.getElementById('letterWorkResults')?.classList.add('hidden');
+            const results = document.getElementById('letterWorkResults');
+            results?.classList.add('hidden');
+            results?.classList.remove('is-floating');
+            results?.removeAttribute('style');
         }
     });
+
+    window.visualViewport?.addEventListener('resize', positionLetterDropdown);
+    window.visualViewport?.addEventListener('scroll', positionLetterDropdown);
+    window.addEventListener('resize', positionLetterDropdown);
 
     function openDevelopmentReportModalFromMenu() {
         closeReportMenu();
@@ -2426,13 +2466,24 @@
         document.getElementById('investmentBanner')?.classList.toggle('hidden', isBgPortal);
         const addBtn = document.querySelector('.fab-add-work');
         if (addBtn) addBtn.classList.toggle('hidden', isBgPortal);
-        document.getElementById('searchInput').placeholder = isBgPortal
-            ? 'Search tender ID, work, agency or bank...'
-            : 'Search ID, agency or work...';
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.placeholder = isBgPortal
+                ? 'Search tender ID, work, agency or bank...'
+                : 'Search ID, agency or work...';
+            searchInput.value = viewSearchValues[view] || '';
+        }
+    }
+
+    function rememberCurrentSearch() {
+        const input = document.getElementById('searchInput');
+        if (input) viewSearchValues[currentAppView] = input.value;
     }
 
     function openWorksDashboardFromMenu() {
         closeReportMenu();
+        rememberCurrentSearch();
+        closeAllSubPagesForHome();
         currentAppView = 'works';
         currentFilter = 'All';
         setDashboardChromeForView('works');
@@ -2459,9 +2510,10 @@
         document.getElementById('letterWorkSearch').value = '';
         document.getElementById('letterTenderId').value = '';
         document.getElementById('letterSelectedWork').innerText = 'No work selected';
-        document.getElementById('letterWorkResults').classList.add('hidden');
-        document.getElementById('letterAgreementCheck').checked = false;
-        document.getElementById('letterBgCheck').checked = false;
+        const results = document.getElementById('letterWorkResults');
+        results.classList.add('hidden');
+        results.classList.remove('is-floating');
+        results.removeAttribute('style');
         document.getElementById('letterDownloadStatus').innerText = '';
         showSubPageModal(document.getElementById('generateLettersModal'));
     }
@@ -2493,6 +2545,7 @@
 
     function openBgPortalFromMenu() {
         closeReportMenu();
+        rememberCurrentSearch();
         currentAppView = 'bgPortal';
         currentFilter = 'All';
         seedBgPortalMapFromRegister();
@@ -4174,6 +4227,11 @@
         link.remove();
     }
 
+    function openPdfFromUrl(url) {
+        const win = window.open(url, '_blank', 'noopener');
+        if (!win) alert('Popup blocked. Browser mein popups allow karke dobara try karo.');
+    }
+
     function readStoredBgRegisterDetails() {
         try {
             return JSON.parse(localStorage.getItem(BG_REGISTER_STORE_KEY) || '{}') || {};
@@ -4328,7 +4386,7 @@
     }
 
     function getVisibleData() {
-        const query = document.getElementById('searchInput').value.toLowerCase().trim();
+        const query = getSearchQueryForView('works');
         let filtered = currentFilter === 'All'
             ? masterData
             : masterData.filter(d => d.computedStatus === currentFilter);
@@ -4366,7 +4424,7 @@
     }
 
     function getBgPortalItems() {
-        const query = document.getElementById('searchInput').value.toLowerCase().trim();
+        const query = getSearchQueryForView('bgPortal');
         const workByTender = new Map((Array.isArray(masterData) ? masterData : [])
             .map(item => [String(getTenderId(item) || '').trim(), item])
             .filter(([tenderId]) => tenderId));
@@ -4606,8 +4664,24 @@
         const pinModal = document.getElementById('pinUnlockModal');
         if (!pinInput || !pinError || !pinModal) return;
 
+        pendingPinAction = null;
         pinInput.value = '';
         pinError.innerText = '';
+        document.getElementById('pinUnlockTitle').innerText = 'Please enter security key to continue';
+        bootstrap.Modal.getOrCreateInstance(pinModal).show();
+    }
+
+    function requestForceBgEditUnlock(details) {
+        const pinInput = document.getElementById('pinUnlockInput');
+        const pinError = document.getElementById('pinUnlockError');
+        const pinModal = document.getElementById('pinUnlockModal');
+        if (!pinInput || !pinError || !pinModal) return;
+
+        pendingPinAction = 'forceBgEdit';
+        pendingForceBgDetails = details;
+        pinInput.value = '';
+        pinError.innerText = '';
+        document.getElementById('pinUnlockTitle').innerText = 'Please enter security key to continue';
         bootstrap.Modal.getOrCreateInstance(pinModal).show();
     }
 
@@ -4623,8 +4697,20 @@
             return;
         }
 
+        if (pendingPinAction === 'forceBgEdit') {
+            const details = pendingForceBgDetails;
+            pendingPinAction = null;
+            pendingForceBgDetails = null;
+            const modalInstance = bootstrap.Modal.getOrCreateInstance(pinModal);
+            pinModal.addEventListener('hidden.bs.modal', () => openPbgUploadForm(details, { unlockEditable: true }), { once: true });
+            modalInstance.hide();
+            return;
+        }
+
+        const alwaysLockedPbgIds = new Set(['pbgWorkName', 'pbgTenderId', 'pbgAgencyName']);
         document.querySelectorAll('#editForm .field-edit[readonly], #pbgUploadForm .edit-input[readonly]').forEach(input => {
             if (input.dataset.releaseLocked === 'true') return;
+            if (alwaysLockedPbgIds.has(input.id)) return;
             input.removeAttribute('readonly');
             input.classList.add('unlocked-field');
         });
@@ -4646,7 +4732,15 @@
     }
 
     function searchWorks() {
+        const input = document.getElementById('searchInput');
+        if (input) viewSearchValues[currentAppView] = input.value;
         renderDeck();
+    }
+
+    function getSearchQueryForView(view) {
+        const input = document.getElementById('searchInput');
+        if (input && currentAppView === view) viewSearchValues[view] = input.value;
+        return String(viewSearchValues[view] || '').toLowerCase().trim();
     }
 
     function getAddFieldKeys() {
@@ -4878,8 +4972,7 @@
                 throw new Error(resp?.message || resp?.error || 'PDF generate nahi ho paya.');
             }
 
-            const fileName = `${isAgreement ? 'Agreement' : 'BG_Letter'}_${tenderId}.pdf`;
-            downloadPdfFromUrl(resp.pdfUrl, fileName);
+            openPdfFromUrl(resp.pdfUrl);
         } catch (e) {
             console.error('PDF download failed', e);
             alert(e.message || 'PDF generate/download nahi ho paya.');
@@ -4940,6 +5033,31 @@
             btn.addEventListener('click', () => selectLetterWork(btn.dataset.tenderId));
         });
         results.classList.remove('hidden');
+        positionLetterDropdown();
+    }
+
+    function positionLetterDropdown() {
+        const input = document.getElementById('letterWorkSearch');
+        const results = document.getElementById('letterWorkResults');
+        if (!input || !results || results.classList.contains('hidden')) return;
+
+        const rect = input.getBoundingClientRect();
+        const viewport = window.visualViewport || { offsetTop: 0, height: window.innerHeight, width: window.innerWidth };
+        const viewportTop = viewport.offsetTop || 0;
+        const viewportBottom = viewportTop + viewport.height;
+        const margin = 12;
+        const maxHeight = Math.min(260, Math.max(150, viewport.height * 0.42));
+        const spaceBelow = viewportBottom - rect.bottom - margin;
+        const spaceAbove = rect.top - viewportTop - margin;
+        const top = spaceBelow >= 150 || spaceBelow >= spaceAbove
+            ? Math.min(rect.bottom + 6, viewportBottom - maxHeight - margin)
+            : Math.max(viewportTop + margin, rect.top - maxHeight - 6);
+
+        results.classList.add('is-floating');
+        results.style.left = `${Math.max(margin, rect.left)}px`;
+        results.style.top = `${Math.max(viewportTop + margin, top)}px`;
+        results.style.width = `${Math.min(rect.width, viewport.width - (margin * 2))}px`;
+        results.style.maxHeight = `${maxHeight}px`;
     }
 
     function selectLetterWork(tenderId) {
@@ -4948,7 +5066,10 @@
         document.getElementById('letterTenderId').value = choice.tenderId;
         document.getElementById('letterWorkSearch').value = choice.label;
         document.getElementById('letterSelectedWork').innerText = choice.label;
-        document.getElementById('letterWorkResults').classList.add('hidden');
+        const results = document.getElementById('letterWorkResults');
+        results.classList.add('hidden');
+        results.classList.remove('is-floating');
+        results.removeAttribute('style');
         return choice;
     }
 
@@ -4985,21 +5106,16 @@
         bootstrap.Modal.getOrCreateInstance(modalEl).hide();
     }
 
-    async function downloadSelectedLetters() {
+    async function generateSelectedLetter(type, triggerButton) {
         const selected = syncSelectedLetterWork();
         const tenderId = selected?.tenderId || document.getElementById('letterTenderId').value;
-        const wantsAgreement = document.getElementById('letterAgreementCheck').checked;
-        const wantsBg = document.getElementById('letterBgCheck').checked;
         const status = document.getElementById('letterDownloadStatus');
-        const btn = document.getElementById('downloadLettersBtn');
+        const btn = triggerButton || document.getElementById(type === 'agreement' ? 'generateAgreementBtn' : 'generateBgLetterBtn');
         const originalHtml = btn.innerHTML;
+        const isAgreement = type === 'agreement';
 
         if (!tenderId) {
             status.innerText = 'Please select work.';
-            return;
-        }
-        if (!wantsAgreement && !wantsBg) {
-            status.innerText = 'Agreement ya BG Verification Letter select karo.';
             return;
         }
 
@@ -5011,23 +5127,17 @@
             return;
         }
 
-        const jobs = [];
-        if (wantsAgreement) jobs.push({ method: 'generateAgreementPdf', fileName: `Agreement_${tenderId}.pdf` });
-        if (wantsBg) jobs.push({ method: 'generateBgLetterPdf', fileName: `BG_Letter_${tenderId}.pdf` });
-
         btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-download me-2"></i>Starting Download...';
-        status.innerText = 'Starting Download...';
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generating...';
+        status.innerText = 'Generating PDF...';
 
         try {
-            for (const job of jobs) {
-                const resp = await postJson({ method: job.method, tenderId }, 90000);
-                if (!isSuccessResponse(resp) || !resp.pdfUrl) {
-                    throw new Error(resp?.message || resp?.error || 'PDF generate nahi ho paya.');
-                }
-                downloadPdfFromUrl(resp.pdfUrl, job.fileName);
+            const resp = await postJson({ method: isAgreement ? 'generateAgreementPdf' : 'generateBgLetterPdf', tenderId }, 90000);
+            if (!isSuccessResponse(resp) || !resp.pdfUrl) {
+                throw new Error(resp?.message || resp?.error || 'PDF generate nahi ho paya.');
             }
-            status.innerText = jobs.length === 2 ? 'Downloads started.' : 'Download started.';
+            openPdfFromUrl(resp.pdfUrl);
+            status.innerText = 'PDF opened in Drive.';
         } catch (e) {
             console.error('Letter download failed', e);
             status.innerText = e.message || 'PDF generate/download nahi ho paya.';
@@ -5108,6 +5218,14 @@
         const addRelease = getBgReleaseInfo(details, 'additional');
         document.getElementById('viewBgTenderLabel').innerText = `Tender ID: ${details.tenderId || '-'}`;
         const content = document.getElementById('viewBgContent');
+        const releaseRows = [
+            ['PBG Release Status', pbgRelease.status],
+            ['PBG Release Date', pbgRelease.date],
+            ['PBG Release Remarks', pbgRelease.remarks],
+            ['Additional PBG Release Status', hasAdditionalBg(details) ? addRelease.status : ''],
+            ['Additional PBG Release Date', hasAdditionalBg(details) ? addRelease.date : ''],
+            ['Additional PBG Release Remarks', hasAdditionalBg(details) ? addRelease.remarks : '']
+        ].filter(([, value]) => hasDisplayValue(value));
         const rows = [
             ['Work Name', details.workName],
             ['Agency Name', details.agencyName],
@@ -5120,12 +5238,7 @@
             ['Additional PBG Submission Date', details.addSubDate || '-'],
             ['Additional PBG Valid Upto', details.addValid || '-'],
             ['Bank Name', details.bankName],
-            ['PBG Release Status', pbgRelease.status || '-'],
-            ['PBG Release Date', pbgRelease.date || '-'],
-            ['PBG Release Remarks', pbgRelease.remarks || '-'],
-            ['Additional PBG Release Status', hasAdditionalBg(details) ? (addRelease.status || '-') : '-'],
-            ['Additional PBG Release Date', hasAdditionalBg(details) ? (addRelease.date || '-') : '-'],
-            ['Additional PBG Release Remarks', hasAdditionalBg(details) ? (addRelease.remarks || '-') : '-'],
+            ...releaseRows,
             ['File Name', details.fileName]
         ];
 
@@ -5184,7 +5297,7 @@
             alert('BG details not found');
             return;
         }
-        openPbgUploadForm(details);
+        requestForceBgEditUnlock(details);
     }
 
     async function openReleaseBgModal() {
@@ -5211,10 +5324,7 @@
         document.getElementById('releaseBgDate').value = toDateInputValue(new Date());
         document.getElementById('releaseBgRemarks').value = '';
         updateReleaseWarning();
-        showSubPageModal(document.getElementById('releaseBgModal'), {
-            replaceOpen: false,
-            keepIds: ['viewBgDetailsModal']
-        });
+        showSubPageModal(document.getElementById('releaseBgModal'), { replaceOpen: true });
     }
 
     function updateReleaseWarning() {
@@ -5315,7 +5425,9 @@
     function updateBgUploadUnlockButtonState() {
         const unlockBtn = document.getElementById('unlockBgFieldsBtn');
         if (!unlockBtn) return;
-        const hasLockedFields = currentPbgEditingExisting && Boolean(document.querySelector('#pbgUploadForm .edit-input[readonly]'));
+        const alwaysLockedPbgIds = new Set(['pbgWorkName', 'pbgTenderId', 'pbgAgencyName']);
+        const hasLockedFields = currentPbgEditingExisting && Array.from(document.querySelectorAll('#pbgUploadForm .edit-input[readonly]'))
+            .some(input => !alwaysLockedPbgIds.has(input.id) && input.dataset.releaseLocked !== 'true');
         unlockBtn.classList.toggle('hidden', !hasLockedFields);
     }
 
@@ -5538,7 +5650,17 @@
         }
     }
 
-    function openPbgUploadForm(prefillDetails = null) {
+    function unlockEditablePbgFields() {
+        const alwaysLockedPbgIds = new Set(['pbgWorkName', 'pbgTenderId', 'pbgAgencyName']);
+        document.querySelectorAll('#pbgUploadForm .edit-input[readonly]').forEach(input => {
+            if (alwaysLockedPbgIds.has(input.id) || input.dataset.releaseLocked === 'true') return;
+            input.removeAttribute('readonly');
+            input.classList.add('unlocked-field');
+        });
+        updateBgUploadUnlockButtonState();
+    }
+
+    function openPbgUploadForm(prefillDetails = null, options = {}) {
         const item = masterData.find(d => getTenderId(d) == currentTenderId);
 
         if (!item) {
@@ -5568,11 +5690,9 @@
         setAdditionalPbgVisibility(bg.additional > 0);
         fillPbgUploadFormFromDetails(prefillDetails);
         setPbgUploadFieldLocks(Boolean(prefillDetails), prefillDetails);
+        if (options.unlockEditable) unlockEditablePbgFields();
 
-        showSubPageModal(document.getElementById('pbgUploadModal'), {
-            replaceOpen: true,
-            keepIds: ['viewBgDetailsModal']
-        });
+        showSubPageModal(document.getElementById('pbgUploadModal'), { replaceOpen: true });
     }
 
     async function openPbgFileUploadOnly() {
@@ -5605,10 +5725,7 @@
         pbgQuickUploadDetails = { ...details };
         document.getElementById('pbgQuickTenderLabel').innerText = `Tender ID: ${details.tenderId || '-'}`;
         resetPbgQuickUploadState();
-        showSubPageModal(document.getElementById('pbgQuickUploadModal'), {
-            replaceOpen: false,
-            keepIds: ['viewBgDetailsModal']
-        });
+        showSubPageModal(document.getElementById('pbgQuickUploadModal'), { replaceOpen: true });
     }
 
     function renderPbgQuickPreview() {
@@ -6016,12 +6133,8 @@ async function openDocScanner(context = 'form') {
     scannerCaptureInProgress = false;
     const modalEl = document.getElementById('docScannerModal');
     modalEl.addEventListener('shown.bs.modal', startScannerCamera, { once: true });
-    const keepIds = context === 'quick'
-        ? ['viewBgDetailsModal', 'pbgQuickUploadModal']
-        : ['viewBgDetailsModal'];
     showSubPageModal(modalEl, {
         replaceOpen: true,
-        keepIds,
         modalOptions: { backdrop: 'static' }
     });
 }
@@ -6090,12 +6203,8 @@ async function captureDocScan() {
 function showScanPreview() {
     document.getElementById('scanPreviewImg').src = currentScanDataUrl;
     document.getElementById('scanProcessingMsg').textContent = '';
-    const keepIds = scannerReturnContext === 'quick'
-        ? ['viewBgDetailsModal', 'pbgQuickUploadModal']
-        : ['viewBgDetailsModal'];
     showSubPageModal(document.getElementById('scanPreviewModal'), {
         replaceOpen: true,
-        keepIds,
         modalOptions: { backdrop: 'static' }
     });
 }
@@ -6122,10 +6231,7 @@ async function confirmScan() {
         pbgQuickPreviewUrls = [];
         renderPbgQuickPreview();
         setTimeout(() => {
-            showSubPageModal(document.getElementById('pbgQuickUploadModal'), {
-                replaceOpen: true,
-                keepIds: ['viewBgDetailsModal']
-            });
+            showSubPageModal(document.getElementById('pbgQuickUploadModal'), { replaceOpen: true });
         }, 220);
         return;
     }
@@ -6150,17 +6256,11 @@ async function confirmScan() {
             'Open Camera again to add more pages',
             currentScanDataUrl
         );
-        showSubPageModal(document.getElementById('pbgUploadModal'), {
-            replaceOpen: true,
-            keepIds: ['viewBgDetailsModal']
-        });
+        showSubPageModal(document.getElementById('pbgUploadModal'), { replaceOpen: true });
     } catch (e) {
         console.error('PDF build failed', e);
         setPbgPhotoState('', '', '', 'PDF failed', 'Document se PDF nahi ban payi', currentScanDataUrl);
-        showSubPageModal(document.getElementById('pbgUploadModal'), {
-            replaceOpen: true,
-            keepIds: ['viewBgDetailsModal']
-        });
+        showSubPageModal(document.getElementById('pbgUploadModal'), { replaceOpen: true });
     }
 }
 </script>
