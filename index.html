@@ -283,6 +283,16 @@
         }
         .work-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-md); border-color: rgba(37,99,235,0.45); }
         .work-card-header { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
+        .bg-bank-heading {
+            color: #0f766e;
+            font-size: 0.72rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            margin-bottom: 0.65rem;
+        }
         .tender-chip {
             border-radius: 999px;
             background: #eef2f7;
@@ -363,6 +373,31 @@
             transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
         }
         .arrow-pill:hover { background: #dff1ff; border-color: rgba(15,110,203,0.38); transform: translateY(-1px); }
+        .bg-card-amounts {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.75rem;
+            border-top: 1px solid var(--line);
+            padding-top: 1rem;
+        }
+        .bg-card-amount {
+            min-width: 0;
+            border: 1px solid #e6eef8;
+            border-radius: var(--radius);
+            background: #fbfdff;
+            padding: 0.75rem;
+        }
+        .bg-card-amount-value {
+            color: var(--accent);
+            font-size: 0.98rem;
+            font-weight: 900;
+            line-height: 1.15;
+            overflow-wrap: anywhere;
+        }
+        .status-badge.valid { background: #dcfce7; color: #166534; }
+        .status-badge.near-expiry { background: #fef3c7; color: #92400e; }
+        .status-badge.expired { background: #fee2e2; color: #991b1b; }
+        .status-badge.released { background: #e0e7ff; color: #3730a3; }
 
         .detail-label { font-size: 0.68rem; font-weight: 850; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
         .detail-value { font-size: 0.95rem; color: var(--text); font-weight: 650; margin-bottom: 12px; line-height: 1.45; word-break: break-word; }
@@ -565,6 +600,38 @@
         }
         .view-bg-actions .btn-light {
             grid-column: 1 / -1;
+        }
+        .bg-release-btn {
+            background: #7c3aed;
+            border-color: #7c3aed;
+            color: #fff;
+            box-shadow: 0 12px 24px rgba(124, 58, 237, 0.18);
+        }
+        .bg-release-btn:hover {
+            background: #6d28d9;
+            border-color: #6d28d9;
+            color: #fff;
+        }
+        .report-section-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 0.75rem;
+        }
+        .report-check-card {
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background: #fbfdff;
+            padding: 0.85rem;
+            font-weight: 850;
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            min-height: 52px;
+        }
+        .report-check-card input {
+            width: 18px;
+            height: 18px;
+            flex: 0 0 auto;
         }
         .file-status-badge {
             border: 1px solid var(--line);
@@ -838,6 +905,10 @@
         </button>
         <div id="reportDropdownMenu" class="report-dropdown-menu hidden">
             <div class="report-dropdown-heading">Reports</div>
+            <button class="report-dropdown-item" type="button" onclick="openWorksDashboardFromMenu()">
+                <i class="fa-solid fa-layer-group bg-icon"></i>
+                <span>Works Dashboard</span>
+            </button>
             <button class="report-dropdown-item" type="button" onclick="openDevelopmentReportModalFromMenu()">
                 <i class="fa-solid fa-file-excel excel-icon"></i>
                 <span>Development Works</span>
@@ -846,6 +917,10 @@
                 <i class="fa-solid fa-building-shield bg-icon"></i>
                 <span>BG Details</span>
             </button>
+            <button class="report-dropdown-item" type="button" onclick="openBgPortalFromMenu()">
+                <i class="fa-solid fa-table-cells-large bg-icon"></i>
+                <span>BG Portal</span>
+            </button>
         </div>
     </div>
 </nav>
@@ -853,7 +928,7 @@
 <div class="container-fluid dashboard-shell">
 
     <!-- Stats Section -->
-    <div class="row g-3 mb-4">
+    <div id="statsSection" class="row g-3 mb-4">
         <div class="col-md col-6" onclick="filterData('All')">
             <div class="card card-stats p-3" data-filter="All" style="--stat-color: #64748b;">
                 <div class="stat-card-top">
@@ -912,7 +987,7 @@
     </div>
 
     <!-- Investment Banner -->
-    <div class="investment-banner p-4 p-md-5 mb-4 d-flex flex-column flex-md-row justify-content-between align-items-center gap-4">
+    <div id="investmentBanner" class="investment-banner p-4 p-md-5 mb-4 d-flex flex-column flex-md-row justify-content-between align-items-center gap-4">
         <div class="d-flex align-items-center gap-3">
             <span class="banner-icon"><i class="fa-solid fa-chart-line fs-4"></i></span>
             <div>
@@ -1126,11 +1201,51 @@
                 </div>
             </div>
             <div class="modal-footer border-0 p-4 pt-0 view-bg-actions">
+                <button type="button" class="btn btn-dark px-3 py-2" onclick="editCurrentBgDetails()">
+                    <i class="fa-solid fa-pen-to-square"></i><span>Edit BG Details</span>
+                </button>
+                <button type="button" class="btn bg-release-btn px-3 py-2" onclick="openReleaseBgModal()">
+                    <i class="fa-solid fa-lock-open"></i><span>Release BG</span>
+                </button>
                 <button type="button" class="btn bg-print-btn letter px-3 py-2" onclick="printBgDocument('letter', this)">
                     <i class="fa-solid fa-file-pdf"></i><span>Download BG Letter PDF</span>
                 </button>
                 <button type="button" class="btn bg-print-btn agreement px-3 py-2" onclick="printBgDocument('agreement', this)">
                     <i class="fa-solid fa-file-pdf"></i><span>Download Agreement PDF</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Release BG Modal -->
+<div class="modal fade" id="releaseBgModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg overflow-hidden">
+            <div class="modal-header border-0 px-4 pt-4 pb-2">
+                <div class="d-flex align-items-center gap-3">
+                    <span class="add-work-title-icon"><i class="fa-solid fa-lock-open"></i></span>
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark mb-0">Release BG</h5>
+                        <small class="text-secondary fw-semibold" id="releaseBgTenderLabel">BG Release</small>
+                    </div>
+                </div>
+                <button type="button" class="modal-close-red" data-bs-dismiss="modal" aria-label="Close">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="releaseBgForm" onsubmit="event.preventDefault(); saveReleaseBg();">
+                    <label class="detail-label" for="releaseBgDate">Release Date</label>
+                    <input id="releaseBgDate" name="releaseDate" type="date" class="edit-input" required>
+                    <label class="detail-label" for="releaseBgRemarks">Release Remarks</label>
+                    <textarea id="releaseBgRemarks" name="releaseRemarks" class="edit-input" rows="4" required></textarea>
+                </form>
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4 pt-0 justify-content-end">
+                <button type="button" class="btn btn-light fw-bold px-4" data-bs-dismiss="modal">Cancel</button>
+                <button id="saveReleaseBgBtn" type="button" class="btn bg-release-btn fw-bold px-4" onclick="saveReleaseBg()">
+                    <i class="fa-solid fa-lock-open me-2"></i>Release BG
                 </button>
             </div>
         </div>
@@ -1313,6 +1428,9 @@
             </div>
 
             <div class="modal-footer border-0 justify-content-center p-4 pt-0">
+                <button id="unlockBgFieldsBtn" type="button" class="btn btn-outline-primary unlock-fields-btn hidden" onclick="unlockLockedFields()" title="Unlock locked fields" aria-label="Unlock locked fields">
+                    <i class="fa-solid fa-key"></i>
+                </button>
                 <button id="submitPbgUploadBtn" type="button" class="btn btn-primary px-5 py-2 rounded-3 fw-bold" onclick="uploadPbgDetails()">
                     <i class="fa-solid fa-cloud-arrow-up me-2"></i>Save to BG Register
                 </button>
@@ -1440,6 +1558,23 @@
             </div>
 
             <div class="modal-body p-4">
+                <div class="report-option-card mb-3">
+                    <div class="detail-label">Sections</div>
+                    <div class="report-section-grid">
+                        <label class="report-check-card" for="bgReportAllSection">
+                            <input id="bgReportAllSection" type="checkbox" checked onchange="updateBgReportPreview()">
+                            <span>All BG</span>
+                        </label>
+                        <label class="report-check-card" for="bgReportBankSection">
+                            <input id="bgReportBankSection" type="checkbox" checked onchange="updateBgReportPreview()">
+                            <span>Bank Wise</span>
+                        </label>
+                        <label class="report-check-card" for="bgReportAgencySection">
+                            <input id="bgReportAgencySection" type="checkbox" checked onchange="updateBgReportPreview()">
+                            <span>Agency Wise</span>
+                        </label>
+                    </div>
+                </div>
                 <div class="small text-secondary" id="bgReportPreview"></div>
             </div>
 
@@ -1467,7 +1602,10 @@
     let pbgQuickImageFiles = [];
     let pbgQuickPdfFile = null;
     let pbgQuickPreviewUrls = [];
+    let currentPbgEditingExisting = false;
     let scannerReturnContext = 'form';
+    let currentAppView = 'works';
+    let bgPortalMap = {};
     let bgRegisterMap = {};
     let bgRegisterIndexLoaded = false;
     let bgRegisterIndexPromise = null;
@@ -2092,6 +2230,27 @@
         openDevelopmentReportModalFromMenu();
     }
 
+    function setDashboardChromeForView(view) {
+        const isBgPortal = view === 'bgPortal';
+        document.getElementById('statsSection')?.classList.toggle('hidden', isBgPortal);
+        document.getElementById('investmentBanner')?.classList.toggle('hidden', isBgPortal);
+        const addBtn = document.querySelector('.fab-add-work');
+        if (addBtn) addBtn.classList.toggle('hidden', isBgPortal);
+        document.getElementById('searchInput').placeholder = isBgPortal
+            ? 'Search tender ID, work, agency or bank...'
+            : 'Search ID, agency or work...';
+    }
+
+    function openWorksDashboardFromMenu() {
+        closeReportMenu();
+        currentAppView = 'works';
+        currentFilter = 'All';
+        setDashboardChromeForView('works');
+        document.getElementById('viewTitle').innerText = 'All Works';
+        setActiveFilter();
+        renderDeck();
+    }
+
     function openReportModal() {
         setDefaultReportFields();
         syncReportModeFields();
@@ -2100,11 +2259,59 @@
 
     function openBgReportModalFromMenu() {
         closeReportMenu();
-        const preview = document.getElementById('bgReportPreview');
-        if (preview) {
-            preview.innerText = `Report generated as on ${formatReportDateDisplay(new Date())}`;
-        }
+        updateBgReportPreview();
         showSubPageModal(document.getElementById('bgReportModal'));
+    }
+
+    async function openBgPortalFromMenu() {
+        closeReportMenu();
+        currentAppView = 'bgPortal';
+        currentFilter = 'All';
+        document.getElementById('loadingOverlay').classList.remove('hidden');
+        try {
+            bgPortalMap = await fetchBgReportMap();
+            document.getElementById('viewTitle').innerText = 'BG Portal';
+            setDashboardChromeForView('bgPortal');
+            setActiveFilter();
+            renderDeck();
+        } catch (e) {
+            console.error('BG Portal load failed', e);
+            alert(e.message || 'BG Portal load nahi ho paya.');
+        } finally {
+            document.getElementById('loadingOverlay').classList.add('hidden');
+        }
+    }
+
+    function getSelectedBgReportSections() {
+        return {
+            all: Boolean(document.getElementById('bgReportAllSection')?.checked),
+            bank: Boolean(document.getElementById('bgReportBankSection')?.checked),
+            agency: Boolean(document.getElementById('bgReportAgencySection')?.checked)
+        };
+    }
+
+    function getSelectedBgReportSectionNames(sections = getSelectedBgReportSections()) {
+        const names = [];
+        if (sections.all) names.push('All BG');
+        if (sections.bank) names.push('Bank Wise');
+        if (sections.agency) names.push('Agency Wise');
+        return names;
+    }
+
+    function requireSelectedBgReportSections() {
+        const sections = getSelectedBgReportSections();
+        if (!sections.all && !sections.bank && !sections.agency) {
+            throw new Error('Kam se kam ek BG report section select karo.');
+        }
+        return sections;
+    }
+
+    function updateBgReportPreview() {
+        const preview = document.getElementById('bgReportPreview');
+        if (!preview) return;
+        const selected = getSelectedBgReportSectionNames();
+        const sectionText = selected.length ? selected.join(', ') : 'No section selected';
+        preview.innerText = `Summary hamesha generate hogi. Selected sections: ${sectionText}. Report generated as on ${formatReportDateDisplay(new Date())}`;
     }
 
     function isPerformanceBgComplete(details) {
@@ -2188,7 +2395,10 @@
             bgNo: number,
             amount: parseCurrencyAmount(amount),
             amountDisplay: formatIndianNumber(parseCurrencyAmount(amount)),
-            validity
+            validity,
+            releaseStatus: base.releaseStatus || '',
+            releaseDate: formatBgReportDate(base.releaseDate) || '',
+            releaseRemarks: base.releaseRemarks || ''
         };
     }
 
@@ -2285,7 +2495,10 @@
                     addSubDate: details.addSubDate,
                     addValid: details.addValid,
                     additionalRequired,
-                    additionalSubmitted: additionalRequired && isAdditionalBgComplete(details)
+                    additionalSubmitted: additionalRequired && isAdditionalBgComplete(details),
+                    releaseStatus: details.releaseStatus || '',
+                    releaseDate: details.releaseDate || '',
+                    releaseRemarks: details.releaseRemarks || ''
                 };
             })
             .sort((a, b) => (a.workName || '').localeCompare(b.workName || '') || (a.tenderId || '').localeCompare(b.tenderId || ''));
@@ -2371,7 +2584,10 @@
             { header: 'BG Type', key: 'bgType' },
             { header: 'BG No.', key: 'bgNo' },
             { header: 'Amount', key: 'amount' },
-            { header: 'Validity', key: 'validity' }
+            { header: 'Validity', key: 'validity' },
+            { header: 'Release Status', key: 'releaseStatus' },
+            { header: 'Release Date', key: 'releaseDate' },
+            { header: 'Release Remarks', key: 'releaseRemarks' }
         ];
     }
 
@@ -2419,9 +2635,9 @@
             blockRows.forEach((entry, index) => {
                 if (entry.type === 'note') {
                     const rowIndex = rowOffset + rows.length;
-                    rows.push(['', '', '', '', '', entry.text, '', '', '']);
+                    rows.push(['', '', '', '', '', entry.text, '', '', '', '', '', '']);
                     noteRows.push(rowIndex);
-                    extraMerges.push({ s: { r: rowIndex, c: 5 }, e: { r: rowIndex, c: 8 } });
+                    extraMerges.push({ s: { r: rowIndex, c: 5 }, e: { r: rowIndex, c: 11 } });
                     return;
                 }
 
@@ -2435,7 +2651,10 @@
                     row.bgType,
                     row.bgNo,
                     row.amountDisplay,
-                    row.validity
+                    row.validity,
+                    row.releaseStatus,
+                    row.releaseDate,
+                    row.releaseRemarks
                 ]);
             });
 
@@ -2459,7 +2678,7 @@
             [title],
             headers,
             ...blockRows.rows,
-            ['Grand Total', '', '', '', '', '', '', formatIndianNumber(getBgBlocksTotal(blocks)), '']
+            ['Grand Total', '', '', '', '', '', '', formatIndianNumber(getBgBlocksTotal(blocks)), '', '', '', '']
         ];
         const totalRow = rows.length - 1;
         const ws = XLSX.utils.aoa_to_sheet(rows);
@@ -2510,12 +2729,12 @@
 
         groups.forEach(group => {
             const sectionRow = rows.length;
-            rows.push([group.name, '', '', '', '', '', '', '', '']);
+            rows.push([group.name, '', '', '', '', '', '', '', '', '', '', '']);
             sectionRows.push(sectionRow);
             extraMerges.push({ s: { r: sectionRow, c: 0 }, e: { r: sectionRow, c: headers.length - 1 } });
             if (group.branchName) {
                 const branchRow = rows.length;
-                rows.push([group.branchName, '', '', '', '', '', '', '', '']);
+                rows.push([group.branchName, '', '', '', '', '', '', '', '', '', '', '']);
                 sectionRows.push(branchRow);
                 extraMerges.push({ s: { r: branchRow, c: 0 }, e: { r: branchRow, c: headers.length - 1 } });
             }
@@ -2530,7 +2749,7 @@
             blockRows.extraMerges.forEach(merge => extraMerges.push(merge));
 
             const totalRow = rows.length;
-            rows.push([`${group.name} Total`, '', '', '', '', '', '', formatIndianNumber(getBgBlocksTotal(group.blocks)), '']);
+            rows.push([`${group.name} Total`, '', '', '', '', '', '', formatIndianNumber(getBgBlocksTotal(group.blocks)), '', '', '', '']);
             sectionRows.push(totalRow);
             extraMerges.push({ s: { r: totalRow, c: 0 }, e: { r: totalRow, c: 6 } });
         });
@@ -2821,6 +3040,8 @@
         if (isReportAmountKey(key)) return 19;
         if (normalizedHeader.includes("report type")) return 24;
         if (normalizedHeader.includes("count")) return 10;
+        if (normalizedHeader.includes("release remarks")) return 34;
+        if (normalizedHeader.includes("release")) return 18;
         return 22;
     }
 
@@ -3302,6 +3523,7 @@
 
         setBgReportButtonsLoading(true);
         try {
+            const sections = requireSelectedBgReportSections();
             const context = await buildBgReportContext();
             const bankGroups = groupBgBlocks(
                 context.detailBlocks,
@@ -3317,9 +3539,9 @@
 
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, makeBgSummaryWorksheet(context), 'Summary');
-            XLSX.utils.book_append_sheet(wb, makeBgDetailsWorksheet('All BG Details', context.detailBlocks, context), 'All BG Details');
-            XLSX.utils.book_append_sheet(wb, makeBgGroupedWorksheet('Bank Wise BG', bankGroups), 'Bank Wise BG');
-            XLSX.utils.book_append_sheet(wb, makeBgGroupedWorksheet('Agency Wise BG', agencyGroups), 'Agency Wise BG');
+            if (sections.all) XLSX.utils.book_append_sheet(wb, makeBgDetailsWorksheet('All BG Details', context.detailBlocks, context), 'All BG Details');
+            if (sections.bank) XLSX.utils.book_append_sheet(wb, makeBgGroupedWorksheet('Bank Wise BG', bankGroups), 'Bank Wise BG');
+            if (sections.agency) XLSX.utils.book_append_sheet(wb, makeBgGroupedWorksheet('Agency Wise BG', agencyGroups), 'Agency Wise BG');
             XLSX.writeFile(wb, `${context.fileBase}.xlsx`);
         } catch (e) {
             console.error('BG XLSX report failed', e);
@@ -3351,7 +3573,7 @@
                 if (entry.type === 'note') {
                     body.push([
                         ...workCells,
-                        { content: entry.text, colSpan: 4, styles: { fontStyle: 'italic', halign: 'center', textColor: [124, 90, 0], fillColor: [255, 242, 204] } }
+                        { content: entry.text, colSpan: 7, styles: { fontStyle: 'italic', halign: 'center', textColor: [124, 90, 0], fillColor: [255, 242, 204] } }
                     ]);
                     return;
                 }
@@ -3362,7 +3584,10 @@
                     row.bgType,
                     row.bgNo,
                     row.amountDisplay,
-                    row.validity
+                    row.validity,
+                    row.releaseStatus,
+                    row.releaseDate,
+                    row.releaseRemarks
                 ]);
             });
             sr += 1;
@@ -3372,6 +3597,9 @@
             body.push([
                 { content: totalLabel, colSpan: 7, styles: { fontStyle: 'bold', halign: 'right', fillColor: [15, 118, 110], textColor: [255, 255, 255] } },
                 { content: formatIndianNumber(getBgBlocksTotal(blocks)), styles: { fontStyle: 'bold', halign: 'right', fillColor: [15, 118, 110], textColor: [255, 255, 255] } },
+                { content: '', styles: { fillColor: [15, 118, 110] } },
+                { content: '', styles: { fillColor: [15, 118, 110] } },
+                { content: '', styles: { fillColor: [15, 118, 110] } },
                 { content: '', styles: { fillColor: [15, 118, 110] } }
             ]);
         }
@@ -3381,15 +3609,18 @@
 
     function getBgPdfColumnStyles() {
         return {
-            0: { cellWidth: 10, halign: 'center' },
-            1: { cellWidth: 58 },
-            2: { cellWidth: 25 },
-            3: { cellWidth: 34 },
-            4: { cellWidth: 28 },
-            5: { cellWidth: 28 },
-            6: { cellWidth: 25 },
-            7: { cellWidth: 24, halign: 'right' },
-            8: { cellWidth: 34, halign: 'center' }
+            0: { cellWidth: 8, halign: 'center' },
+            1: { cellWidth: 45 },
+            2: { cellWidth: 22 },
+            3: { cellWidth: 28 },
+            4: { cellWidth: 24 },
+            5: { cellWidth: 24 },
+            6: { cellWidth: 20 },
+            7: { cellWidth: 20, halign: 'right' },
+            8: { cellWidth: 28, halign: 'center' },
+            9: { cellWidth: 18, halign: 'center' },
+            10: { cellWidth: 20, halign: 'center' },
+            11: { cellWidth: 24 }
         };
     }
 
@@ -3514,6 +3745,7 @@
 
         setBgReportButtonsLoading(true);
         try {
+            const sections = requireSelectedBgReportSections();
             const context = await buildBgReportContext();
             const bankGroups = groupBgBlocks(
                 context.detailBlocks,
@@ -3554,12 +3786,18 @@
                 headingX: 44
             });
 
-            y = startNewPdfSection(doc, 'landscape');
-            y = drawBgPdfTable(doc, 'All BG Details', context.detailBlocks, y, context.reportTitle);
-            y = startNewPdfSection(doc, 'landscape');
-            y = drawBgPdfGroupedTables(doc, 'Bank Wise BG', bankGroups, y, context.reportTitle, { forceGroupPageBreak: true });
-            y = startNewPdfSection(doc, 'landscape');
-            drawBgPdfGroupedTables(doc, 'Agency Wise BG', agencyGroups, y, context.reportTitle);
+            if (sections.all) {
+                y = startNewPdfSection(doc, 'landscape');
+                y = drawBgPdfTable(doc, 'All BG Details', context.detailBlocks, y, context.reportTitle);
+            }
+            if (sections.bank) {
+                y = startNewPdfSection(doc, 'landscape');
+                y = drawBgPdfGroupedTables(doc, 'Bank Wise BG', bankGroups, y, context.reportTitle, { forceGroupPageBreak: true });
+            }
+            if (sections.agency) {
+                y = startNewPdfSection(doc, 'landscape');
+                drawBgPdfGroupedTables(doc, 'Agency Wise BG', agencyGroups, y, context.reportTitle);
+            }
 
             doc.save(`${context.fileBase}.pdf`);
         } catch (e) {
@@ -3772,8 +4010,10 @@
 
         if (isBgDetailsComplete(details, item)) {
             bgRegisterMap[key] = details;
+            if (currentAppView === 'bgPortal' || bgPortalMap[key]) bgPortalMap[key] = details;
         } else {
             delete bgRegisterMap[key];
+            if (bgPortalMap[key]) delete bgPortalMap[key];
         }
     }
 
@@ -3852,6 +4092,132 @@
         return filtered;
     }
 
+    function isBgReleased(details) {
+        return String(details?.releaseStatus || '').trim().toLowerCase() === 'released';
+    }
+
+    function getBgStatusInfo(details) {
+        if (isBgReleased(details)) {
+            return { label: 'Released', className: 'released' };
+        }
+
+        const dates = [parseReportDate(details?.pbgValid)];
+        if (String(details?.addValid || '').trim()) dates.push(parseReportDate(details.addValid));
+        const validDates = dates.filter(Boolean).sort((a, b) => a - b);
+        const endDate = validDates[0] || null;
+        if (!endDate) return { label: 'Valid', className: 'valid' };
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        endDate.setHours(0, 0, 0, 0);
+        const daysLeft = Math.ceil((endDate - today) / 86400000);
+
+        if (daysLeft < 0) return { label: 'Expired', className: 'expired' };
+        if (daysLeft <= 30) return { label: 'Near Expiry', className: 'near-expiry' };
+        return { label: 'Valid', className: 'valid' };
+    }
+
+    function getBgPortalItems() {
+        const query = document.getElementById('searchInput').value.toLowerCase().trim();
+        const workByTender = new Map((Array.isArray(masterData) ? masterData : [])
+            .map(item => [String(getTenderId(item) || '').trim(), item])
+            .filter(([tenderId]) => tenderId));
+
+        let items = Object.values(bgPortalMap || {})
+            .filter(isPerformanceBgComplete)
+            .map(details => {
+                const tenderId = String(details.tenderId || '').trim();
+                const item = workByTender.get(tenderId) || null;
+                const merged = {
+                    ...details,
+                    workName: details.workName || (item ? getWorkName(item) : ''),
+                    agencyName: details.agencyName || (item ? getAgencyName(item) : ''),
+                    tenderId
+                };
+                merged.statusInfo = getBgStatusInfo(merged);
+                return merged;
+            })
+            .sort((a, b) => (a.bankName || '').localeCompare(b.bankName || '') || (a.workName || '').localeCompare(b.workName || ''));
+
+        if (currentFilter && currentFilter !== 'All') {
+            const wanted = String(currentFilter).toLowerCase();
+            items = items.filter(details => details.statusInfo.label.toLowerCase() === wanted);
+        }
+
+        if (query) {
+            items = items.filter(details => [
+                details.tenderId,
+                details.workName,
+                details.agencyName,
+                details.bankName,
+                details.pbgAmt,
+                details.addAmt,
+                details.statusInfo.label
+            ].join(' ').toLowerCase().includes(query));
+        }
+
+        return items;
+    }
+
+    function createBgPortalCard(details) {
+        const status = details.statusInfo || getBgStatusInfo(details);
+        const card = document.createElement('div');
+        card.className = 'col-md-6 col-lg-4';
+        card.innerHTML = `
+            <div class="card work-card">
+                <div class="card-body p-4">
+                    <div class="bg-bank-heading">${escapeHtml(String(details.bankName || 'Unknown Bank').toUpperCase())}</div>
+                    <div class="work-card-header">
+                        <span class="tender-chip">#${escapeHtml(details.tenderId || '-')}</span>
+                        <span class="status-badge ${escapeHtml(status.className)}">${escapeHtml(status.label)}</span>
+                    </div>
+                    <h6 class="work-title fw-bold text-dark mb-3 lh-base">${escapeHtml(details.workName || 'Untitled Work')}</h6>
+
+                    <div class="work-meta">
+                        <div class="meta-row">
+                            <span class="meta-icon agency"><i class="fa-solid fa-building-user"></i></span>
+                            <div class="meta-text text-truncate">${escapeHtml(details.agencyName || 'Not Assigned')}</div>
+                        </div>
+
+                        <div class="meta-row">
+                            <span class="meta-icon date"><i class="fa-solid fa-building-columns"></i></span>
+                            <div class="meta-text text-truncate">${escapeHtml(details.bankName || 'Unknown Bank')}</div>
+                        </div>
+                    </div>
+
+                    <div class="bg-card-amounts">
+                        <div class="bg-card-amount">
+                            <div class="detail-label">PBG Amount</div>
+                            <div class="bg-card-amount-value">${escapeHtml(formatCurrency(details.pbgAmt))}</div>
+                        </div>
+                        <div class="bg-card-amount">
+                            <div class="detail-label">Additional PBG</div>
+                            <div class="bg-card-amount-value">${escapeHtml(details.addAmt ? formatCurrency(details.addAmt) : `${RUPEE}0.00`)}</div>
+                        </div>
+                    </div>
+
+                    <div class="work-footer mt-3">
+                        <div>
+                            <div class="detail-label" style="color:var(--accent); margin-bottom: 2px;">Valid Upto</div>
+                            <div class="fw-bold text-primary">${escapeHtml(details.addValid || details.pbgValid || '-')}</div>
+                        </div>
+                        <button type="button" class="arrow-pill edit-card-btn" title="Edit BG details" aria-label="Edit BG details"><i class="fa fa-edit"></i></button>
+                    </div>
+                </div>
+            </div>`;
+
+        card.querySelector('.work-card').addEventListener('click', () => {
+            currentTenderId = details.tenderId;
+            openStoredBgDetails(details);
+        });
+        card.querySelector('.edit-card-btn').addEventListener('click', event => {
+            event.stopPropagation();
+            currentTenderId = details.tenderId;
+            openPbgUploadForm(details);
+        });
+        return card;
+    }
+
     function createWorkCard(item) {
         const statusStr = (item.computedStatus || "").toUpperCase();
         const allowedBadges = ["UNDER DLP", "IN PROGRESS", "YET TO BE ALLOTTED", "LIVE TENDER"];
@@ -3905,6 +4271,16 @@
     function renderDeck() {
         const deck = document.getElementById('workDeck');
         deck.innerHTML = '';
+        if (currentAppView === 'bgPortal') {
+            const bgItems = getBgPortalItems();
+            if (!bgItems.length) {
+                deck.innerHTML = `<div class="col-12"><div class="empty-state">No BG found</div></div>`;
+                return;
+            }
+            bgItems.forEach(details => deck.appendChild(createBgPortalCard(details)));
+            return;
+        }
+
         const filtered = getVisibleData();
 
         if (!filtered.length) {
@@ -4011,17 +4387,23 @@
             return;
         }
 
-        document.querySelectorAll('#editForm .field-edit[readonly]').forEach(input => {
+        document.querySelectorAll('#editForm .field-edit[readonly], #pbgUploadForm .edit-input[readonly]').forEach(input => {
             input.removeAttribute('readonly');
             input.classList.add('unlocked-field');
         });
         updateUnlockButtonState();
+        updateBgUploadUnlockButtonState();
         bootstrap.Modal.getOrCreateInstance(pinModal).hide();
     }
 
     function filterData(f) {
+        if (currentAppView === 'bgPortal' && !['All', 'Valid', 'Near Expiry', 'Expired', 'Released'].includes(f)) {
+            f = 'All';
+        }
         currentFilter = f;
-        document.getElementById('viewTitle').innerText = (f === 'All') ? "All Works" : f;
+        document.getElementById('viewTitle').innerText = currentAppView === 'bgPortal'
+            ? (f === 'All' ? 'BG Portal' : `BG Portal - ${f}`)
+            : ((f === 'All') ? "All Works" : f);
         setActiveFilter();
         renderDeck();
     }
@@ -4291,6 +4673,7 @@
     }
 
     function openStoredBgDetails(details) {
+        currentTenderId = details.tenderId || currentTenderId;
         document.getElementById('viewBgTenderLabel').innerText = `Tender ID: ${details.tenderId || '-'}`;
         const content = document.getElementById('viewBgContent');
         const rows = [
@@ -4305,6 +4688,9 @@
             ['Additional PBG Submission Date', details.addSubDate || '-'],
             ['Additional PBG Valid Upto', details.addValid || '-'],
             ['Bank Name', details.bankName],
+            ['Release Status', details.releaseStatus || '-'],
+            ['Release Date', details.releaseDate || '-'],
+            ['Release Remarks', details.releaseRemarks || '-'],
             ['File Name', details.fileName]
         ];
 
@@ -4335,6 +4721,78 @@
         showSubPageModal(document.getElementById('viewBgDetailsModal'), { replaceOpen: true });
     }
 
+    async function editCurrentBgDetails() {
+        const item = masterData.find(d => getTenderId(d) == currentTenderId);
+        let details = null;
+        if (item) details = await getBgRegisterDetails(currentTenderId, item);
+        details = details || bgPortalMap[String(currentTenderId || '').trim()] || null;
+        if (!details) {
+            alert('BG details not found');
+            return;
+        }
+        openPbgUploadForm(details);
+    }
+
+    async function openReleaseBgModal() {
+        const tenderId = String(currentTenderId || '').trim();
+        if (!tenderId) {
+            alert('Tender ID missing');
+            return;
+        }
+        const details = bgPortalMap[tenderId] || bgRegisterMap[tenderId] || {};
+        document.getElementById('releaseBgTenderLabel').innerText = `Tender ID: ${tenderId}`;
+        document.getElementById('releaseBgDate').value = formatDateInputValue(details.releaseDate) || toDateInputValue(new Date());
+        document.getElementById('releaseBgRemarks').value = details.releaseRemarks || '';
+        showSubPageModal(document.getElementById('releaseBgModal'), {
+            replaceOpen: false,
+            keepIds: ['viewBgDetailsModal']
+        });
+    }
+
+    async function saveReleaseBg() {
+        const form = document.getElementById('releaseBgForm');
+        if (!form.reportValidity()) return;
+
+        const tenderId = String(currentTenderId || '').trim();
+        if (!tenderId) {
+            alert('Tender ID missing');
+            return;
+        }
+
+        const btn = document.getElementById('saveReleaseBgBtn');
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Releasing...';
+
+        try {
+            const resp = await postJson({
+                method: 'releaseBg',
+                tenderId,
+                releaseDate: toRegisterDate(document.getElementById('releaseBgDate').value),
+                releaseRemarks: document.getElementById('releaseBgRemarks').value.trim()
+            });
+
+            if (!isSuccessResponse(resp) || !resp.details) {
+                throw new Error(resp?.message || resp?.error || 'BG release save nahi ho paya.');
+            }
+
+            bgRegisterMap[tenderId] = resp.details;
+            bgPortalMap[tenderId] = resp.details;
+            const releaseModalEl = document.getElementById('releaseBgModal');
+            releaseModalEl.addEventListener('hidden.bs.modal', () => {
+                openStoredBgDetails(resp.details);
+                renderDeck();
+            }, { once: true });
+            bootstrap.Modal.getOrCreateInstance(releaseModalEl).hide();
+        } catch (e) {
+            console.error('BG release failed', e);
+            alert(e.message || 'BG release save nahi ho paya.');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        }
+    }
+
     function toRegisterDate(value) {
         if (!value || typeof value !== "string") return value || "";
 
@@ -4356,6 +4814,48 @@
             input.required = show;
             if (!show && id !== 'addAmt') input.value = '';
         });
+    }
+
+    function updateBgUploadUnlockButtonState() {
+        const unlockBtn = document.getElementById('unlockBgFieldsBtn');
+        if (!unlockBtn) return;
+        const hasLockedFields = currentPbgEditingExisting && Boolean(document.querySelector('#pbgUploadForm .edit-input[readonly]'));
+        unlockBtn.classList.toggle('hidden', !hasLockedFields);
+    }
+
+    function setPbgUploadFieldLocks(enabled) {
+        currentPbgEditingExisting = enabled;
+        const lockableIds = [
+            'pbgWorkName',
+            'pbgTenderId',
+            'pbgAgencyName',
+            'pbgAmt',
+            'pbgNo',
+            'pbgSubDate',
+            'pbgValid',
+            'addAmt',
+            'addNo',
+            'addSubDate',
+            'addValid',
+            'bankName'
+        ];
+
+        lockableIds.forEach(id => {
+            const input = document.getElementById(id);
+            if (!input) return;
+            input.classList.remove('unlocked-field');
+            const hasValue = String(input.value || '').trim() !== '';
+            if (enabled && hasValue) {
+                input.setAttribute('readonly', 'readonly');
+            } else {
+                input.removeAttribute('readonly');
+            }
+        });
+
+        document.getElementById('pbgWorkName').readOnly = true;
+        document.getElementById('pbgTenderId').readOnly = true;
+        document.getElementById('pbgAgencyName').readOnly = true;
+        updateBgUploadUnlockButtonState();
     }
 
     function safeFilePart(value) {
@@ -4524,6 +5024,16 @@
         document.getElementById('addSubDate').value = formatDateInputValue(details.addSubDate);
         document.getElementById('addValid').value = formatDateInputValue(details.addValid);
         document.getElementById('bankName').value = details.bankName || '';
+        if (details.fileUrl || details.fileName) {
+            setPbgPhotoState(
+                details.fileUrl || details.fileName,
+                '',
+                '',
+                'Existing document saved',
+                'Add Document only if document needs replacement',
+                ''
+            );
+        }
     }
 
     function openPbgUploadForm(prefillDetails = null) {
@@ -4555,6 +5065,7 @@
         setPbgPhotoState('', '', '', 'No document selected', '', '');
         setAdditionalPbgVisibility(bg.additional > 0);
         fillPbgUploadFormFromDetails(prefillDetails);
+        setPbgUploadFieldLocks(Boolean(prefillDetails));
 
         showSubPageModal(document.getElementById('pbgUploadModal'), {
             replaceOpen: true,
@@ -4710,6 +5221,10 @@
                 fileData,
                 fileMimeType
             };
+            const existingRelease = bgPortalMap[String(payload.tenderId || '').trim()] || bgRegisterMap[String(payload.tenderId || '').trim()] || {};
+            payload.releaseStatus = existingRelease.releaseStatus || payload.releaseStatus || '';
+            payload.releaseDate = existingRelease.releaseDate || payload.releaseDate || '';
+            payload.releaseRemarks = existingRelease.releaseRemarks || payload.releaseRemarks || '';
 
             const resp = await postJson({
                 method: 'uploadToRegister',
@@ -4751,8 +5266,12 @@
         payload.pbgValid = toRegisterDate(payload.pbgValid);
         payload.addSubDate = toRegisterDate(payload.addSubDate);
         payload.addValid = toRegisterDate(payload.addValid);
+        const existingRelease = bgPortalMap[String(payload.tenderId || '').trim()] || bgRegisterMap[String(payload.tenderId || '').trim()] || {};
+        payload.releaseStatus = existingRelease.releaseStatus || '';
+        payload.releaseDate = existingRelease.releaseDate || '';
+        payload.releaseRemarks = existingRelease.releaseRemarks || '';
 
-        if (!payload.fileName || !payload.fileData) {
+        if (!payload.fileName || (!payload.fileData && !/^https?:\/\//i.test(payload.fileName))) {
             alert("Please add PBG document");
             return;
         }
