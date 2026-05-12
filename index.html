@@ -4766,6 +4766,17 @@
         pinInput.value = '';
         pinError.innerText = '';
         document.getElementById('pinUnlockTitle').innerText = 'Please enter security key to continue';
+
+        const viewModal = document.getElementById('viewBgDetailsModal');
+        if (viewModal?.classList.contains('show')) {
+            viewModal.dataset.skipHistoryBack = '1';
+            viewModal.addEventListener('hidden.bs.modal', () => {
+                setTimeout(() => showPinUnlockModal(pinModal), 100);
+            }, { once: true });
+            hideModalElement(viewModal);
+            return;
+        }
+
         showPinUnlockModal(pinModal);
     }
 
