@@ -451,6 +451,8 @@
         .pin-unlock-dialog { max-width: 360px; margin-left: auto; margin-right: auto; }
         .modal.show .pin-unlock-dialog { transform: translateY(-8vh); }
         .pin-unlock-error { min-height: 1.25rem; font-size: 0.82rem; font-weight: 700; color: var(--danger); }
+        #pinUnlockModal { z-index: 20010; }
+        .modal-backdrop.pin-unlock-backdrop { z-index: 20000; }
 
         .btn { border-radius: var(--radius) !important; }
         .fab-add-work {
@@ -4727,6 +4729,19 @@
         unlockBtn.classList.toggle('hidden', !hasLockedFields);
     }
 
+    function showPinUnlockModal(pinModal) {
+        pinModal.addEventListener('shown.bs.modal', () => {
+            const backdrops = Array.from(document.querySelectorAll('.modal-backdrop'));
+            backdrops.at(-1)?.classList.add('pin-unlock-backdrop');
+        }, { once: true });
+        pinModal.addEventListener('hidden.bs.modal', () => {
+            document.querySelectorAll('.pin-unlock-backdrop').forEach(backdrop => {
+                backdrop.classList.remove('pin-unlock-backdrop');
+            });
+        }, { once: true });
+        bootstrap.Modal.getOrCreateInstance(pinModal).show();
+    }
+
     function unlockLockedFields() {
         const pinInput = document.getElementById('pinUnlockInput');
         const pinError = document.getElementById('pinUnlockError');
@@ -4737,7 +4752,7 @@
         pinInput.value = '';
         pinError.innerText = '';
         document.getElementById('pinUnlockTitle').innerText = 'Please enter security key to continue';
-        bootstrap.Modal.getOrCreateInstance(pinModal).show();
+        showPinUnlockModal(pinModal);
     }
 
     function requestForceBgEditUnlock(details) {
@@ -4751,7 +4766,7 @@
         pinInput.value = '';
         pinError.innerText = '';
         document.getElementById('pinUnlockTitle').innerText = 'Please enter security key to continue';
-        bootstrap.Modal.getOrCreateInstance(pinModal).show();
+        showPinUnlockModal(pinModal);
     }
 
     function confirmPinUnlock() {
