@@ -1885,16 +1885,30 @@
     window.onload = initApp;
 
     async function initApp() {
-        initModalGestureLock();
-        initSwipeBackGesture();
-        initPinUnlockModal();
-        const hasCachedData = hydrateMasterDataFromCache();
-        await fetchData({ silent: hasCachedData });
-        await loadBgRegisterIndex();
-        seedBgPortalMapFromRegister();
-        startBgPortalPreload().catch(() => {});
-        if (window.location.hash === '#add-work') {
-            openAddWorkModal();
+        try {
+            initModalGestureLock();
+            initSwipeBackGesture();
+            initPinUnlockModal();
+            const hasCachedData = hydrateMasterDataFromCache();
+            await fetchData({ silent: hasCachedData, timeoutMs: hasCachedData ? 10000 : 12000 });
+            loadBgRegisterIndex().then(() => {
+                seedBgPortalMapFromRegister();
+                startBgPortalPreload().catch(() => {});
+            }).catch(e => {
+                console.error('BG register startup load failed', e);
+            });
+            if (window.location.hash === '#add-work') {
+                openAddWorkModal();
+            }
+        } catch (e) {
+            console.error('Startup failed', e);
+            if (!masterData.length) {
+                hydrateMasterDataFromCache();
+                if (!masterData.length) updateDashboard();
+            }
+            showAppToast('Startup slow hai. Cached/empty dashboard dikha rahe hain.', 3600);
+        } finally {
+            document.getElementById('loadingOverlay')?.classList.add('hidden');
         }
     }
 
@@ -2187,15 +2201,18 @@
     }
 
     async function fetchData(options = {}) {
-        const { silent = false, forceOverlay = false } = options;
+        const { silent = false, forceOverlay = false, timeoutMs = 12000 } = options;
         if (masterDataRefreshPromise && silent) return masterDataRefreshPromise;
 
         const shouldShowOverlay = forceOverlay || (!silent && !masterData.length);
         if (shouldShowOverlay) document.getElementById('loadingOverlay').classList.remove('hidden');
 
         const refresh = (async () => {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), timeoutMs);
             try {
-                const res = await fetch(SCRIPT_URL);
+                const res = await fetch(SCRIPT_URL, { signal: controller.signal });
+                if (!res.ok) throw new Error(`Data request failed: ${res.status}`);
                 const result = await res.json();
                 masterData = Array.isArray(result.data) ? result.data.map(applyComputedStatusRules) : masterData;
                 writeStoredMasterData();
@@ -2208,6 +2225,7 @@
                 }
                 if (!silent) showAppToast('Data refresh failed. Cached data dikha rahe hain.', 3200);
             } finally {
+                clearTimeout(timer);
                 if (shouldShowOverlay) document.getElementById('loadingOverlay').classList.add('hidden');
                 masterDataRefreshPromise = null;
             }
