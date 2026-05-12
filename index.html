@@ -265,6 +265,11 @@
             border-radius: var(--radius);
             box-shadow: var(--shadow-sm);
             padding: 1rem;
+            position: sticky;
+            top: calc(70px + 0.75rem);
+            z-index: 900;
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
         }
         .search-wrap { position: relative; }
         .search-wrap i {
@@ -904,6 +909,7 @@
 
         @media (max-width: 768px) {
             .dashboard-shell { padding-top: 1rem; }
+            .toolbar-panel { top: calc(64px + 0.6rem); }
             .investment-banner { align-items: stretch !important; }
             .metric-panel { min-width: 100%; }
             .bg-header-actions { width: 100%; margin-left: 0; }
@@ -923,7 +929,7 @@
             .report-menu-btn { width: 40px; height: 40px; }
             .fab-add-work { width: 56px; height: 56px; }
             .status-badge { font-size: 0.6rem; padding: 5px 9px; }
-            .toolbar-panel { padding: 0.85rem; }
+            .toolbar-panel { padding: 0.85rem; top: calc(61px + 0.5rem); }
             #pbgUploadModal .modal-dialog { margin: 0.75rem; }
             #pbgUploadModal .modal-body,
             #pbgUploadModal .modal-header,
@@ -1813,7 +1819,9 @@
     let pendingPinAction = null;
     let pendingForceBgDetails = null;
     let appToastTimer = null;
+    let masterDataRefreshPromise = null;
     const BG_REGISTER_STORE_KEY = 'dadriworksBgRegisterDetails';
+    const MASTER_DATA_STORE_KEY = 'dadriworksMasterData';
     const RUPEE = String.fromCharCode(8377);
     const MAJOR_WORK_THRESHOLD = 10000000;
     const MAJOR_WORK_FILL = "FFF2CC";
@@ -1880,7 +1888,8 @@
         initModalGestureLock();
         initSwipeBackGesture();
         initPinUnlockModal();
-        await fetchData();
+        const hasCachedData = hydrateMasterDataFromCache();
+        await fetchData({ silent: hasCachedData });
         await loadBgRegisterIndex();
         seedBgPortalMapFromRegister();
         startBgPortalPreload().catch(() => {});
@@ -2151,20 +2160,115 @@
         });
     }
 
-    async function fetchData() {
-        document.getElementById('loadingOverlay').classList.remove('hidden');
+    function readStoredMasterData() {
         try {
-            const res = await fetch(SCRIPT_URL);
-            const result = await res.json();
-            masterData = Array.isArray(result.data) ? result.data.map(applyComputedStatusRules) : [];
-            updateDashboard();
+            const cached = JSON.parse(localStorage.getItem(MASTER_DATA_STORE_KEY) || '[]');
+            return Array.isArray(cached) ? cached : [];
         } catch (e) {
-            console.error("Sync Error", e);
-            masterData = [];
-            updateDashboard();
-        } finally {
-            document.getElementById('loadingOverlay').classList.add('hidden');
+            console.warn('Master data cache read failed', e);
+            return [];
         }
+    }
+
+    function writeStoredMasterData(data = masterData) {
+        try {
+            localStorage.setItem(MASTER_DATA_STORE_KEY, JSON.stringify(Array.isArray(data) ? data : []));
+        } catch (e) {
+            console.warn('Master data cache write failed', e);
+        }
+    }
+
+    function hydrateMasterDataFromCache() {
+        const cachedData = readStoredMasterData();
+        if (!cachedData.length) return false;
+        masterData = cachedData.map(applyComputedStatusRules);
+        updateDashboard();
+        return true;
+    }
+
+    async function fetchData(options = {}) {
+        const { silent = false, forceOverlay = false } = options;
+        if (masterDataRefreshPromise && silent) return masterDataRefreshPromise;
+
+        const shouldShowOverlay = forceOverlay || (!silent && !masterData.length);
+        if (shouldShowOverlay) document.getElementById('loadingOverlay').classList.remove('hidden');
+
+        const refresh = (async () => {
+            try {
+                const res = await fetch(SCRIPT_URL);
+                const result = await res.json();
+                masterData = Array.isArray(result.data) ? result.data.map(applyComputedStatusRules) : masterData;
+                writeStoredMasterData();
+                updateDashboard();
+            } catch (e) {
+                console.error("Sync Error", e);
+                if (!masterData.length) {
+                    hydrateMasterDataFromCache();
+                    if (!masterData.length) updateDashboard();
+                }
+                if (!silent) showAppToast('Data refresh failed. Cached data dikha rahe hain.', 3200);
+            } finally {
+                if (shouldShowOverlay) document.getElementById('loadingOverlay').classList.add('hidden');
+                masterDataRefreshPromise = null;
+            }
+
+            return masterData;
+        })();
+
+        masterDataRefreshPromise = refresh;
+        return refresh;
+    }
+
+    function refreshDataInBackground() {
+        return fetchData({ silent: true }).catch(e => {
+            console.error('Background refresh failed', e);
+        });
+    }
+
+    function upsertLocalWork(payload, options = {}) {
+        const { temporary = false, fallbackTenderId = '' } = options;
+        const normalizedPayload = normalizePayloadDates(payload);
+        const tenderId = String(normalizedPayload.tenderId || normalizedPayload.E_TENDERID || normalizedPayload.E_TenderID || fallbackTenderId || '').trim();
+        const rowPayload = { ...normalizedPayload };
+        if (!Object.prototype.hasOwnProperty.call(payload, 'tenderId')) delete rowPayload.tenderId;
+        if (Object.prototype.hasOwnProperty.call(rowPayload, 'tenderId') && !Object.keys(masterData[0] || {}).includes('tenderId')) {
+            delete rowPayload.tenderId;
+        }
+        const index = masterData.findIndex(item => String(getTenderId(item) || '').trim() === tenderId);
+
+        let nextItem;
+        if (index >= 0) {
+            nextItem = applyComputedStatusRules({ ...masterData[index], ...rowPayload });
+            masterData[index] = nextItem;
+        } else {
+            nextItem = applyComputedStatusRules({
+                ...rowPayload,
+                E_TENDERID: rowPayload.E_TENDERID || rowPayload.E_TenderID || tenderId,
+                rowIndex: temporary ? `pending-${Date.now()}` : ''
+            });
+            masterData = [nextItem, ...masterData];
+        }
+
+        writeStoredMasterData();
+        updateDashboard();
+        return { item: nextItem, index, tenderId };
+    }
+
+    function removeLocalWorkByTenderId(tenderId, fallbackItem = null) {
+        const key = String(tenderId || '').trim();
+        masterData = masterData.filter(item => {
+            if (key && String(getTenderId(item) || '').trim() === key) return false;
+            return fallbackItem ? item !== fallbackItem : true;
+        });
+        writeStoredMasterData();
+        updateDashboard();
+    }
+
+    function restoreLocalWorkAt(index, item) {
+        if (!item || index < 0) return;
+        masterData[index] = item;
+        writeStoredMasterData();
+        updateDashboard();
     }
 
     function escapeHtml(value) {
@@ -6066,30 +6170,36 @@
         }
 
         const addBtn = document.getElementById('addSaveBtn');
+        const originalHtml = addBtn.innerHTML;
         addBtn.disabled = true;
         addBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Adding...';
-        document.getElementById('loadingOverlay').classList.remove('hidden');
 
-        try {
-            const resp = await postJson({
-                method: 'addWork',
-                rowData: buildAddRowData(payload)
-            });
+        const normalizedPayload = normalizePayloadDates(payload);
+        const localPayload = { ...normalizedPayload };
+        const localTenderId = String(localPayload.E_TENDERID || localPayload.E_TenderID || localPayload.tenderId || '').trim();
+        if (!localPayload.E_TENDERID && localTenderId) localPayload.E_TENDERID = localTenderId;
+        const localInsert = upsertLocalWork(localPayload, { temporary: true });
+        bootstrap.Modal.getInstance(document.getElementById('addWorkModal'))?.hide();
+        showAppToast('Work added. Sheet sync background mein chal raha hai.');
 
-            if (isSuccessResponse(resp)) {
-                bootstrap.Modal.getInstance(document.getElementById('addWorkModal')).hide();
-                await fetchData();
-            } else {
-                alert(resp?.message || resp?.error || "Add Work Failed");
+        postJson({
+            method: 'addWork',
+            rowData: buildAddRowData(payload)
+        }).then(resp => {
+            if (!isSuccessResponse(resp)) {
+                throw new Error(resp?.message || resp?.error || "Add Work Failed");
             }
-        } catch (e) {
+            showAppToast('Work synced to sheet.');
+            refreshDataInBackground();
+        }).catch(e => {
             console.error("Add failed", e);
-            alert("Add Work Failed");
-        } finally {
-            document.getElementById('loadingOverlay').classList.add('hidden');
+            removeLocalWorkByTenderId(localTenderId || localInsert.tenderId, localInsert.item);
+            showAppToast(e.message || 'Add Work Failed. Local change hata diya.', 4200);
+            alert(e.message || "Add Work Failed");
+        }).finally(() => {
             addBtn.disabled = false;
-            addBtn.innerHTML = '<i class="fa-solid fa-plus me-2"></i>Add Work';
-        }
+            addBtn.innerHTML = originalHtml;
+        });
     }
 
     async function shareWorkDetails() {
@@ -6137,21 +6247,33 @@
 
     async function saveDetails() {
         const payload = { tenderId: currentTenderId, ...collectFormPayload('editForm') };
-        document.getElementById('loadingOverlay').classList.remove('hidden');
-        try {
-            const resp = await postJson({ action: 'updateWork', details: payload });
-            if (isSuccessResponse(resp)) {
-                await fetchData();
-                bootstrap.Modal.getInstance(document.getElementById('workModal')).hide();
-            } else {
-                alert(resp?.message || resp?.error || "Update Failed");
+        const saveBtn = document.getElementById('saveBtn');
+        const originalHtml = saveBtn.innerHTML;
+        const existingIndex = masterData.findIndex(item => String(getTenderId(item) || '').trim() === String(currentTenderId || '').trim());
+        const previousItem = existingIndex >= 0 ? { ...masterData[existingIndex] } : null;
+
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
+
+        upsertLocalWork(payload, { fallbackTenderId: currentTenderId });
+        bootstrap.Modal.getInstance(document.getElementById('workModal'))?.hide();
+        showAppToast('Saved locally. Sheet sync background mein chal raha hai.');
+
+        postJson({ action: 'updateWork', details: payload }).then(resp => {
+            if (!isSuccessResponse(resp)) {
+                throw new Error(resp?.message || resp?.error || "Update Failed");
             }
-        } catch (e) {
+            showAppToast('Work synced to sheet.');
+            refreshDataInBackground();
+        }).catch(e => {
             console.error("Update failed", e);
-            alert("Update Failed");
-        } finally {
-            document.getElementById('loadingOverlay').classList.add('hidden');
-        }
+            if (previousItem) restoreLocalWorkAt(existingIndex, previousItem);
+            showAppToast(e.message || 'Update failed. Local change wapas kar diya.', 4200);
+            alert(e.message || "Update Failed");
+        }).finally(() => {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalHtml;
+        });
     }
 </script>
 <!-- ===== CAMERA PDF MODAL ===== -->

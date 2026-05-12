@@ -1,4 +1,4 @@
-const CACHE_NAME = "dadriworks-v19";
+const CACHE_NAME = "dadriworks-v20";
 
 const CORE_ASSETS = [
   "./",
