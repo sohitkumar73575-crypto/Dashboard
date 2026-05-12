@@ -2772,7 +2772,7 @@
         if (!preview) return;
         const selected = getSelectedBgReportSectionNames();
         const sectionText = selected.length ? selected.join(', ') : 'No section selected';
-        preview.innerText = `Summary hamesha generate hogi. Selected sections: ${sectionText}. Report generated as on ${formatReportDateDisplay(new Date())}`;
+        preview.innerText = `Selected sections: ${sectionText}. Report generated as on ${formatReportDateDisplay(new Date())}`;
     }
 
     function isPerformanceBgComplete(details) {
@@ -2926,7 +2926,7 @@
             return resp.bgRegisterMap;
         }
 
-        throw new Error(resp?.message || resp?.error || 'BG report data load nahi ho paya.');
+        throw new Error(resp?.message || resp?.error || 'BG report data load failed.');
     }
 
     async function buildBgReportContext() {
@@ -2972,7 +2972,7 @@
             .sort((a, b) => (a.workName || '').localeCompare(b.workName || '') || (a.tenderId || '').localeCompare(b.tenderId || ''));
 
         if (!works.length) {
-            throw new Error('Performance BG submitted works report ke liye available nahi hain.');
+            throw new Error('Performance BG not available for submitted works .');
         }
 
         const detailBlocks = [];
@@ -3011,7 +3011,7 @@
                 missingAdditionalCount += 1;
                 rows.push({
                     type: 'note',
-                    text: 'Additional BG not submitted for this work',
+                    text: 'N/A',
                     work
                 });
             }
@@ -3700,7 +3700,7 @@
 
     function buildReportContext() {
         if (!masterData.length) {
-            throw new Error('Report banane ke liye data available nahi hai.');
+            throw new Error('No Data Available.');
         }
 
         const range = getReportRange();
@@ -3717,7 +3717,7 @@
 
     function downloadWorksReportXlsx() {
         if (!window.XLSX) {
-            alert('XLSX library load nahi hui. Internet/CDN check karke dobara try karo.');
+            alert('Please check Internet/CDN connection and try again.');
             return;
         }
 
@@ -3725,7 +3725,7 @@
         try {
             context = buildReportContext();
         } catch (e) {
-            alert(e.message || 'Report duration check karo.');
+            alert(e.message || 'Check Report Duration.');
             return;
         }
 
@@ -3895,12 +3895,12 @@
         try {
             context = buildReportContext();
         } catch (e) {
-            alert(e.message || 'Report duration check karo.');
+            alert(e.message || 'Check Report Duration.');
             return;
         }
 
         if (!window.jspdf || !window.jspdf.jsPDF || !window.jspdf.jsPDF.API.autoTable) {
-            alert('PDF table library load nahi hui. Internet/CDN check karke dobara try karo.');
+            alert('PDF table not loaded. check Internet/CDN.');
             return;
         }
 
@@ -3985,7 +3985,7 @@
 
     async function downloadBgReportXlsx() {
         if (!window.XLSX) {
-            alert('XLSX library load nahi hui. Internet/CDN check karke dobara try karo.');
+            alert('Check Internet/CDN and retry.');
             return;
         }
 
@@ -4270,7 +4270,7 @@
             doc.save(`${context.fileBase}.pdf`);
         } catch (e) {
             console.error('BG PDF report failed', e);
-            alert(e.message || 'BG report generate nahi ho payi.');
+            alert(e.message || 'BG report generation failed.');
         } finally {
             setBgReportButtonsLoading(false);
         }
@@ -4422,7 +4422,7 @@
 
     function openPdfFromUrl(url) {
         const win = window.open(url, '_blank', 'noopener');
-        if (!win) alert('Popup blocked. Browser mein popups allow karke dobara try karo.');
+        if (!win) alert('Popup blocked.');
     }
 
     function readStoredBgRegisterDetails() {
