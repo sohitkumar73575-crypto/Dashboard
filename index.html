@@ -2154,7 +2154,7 @@
         try {
             const res = await fetch(SCRIPT_URL);
             const result = await res.json();
-            masterData = Array.isArray(result.data) ? result.data : [];
+            masterData = Array.isArray(result.data) ? result.data.map(applyComputedStatusRules) : [];
             updateDashboard();
         } catch (e) {
             console.error("Sync Error", e);
@@ -2344,6 +2344,60 @@
 
     function isDateInRange(date, startDate, endDate) {
         return Boolean(date && date >= startDate && date <= endDate);
+    }
+
+    function parseDlpDays(value) {
+        const match = String(value ?? '').match(/\d+/);
+        return match ? Number(match[0]) : 0;
+    }
+
+    function addDays(date, days) {
+        if (!(date instanceof Date) || isNaN(date.getTime())) return null;
+        const result = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        result.setDate(result.getDate() + Number(days || 0));
+        return result;
+    }
+
+    function getTodayDateOnly() {
+        const now = new Date();
+        return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    }
+
+    function getDlpEndDate(item) {
+        const completionDate = getReportDate(item, "Completion_Date");
+        const dlpDays = parseDlpDays(getReportValue(item, "DLP"));
+        return completionDate && dlpDays > 0 ? addDays(completionDate, dlpDays) : null;
+    }
+
+    function isWorkUnderDlp(item, asOfDate = getTodayDateOnly()) {
+        const completionDate = getReportDate(item, "Completion_Date");
+        const dlpEndDate = getDlpEndDate(item);
+        return Boolean(completionDate && dlpEndDate && completionDate <= asOfDate && dlpEndDate >= asOfDate);
+    }
+
+    function applyComputedStatusRules(item) {
+        if (!item || typeof item !== 'object') return item;
+        const normalized = { ...item };
+        const today = getTodayDateOnly();
+        const publishDate = getReportDate(normalized, "T_PUB_DATE");
+        const bidSubDate = getReportDate(normalized, "T_BIDSUB_END_DATE");
+        const allotDate = getReportDate(normalized, "Allotement_Date");
+        const completionDate = getReportDate(normalized, "Completion_Date");
+        const endDate = getReportDate(normalized, "Agreement End Date");
+
+        if (publishDate && publishDate <= today && bidSubDate && bidSubDate > today) {
+            normalized.computedStatus = 'Live Tender';
+        } else if (bidSubDate && bidSubDate < today && !getReportValue(normalized, "Allotement_Date")) {
+            normalized.computedStatus = 'Yet to be Allotted';
+        } else if (isWorkUnderDlp(normalized, today)) {
+            normalized.computedStatus = 'Under DLP';
+        } else if (allotDate && allotDate <= today && !completionDate && endDate && endDate > today) {
+            normalized.computedStatus = 'In Progress';
+        } else {
+            normalized.computedStatus = 'Other';
+        }
+
+        return normalized;
     }
 
     function doesDateRangeOverlap(startA, endA, startB, endB) {
@@ -4222,11 +4276,21 @@
 
     function downloadPdfFromUrl(url, fileName) {
         const downloadUrl = getDriveDownloadUrl(url);
+        const isDriveUrl = Boolean(getDriveFileId(url));
+
+        if (isDriveUrl) {
+            const frame = document.createElement('iframe');
+            frame.style.display = 'none';
+            frame.src = downloadUrl;
+            document.body.appendChild(frame);
+            setTimeout(() => frame.remove(), 30000);
+            return;
+        }
+
         const link = document.createElement('a');
         link.href = downloadUrl;
         link.download = fileName;
-        link.target = '_blank';
-        link.rel = 'noopener';
+        link.target = '_self';
         document.body.appendChild(link);
         link.click();
         link.remove();
@@ -4707,7 +4771,9 @@
             pendingPinAction = null;
             pendingForceBgDetails = null;
             const modalInstance = bootstrap.Modal.getOrCreateInstance(pinModal);
-            pinModal.addEventListener('hidden.bs.modal', () => openPbgUploadForm(details, { unlockEditable: true }), { once: true });
+            pinModal.addEventListener('hidden.bs.modal', () => {
+                setTimeout(() => openPbgUploadForm(details, { unlockEditable: true }), 150);
+            }, { once: true });
             modalInstance.hide();
             return;
         }
@@ -5656,21 +5722,28 @@
     function openPbgUploadForm(prefillDetails = null, options = {}) {
         const item = masterData.find(d => getTenderId(d) == currentTenderId);
 
-        if (!item) {
+        if (!item && !prefillDetails) {
             alert("Work details not found");
             return;
         }
 
-        const bg = calculateBgForItem(item);
+        const bg = item
+            ? calculateBgForItem(item)
+            : {
+                agency: prefillDetails?.agencyName || '',
+                quotedAmt: true,
+                pbg: parseCurrencyAmount(prefillDetails?.pbgAmt) || prefillDetails?.pbgAmt || '',
+                additional: parseCurrencyAmount(prefillDetails?.addAmt) || 0
+            };
 
-        if (!bg.agency || !bg.quotedAmt) {
+        if (!prefillDetails && (!bg.agency || !bg.quotedAmt)) {
             alert("Please generate LOA first");
             return;
         }
 
         document.getElementById('pbgUploadForm').reset();
-        document.getElementById('pbgWorkName').value = getWorkName(item);
-        document.getElementById('pbgTenderId').value = getTenderId(item);
+        document.getElementById('pbgWorkName').value = item ? getWorkName(item) : prefillDetails?.workName || '';
+        document.getElementById('pbgTenderId').value = item ? getTenderId(item) : prefillDetails?.tenderId || currentTenderId || '';
         document.getElementById('pbgAgencyName').value = bg.agency || '';
         document.getElementById('pbgWorkName').readOnly = true;
         document.getElementById('pbgTenderId').readOnly = true;
