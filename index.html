@@ -1140,6 +1140,10 @@
                     <i class="fa-solid fa-building-shield bg-icon"></i>
                     <span>BG Register</span>
                 </button>
+                <button class="report-dropdown-item" type="button" onclick="downloadOverdueWorksReportPdf()">
+                    <i class="fa-solid fa-triangle-exclamation text-danger"></i>
+                    <span>Overdue Works</span>
+                </button>
             </div>
         </div>
     </div>
@@ -1426,10 +1430,10 @@
                 </div>
             </div>
             <div id="viewBgActions" class="modal-footer border-0 p-4 pt-0 view-bg-actions hidden">
-                <button type="button" class="btn btn-dark icon-action-btn" onclick="editCurrentBgDetails()" title="Force edit" aria-label="Force edit">
+                <button id="viewBgForceEditBtn" type="button" class="btn btn-dark icon-action-btn" onclick="editCurrentBgDetails()" title="Force edit" aria-label="Force edit">
                     <i class="fa-solid fa-key"></i>
                 </button>
-                <button type="button" class="btn bg-release-btn icon-action-btn" onclick="openReleaseBgModal()" title="Release BG" aria-label="Release BG">
+                <button id="viewBgReleaseBtn" type="button" class="btn bg-release-btn icon-action-btn" onclick="openReleaseBgModal()" title="Release BG" aria-label="Release BG">
                     <i class="fa-solid fa-lock-open"></i>
                 </button>
             </div>
@@ -1956,6 +1960,9 @@
     const REPORT_KEY_ALIASES = {
         "Allotement_Date": ["Allotment Date", "Allotted Date", "Alloted Date", "Allotment_Date"],
         "Admin Approval_Date": ["Admin_Approval_Date", "Admin Approval Date", "Admin Approved Date"],
+        "Agreement Start Date": ["Agreement_Start_Date", "Agreement Start_Date", "AGREEMENT_START_DATE"],
+        "Agreement End Date": ["Agreement_End_Date", "Agreement End_Date", "AGREEMENT_END_DATE"],
+        "Revised_End Date(if any)": ["Revised End Date", "Revised_End_Date", "Revised End_Date", "REVISED_END_DATE", "Revised Agreement End Date"],
         "T_PUB_DATE": ["Tender Publish Date", "Publish Date", "Tender Publish_Date"],
         "T_BID_OPEN_DATE": ["Tender Bid Open Date", "Bid Open Date", "Tender Opening Date"],
         "Completion_Date": ["Completion Date", "Completed Date"],
@@ -2198,19 +2205,18 @@
     }
 
     function handleAuthError(message = 'Admin key required') {
-        clearSensitiveSession({ clearMaster: true });
+        setAdminKey('');
         setSyncStatus('error', message);
         showAppToast(message, 3200);
     }
 
     function requestNeedsAdminKey(body = {}) {
         const action = body.method || body.action || '';
+        if (body.forceEdit === true) return true;
         return [
             'calculateAndStore',
-            'uploadToRegister',
             'releaseBg',
-            'addWork',
-            'updateWork'
+            'addWork'
         ].includes(action);
     }
 
@@ -4346,6 +4352,95 @@
         doc.save(`${context.fileBase}.pdf`);
     }
 
+    function getOverdueEffectiveDueDate(item) {
+        const revisedDate = getReportDate(item, "Revised_End Date(if any)");
+        return revisedDate || getReportDate(item, "Agreement End Date");
+    }
+
+    function getOverdueWorks(asOfDate = getTodayDateOnly()) {
+        return (Array.isArray(masterData) ? masterData : [])
+            .map(item => {
+                const tenderId = String(getTenderId(item) || '').trim();
+                const completionDate = getReportDate(item, "Completion_Date");
+                const effectiveDueDate = getOverdueEffectiveDueDate(item);
+                const daysOverdue = effectiveDueDate
+                    ? Math.floor((asOfDate - effectiveDueDate) / 86400000)
+                    : 0;
+                return { item, tenderId, completionDate, effectiveDueDate, daysOverdue };
+            })
+            .filter(entry => entry.tenderId && !entry.completionDate && entry.effectiveDueDate && entry.daysOverdue > 0)
+            .sort((a, b) => b.daysOverdue - a.daysOverdue || String(getWorkName(a.item)).localeCompare(String(getWorkName(b.item))));
+    }
+
+    function buildOverdueReportRows(entries) {
+        return entries.map((entry, index) => {
+            const item = entry.item;
+            return {
+                sr: index + 1,
+                workName: getReportValue(item, "Work_Name") || getWorkName(item),
+                tenderId: entry.tenderId,
+                agency: getReportValue(item, "Agency_Name") || getAgencyName(item),
+                allotmentDate: formatReportDateDisplay(getReportDate(item, "Allotement_Date")),
+                agreementStartDate: formatReportDateDisplay(getReportDate(item, "Agreement Start Date")),
+                agreementEndDate: formatReportDateDisplay(getReportDate(item, "Agreement End Date")),
+                revisedEndDate: formatReportDateDisplay(getReportDate(item, "Revised_End Date(if any)")),
+                effectiveDueDate: formatReportDateDisplay(entry.effectiveDueDate),
+                daysOverdue: entry.daysOverdue,
+                agreementAmount: getReportCellValue(item, "Agreement Amount")
+            };
+        });
+    }
+
+    async function downloadOverdueWorksReportPdf() {
+        try {
+            await ensurePdfReportLibraries();
+        } catch (e) {
+            alert(e.message || 'PDF report library could not be loaded.');
+            return;
+        }
+
+        const asOfDate = getTodayDateOnly();
+        const entries = getOverdueWorks(asOfDate);
+        const reportTitle = `MC Dadri Overdue Works Report As On ${formatReportDateDisplay(asOfDate)}`;
+        const fileBase = `MC_Dadri_Overdue_Works_Report_${toDateInputValue(asOfDate)}`;
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+        if (!entries.length) {
+            drawReportPdfTitle(doc, reportTitle);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(13);
+            doc.setTextColor(15, 36, 61);
+            doc.text(`No overdue works found as on ${formatReportDateDisplay(asOfDate)}.`, 148.5, 42, { align: 'center' });
+            doc.save(`${fileBase}.pdf`);
+            return;
+        }
+
+        const rows = buildOverdueReportRows(entries);
+        drawPdfAutoTable(doc, "Overdue Works", [
+            { header: "Sr No.", dataKey: "sr", sourceKey: "sr" },
+            { header: "Work Name", dataKey: "workName", sourceKey: "Work_Name" },
+            { header: "E-Tender ID", dataKey: "tenderId", sourceKey: "E_TENDERID" },
+            { header: "Agency Name", dataKey: "agency", sourceKey: "Agency_Name" },
+            { header: "Allotment Date", dataKey: "allotmentDate", sourceKey: "Allotement_Date" },
+            { header: "Agreement Start Date", dataKey: "agreementStartDate", sourceKey: "Agreement Start Date" },
+            { header: "Agreement End Date", dataKey: "agreementEndDate", sourceKey: "Agreement End Date" },
+            { header: "Revised End Date, If Any", dataKey: "revisedEndDate", sourceKey: "Revised_End Date(if any)" },
+            { header: "Effective Due Date", dataKey: "effectiveDueDate", sourceKey: "Agreement End Date" },
+            { header: "Days Overdue", dataKey: "daysOverdue", sourceKey: "sr" },
+            { header: "Agreement Amount", dataKey: "agreementAmount", sourceKey: "Agreement Amount" }
+        ], rows, {
+            startY: 24,
+            reportTitle,
+            fontSize: 6.4,
+            headFontSize: 6.2,
+            marginLeft: 6,
+            marginRight: 6
+        });
+
+        doc.save(`${fileBase}.pdf`);
+    }
+
     function setBgReportButtonsLoading(loading) {
         ['bgReportXlsxBtn', 'bgReportPdfBtn'].forEach(id => {
             const btn = document.getElementById(id);
@@ -5178,9 +5273,9 @@
             if (skip.includes(key.toLowerCase())) continue;
 
             const rawValue = item[key] !== undefined && item[key] !== null ? item[key] : "";
-            const isLocked = (rawValue !== "" && rawValue !== "-" && rawValue !== "0" && rawValue !== "0.00") ? "readonly" : "";
+            const isLocked = (rawValue !== "" && rawValue !== "-") ? "readonly" : "";
             const { inputType, extraAttrs, inputValue } = getInputConfig(key, rawValue);
-            const viewValue = isCostKey(key) ? formatWorkAmount(key, item[key]) : escapeHtml(rawValue || '-');
+            const viewValue = isCostKey(key) ? formatWorkAmount(key, item[key]) : escapeHtml(rawValue === "" ? '-' : rawValue);
 
             container.innerHTML += `
                 <div class="col-md-4 col-sm-6">
@@ -5422,9 +5517,10 @@
         if (needsAdminKey && !adminKey) return { status: 'auth_error', message: 'Admin key required' };
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), timeoutMs);
+        const requestBodyBase = { ...body };
 
         try {
-            const requestBody = needsAdminKey ? { ...body, adminKey } : body;
+            const requestBody = needsAdminKey ? { ...requestBodyBase, adminKey } : requestBodyBase;
             const res = await fetch(SCRIPT_URL, {
                 method: 'POST',
                 body: JSON.stringify(requestBody),
@@ -5924,7 +6020,13 @@
             uploadFileBtn.classList.remove('hidden');
         }
 
-        document.getElementById('viewBgActions').classList.toggle('hidden', currentBgDetailsSource !== 'bgPortal');
+        const bgReleased = isBgReleased(details);
+        const actions = document.getElementById('viewBgActions');
+        const forceEditBtn = document.getElementById('viewBgForceEditBtn');
+        const releaseBtn = document.getElementById('viewBgReleaseBtn');
+        actions.classList.toggle('hidden', currentBgDetailsSource !== 'bgPortal' || bgReleased);
+        if (forceEditBtn) forceEditBtn.classList.toggle('hidden', bgReleased);
+        if (releaseBtn) releaseBtn.classList.toggle('hidden', bgReleased);
         showSubPageModal(document.getElementById('viewBgDetailsModal'), { replaceOpen: true });
     }
 
@@ -5935,6 +6037,10 @@
         details = details || bgPortalMap[String(currentTenderId || '').trim()] || null;
         if (!details) {
             alert('BG details not found');
+            return;
+        }
+        if (isBgReleased(details)) {
+            showAppToast('BG already released. Details are view only.', 3200);
             return;
         }
         requestForceBgEditUnlock(details);
@@ -6642,6 +6748,7 @@
 
         const btn = document.getElementById('submitPbgUploadBtn');
         const originalHtml = btn.innerHTML;
+        const forceEdit = Boolean(document.querySelector('#pbgUploadForm .edit-input.unlocked-field'));
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Uploading...';
 
@@ -6649,7 +6756,8 @@
         try {
             const resp = await postJson({
                 method: 'uploadToRegister',
-                formData: payload
+                formData: payload,
+                forceEdit
             }, 90000);
             if (!isSuccessResponse(resp)) {
                 throw new Error(resp?.message || resp?.error || 'PBG upload failed');
@@ -6766,6 +6874,7 @@
 
     async function saveDetails() {
         const payload = { tenderId: currentTenderId, ...collectFormPayload('editForm') };
+        const forceEdit = Boolean(document.querySelector('#editForm .field-edit.unlocked-field'));
         const saveBtn = document.getElementById('saveBtn');
         const originalHtml = saveBtn.innerHTML;
         const existingIndex = masterData.findIndex(item => String(getTenderId(item) || '').trim() === String(currentTenderId || '').trim());
@@ -6778,7 +6887,7 @@
         bootstrap.Modal.getInstance(document.getElementById('workModal'))?.hide();
         showAppToast('Saved locally. Syncing sheet...');
 
-        postJson({ action: 'updateWork', details: payload }).then(resp => {
+        postJson({ action: 'updateWork', details: payload, forceEdit }).then(resp => {
             if (!isSuccessResponse(resp)) {
                 throw new Error(resp?.message || resp?.error || "Update failed.");
             }
