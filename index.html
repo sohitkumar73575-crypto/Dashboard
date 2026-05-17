@@ -5343,25 +5343,17 @@
         }
 
         try {
-            let resp = await requestLetterPdf(isAgreement, tenderId);
-            if (!isSuccessResponse(resp) && isCompleteBgDetailsServerError(resp?.message || resp?.error) && isBgDetailsComplete(details, item) && !hasAdditionalBg(details)) {
-                await syncNormalizedBgDetailsForLetter(details, item);
-                resp = await requestLetterPdf(isAgreement, tenderId);
-            }
-
-            if (!isSuccessResponse(resp) || !resp.pdfUrl) {
-                throw new Error(resp?.message || resp?.error || 'The PDF could not be generated.');
-            }
-
+            const resp = await generateLetterPdfWithRepair({
+                isAgreement,
+                tenderId,
+                details,
+                item
+            });
             const fileName = `${isAgreement ? 'Agreement' : 'BG_Letter'}_${tenderId}.pdf`;
             downloadPdfFromUrl(resp.pdfUrl, fileName);
         } catch (e) {
             console.error('PDF download failed', e);
-            if (isCompleteBgDetailsServerError(e) && isBgDetailsComplete(details, item) && !hasAdditionalBg(details)) {
-                alert('BG details were updated. Please try generating the document again.');
-            } else {
-                alert(e.message || 'The PDF could not be generated or downloaded.');
-            }
+            alert(e.message || 'The PDF could not be generated or downloaded.');
         } finally {
             if (btn) {
                 btn.disabled = false;
@@ -5482,6 +5474,10 @@
         return /complete\s+bg\s+details\s+first/i.test(String(error?.message || error || ''));
     }
 
+    function wait(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
     async function syncNormalizedBgDetailsForLetter(details, item) {
         const normalized = normalizeBgDetailsForAdditionalRequirement(details, item);
         if (!normalized || !isBgDetailsComplete(normalized, item) || hasAdditionalBg(normalized)) return normalized;
@@ -5489,6 +5485,7 @@
 
         const payload = { ...normalized };
         payload.fileUrl = payload.fileUrl || (/^https?:\/\//i.test(payload.fileName || '') ? payload.fileName : '');
+        setBgRegisterDetails(payload.tenderId, payload, item);
         const resp = await postJson({
             method: 'uploadToRegister',
             formData: payload
@@ -5500,6 +5497,8 @@
                 fileName: resp.fileUrl || resp.fileLink || payload.fileName || ''
             };
             setBgRegisterDetails(saved.tenderId, saved, item);
+            await wait(900);
+            await loadBgRegisterIndex(true);
             return bgRegisterMap[String(saved.tenderId || '').trim()] || saved;
         }
         return normalized;
@@ -5507,6 +5506,37 @@
 
     async function requestLetterPdf(isAgreement, tenderId) {
         return postJson({ method: isAgreement ? 'generateAgreementPdf' : 'generateBgLetterPdf', tenderId }, 90000);
+    }
+
+    async function generateLetterPdfWithRepair({ isAgreement, tenderId, details, item, onStatus }) {
+        let normalized = normalizeBgDetailsForAdditionalRequirement(details, item);
+        setBgRegisterDetails(tenderId, normalized, item);
+        const canRepairZeroAdditional = isBgDetailsComplete(normalized, item) && !hasAdditionalBg(normalized);
+        let lastResp = null;
+
+        for (let attempt = 1; attempt <= 3; attempt += 1) {
+            if (attempt > 1) {
+                onStatus?.(`Generating PDF... (${attempt}/3)`);
+                await wait(700 * attempt);
+            }
+
+            lastResp = await requestLetterPdf(isAgreement, tenderId);
+            if (isSuccessResponse(lastResp) && lastResp.pdfUrl) return lastResp;
+
+            if (!canRepairZeroAdditional || !isCompleteBgDetailsServerError(lastResp?.message || lastResp?.error)) {
+                break;
+            }
+
+            onStatus?.('Updating BG details...');
+            normalized = await syncNormalizedBgDetailsForLetter(normalized, item);
+            onStatus?.('Generating PDF...');
+        }
+
+        if (canRepairZeroAdditional && isCompleteBgDetailsServerError(lastResp?.message || lastResp?.error)) {
+            throw new Error('The saved PBG details are complete, but the server is still asking for Additional PBG details. Please update the Apps Script validation to ignore Additional PBG when the amount is zero.');
+        }
+
+        throw new Error(lastResp?.message || lastResp?.error || 'The PDF could not be generated.');
     }
 
     async function generateSelectedLetter(type, triggerButton) {
@@ -5537,26 +5567,19 @@
         status.innerText = 'Generating PDF...';
 
         try {
-            let resp = await requestLetterPdf(isAgreement, tenderId);
-            if (!isSuccessResponse(resp) && isCompleteBgDetailsServerError(resp?.message || resp?.error) && isBgDetailsComplete(details, item) && !hasAdditionalBg(details)) {
-                status.innerText = 'Updating BG details...';
-                await syncNormalizedBgDetailsForLetter(details, item);
-                status.innerText = 'Generating PDF...';
-                resp = await requestLetterPdf(isAgreement, tenderId);
-            }
-            if (!isSuccessResponse(resp) || !resp.pdfUrl) {
-                throw new Error(resp?.message || resp?.error || 'The PDF could not be generated.');
-            }
+            const resp = await generateLetterPdfWithRepair({
+                isAgreement,
+                tenderId,
+                details,
+                item,
+                onStatus: message => { status.innerText = message; }
+            });
             const fileName = `${isAgreement ? 'Agreement' : 'BG_Letter'}_${tenderId}.pdf`;
             downloadPdfFromUrl(resp.pdfUrl, fileName);
             status.innerText = 'Download started.';
         } catch (e) {
             console.error('Letter download failed', e);
-            if (isCompleteBgDetailsServerError(e) && isBgDetailsComplete(details, item) && !hasAdditionalBg(details)) {
-                status.innerText = 'BG details were updated. Please try generating the document again.';
-            } else {
-                status.innerText = e.message || 'The PDF could not be generated or downloaded.';
-            }
+            status.innerText = e.message || 'The PDF could not be generated or downloaded.';
         } finally {
             btn.disabled = false;
             btn.innerHTML = originalHtml;
