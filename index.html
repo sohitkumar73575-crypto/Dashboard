@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MC Charkhi Dadri | Work Management System</title>
-    <meta name="theme-color" content="#162033">
+    <meta name="theme-color" content="#0b1f33">
     <meta name="application-name" content="DadriWorks">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,26 +14,24 @@
     <link rel="apple-touch-icon" href="./icons/dadri-work-192.png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.4/jspdf.plugin.autotable.min.js"></script>
     <style>
         :root {
-            --primary: #10243d;
-            --primary-2: #1c3857;
-            --accent: #0f6ecb;
+            --primary: #0b1f33;
+            --primary-2: #123452;
+            --accent: #0e7490;
             --accent-2: #0f766e;
-            --warning: #c77700;
-            --danger: #c9342f;
-            --success: #16a34a;
-            --bg: #eef4f8;
+            --action: #2563eb;
+            --warning: #b7791f;
+            --danger: #dc2626;
+            --success: #059669;
+            --bg: #edf6f9;
             --surface: #ffffff;
-            --surface-soft: #f6f9fc;
-            --line: #d4e1ee;
-            --text: #111827;
-            --muted: #5d6d80;
-            --shadow-sm: 0 10px 24px rgba(16, 36, 61, 0.07);
-            --shadow-md: 0 20px 48px rgba(16, 36, 61, 0.14);
+            --surface-soft: #f7fbfd;
+            --line: #cfe0ea;
+            --text: #102033;
+            --muted: #607286;
+            --shadow-sm: 0 10px 24px rgba(11, 31, 51, 0.08);
+            --shadow-md: 0 20px 48px rgba(11, 31, 51, 0.15);
             --radius: 8px;
         }
 
@@ -41,7 +39,8 @@
         html { overscroll-behavior-x: none; }
         body {
             background:
-                linear-gradient(180deg, #e7f0f7 0%, var(--bg) 300px, #f8fbfd 100%);
+                radial-gradient(circle at top left, rgba(14, 116, 144, 0.12), transparent 320px),
+                linear-gradient(180deg, #e4f2f7 0%, var(--bg) 320px, #f8fcfd 100%);
             font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
             color: var(--text);
             overflow-x: hidden;
@@ -50,10 +49,10 @@
         }
 
         .navbar {
-            background: rgba(16, 36, 61, 0.96);
+            background: linear-gradient(135deg, rgba(11, 31, 51, 0.98), rgba(18, 52, 82, 0.98));
             backdrop-filter: blur(16px);
             padding: 0.85rem clamp(1rem, 4vw, 3rem);
-            box-shadow: 0 1px 0 rgba(255,255,255,0.08), 0 12px 28px rgba(15,23,42,0.18);
+            box-shadow: 0 1px 0 rgba(255,255,255,0.08), 0 14px 30px rgba(11,31,51,0.22);
             position: sticky;
             top: 0;
             z-index: 1000;
@@ -75,15 +74,15 @@
             width: 42px;
             height: 42px;
             border-radius: var(--radius);
-            background: #e0f2fe;
-            color: #0369a1;
+            background: #d9f3f6;
+            color: var(--accent);
             display: inline-flex;
             align-items: center;
             justify-content: center;
             box-shadow: inset 0 0 0 1px rgba(255,255,255,0.5);
             flex: 0 0 auto;
         }
-        .brand-kicker { color: #9fb2c8; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; }
+        .brand-kicker { color: #a7c6d8; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; }
         .brand-title { line-height: 1.1; }
         .navbar-actions {
             display: flex;
@@ -154,7 +153,7 @@
         }
         .report-dropdown-item:hover,
         .report-dropdown-item:focus {
-            background: #f1f5f9;
+            background: #eef7fa;
             outline: none;
         }
         .report-submenu {
@@ -189,11 +188,38 @@
             margin: 0 auto;
             padding: 1.35rem clamp(1rem, 3vw, 2.5rem) 3rem;
         }
+        .btn-primary {
+            --bs-btn-bg: var(--action);
+            --bs-btn-border-color: var(--action);
+            --bs-btn-hover-bg: #1d4ed8;
+            --bs-btn-hover-border-color: #1d4ed8;
+            --bs-btn-active-bg: #1e40af;
+            --bs-btn-active-border-color: #1e40af;
+            box-shadow: 0 12px 24px rgba(37, 99, 235, 0.16);
+        }
+        .btn-info {
+            --bs-btn-bg: var(--accent);
+            --bs-btn-border-color: var(--accent);
+            --bs-btn-hover-bg: #0f6475;
+            --bs-btn-hover-border-color: #0f6475;
+        }
+        .btn-success {
+            --bs-btn-bg: var(--success);
+            --bs-btn-border-color: var(--success);
+            --bs-btn-hover-bg: #047857;
+            --bs-btn-hover-border-color: #047857;
+        }
+        .btn-danger {
+            --bs-btn-bg: var(--danger);
+            --bs-btn-border-color: var(--danger);
+            --bs-btn-hover-bg: #b91c1c;
+            --bs-btn-hover-border-color: #b91c1c;
+        }
 
         .card-stats {
             border: 1px solid var(--line);
             border-radius: var(--radius);
-            background: rgba(255,255,255,0.92);
+            background: rgba(255,255,255,0.96);
             transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
             cursor: pointer;
             position: relative;
@@ -208,8 +234,8 @@
             width: 4px;
             background: var(--stat-color, var(--accent));
         }
-        .card-stats:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); border-color: rgba(37,99,235,0.35); }
-        .card-stats.active { border-color: rgba(37,99,235,0.5); box-shadow: 0 0 0 4px rgba(37,99,235,0.09), var(--shadow-sm); }
+        .card-stats:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); border-color: rgba(14,116,144,0.38); }
+        .card-stats.active { border-color: rgba(14,116,144,0.5); box-shadow: 0 0 0 4px rgba(14,116,144,0.1), var(--shadow-sm); }
         .stat-card-top { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; }
         .stat-icon {
             width: 36px;
@@ -504,7 +530,33 @@
             box-shadow: var(--shadow-sm);
         }
 
-        #loadingOverlay { position: fixed; inset: 0; background: rgba(248,250,252,0.94); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; backdrop-filter: blur(12px); }
+        #loadingOverlay { position: fixed; inset: 0; background: rgba(248,252,253,0.94); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; backdrop-filter: blur(12px); }
+        .sync-status {
+            position: fixed;
+            right: clamp(1rem, 3vw, 2rem);
+            bottom: 20px;
+            z-index: 2500;
+            min-height: 42px;
+            max-width: min(360px, calc(100vw - 2rem));
+            display: inline-flex;
+            align-items: center;
+            gap: 0.65rem;
+            border: 1px solid rgba(14, 116, 144, 0.22);
+            border-radius: 999px;
+            background: rgba(255,255,255,0.96);
+            color: var(--primary);
+            padding: 0.65rem 0.9rem;
+            font-size: 0.86rem;
+            font-weight: 850;
+            box-shadow: var(--shadow-md);
+            backdrop-filter: blur(14px);
+        }
+        .sync-status i { color: var(--accent); }
+        .sync-status.success { border-color: rgba(5, 150, 105, 0.24); }
+        .sync-status.success i { color: var(--success); }
+        .sync-status.error { border-color: rgba(220, 38, 38, 0.24); }
+        .sync-status.error i { color: var(--danger); }
+        .sync-status.idle { opacity: 0; transform: translateY(8px); pointer-events: none; transition: opacity 0.2s ease, transform 0.2s ease; }
         .hidden { display: none !important; }
 
         .modal-content { border-radius: var(--radius) !important; }
@@ -1039,7 +1091,11 @@
 
 <div id="loadingOverlay">
     <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div>
-    <span class="mt-3 fw-bold">Fetching Data...</span>
+    <span class="mt-3 fw-bold">Loading dashboard...</span>
+</div>
+<div id="syncStatus" class="sync-status idle" role="status" aria-live="polite">
+    <i class="fa-solid fa-circle-notch fa-spin" aria-hidden="true"></i>
+    <span id="syncStatusText">Syncing latest data...</span>
 </div>
 
 <nav class="navbar navbar-dark">
@@ -1087,7 +1143,7 @@
     <!-- Stats Section -->
     <div id="statsSection" class="row g-3 mb-4">
         <div class="col-md col-6" onclick="filterData('All')">
-            <div class="card card-stats p-3" data-filter="All" style="--stat-color: #64748b;">
+            <div class="card card-stats p-3" data-filter="All" style="--stat-color: #607286;">
                 <div class="stat-card-top">
                     <div>
                         <small class="detail-label">All Works</small>
@@ -1098,7 +1154,7 @@
             </div>
         </div>
         <div class="col-md col-6" onclick="filterData('In Progress')">
-            <div class="card card-stats p-3" data-filter="In Progress" style="--stat-color: #10b981;">
+            <div class="card card-stats p-3" data-filter="In Progress" style="--stat-color: #059669;">
                 <div class="stat-card-top">
                     <div>
                         <small class="detail-label text-success">In Progress</small>
@@ -1109,7 +1165,7 @@
             </div>
         </div>
         <div class="col-md col-6" onclick="filterData('Yet to be Allotted')">
-            <div class="card card-stats p-3" data-filter="Yet to be Allotted" style="--stat-color: #f59e0b;">
+            <div class="card card-stats p-3" data-filter="Yet to be Allotted" style="--stat-color: #b7791f;">
                 <div class="stat-card-top">
                     <div>
                         <small class="detail-label text-warning">Pending</small>
@@ -1120,7 +1176,7 @@
             </div>
         </div>
         <div class="col-md col-6" onclick="filterData('Live Tender')">
-            <div class="card card-stats p-3" data-filter="Live Tender" style="--stat-color: #3b82f6;">
+            <div class="card card-stats p-3" data-filter="Live Tender" style="--stat-color: #2563eb;">
                 <div class="stat-card-top">
                     <div>
                         <small class="detail-label text-primary">Live</small>
@@ -1131,7 +1187,7 @@
             </div>
         </div>
         <div class="col-md col-6" onclick="filterData('Under DLP')">
-            <div class="card card-stats p-3" data-filter="Under DLP" style="--stat-color: #6366f1;">
+            <div class="card card-stats p-3" data-filter="Under DLP" style="--stat-color: #0e7490;">
                 <div class="stat-card-top">
                     <div>
                         <small class="detail-label text-primary">Under DLP</small>
@@ -1541,7 +1597,7 @@
                             <input id="pbgSubDate" name="pbgSubDate" type="date" class="edit-input" required>
                         </div>
                         <div class="col-md-3">
-                            <label class="detail-label" for="pbgValid">Valid Upto Date (PBG)</label>
+                            <label class="detail-label" for="pbgValid">Valid Up To Date (PBG)</label>
                             <input id="pbgValid" name="pbgValid" type="date" class="edit-input" required>
                         </div>
 
@@ -1561,7 +1617,7 @@
                             <input id="addSubDate" name="addSubDate" type="date" class="edit-input">
                         </div>
                         <div class="col-md-3 additional-bg-field">
-                            <label class="detail-label" for="addValid">Valid Upto Date (Additional PBG)</label>
+                            <label class="detail-label" for="addValid">Valid Up To Date (Additional PBG)</label>
                             <input id="addValid" name="addValid" type="date" class="edit-input">
                         </div>
 
@@ -1789,9 +1845,18 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script>
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxOKN15Szd7A3OGEM1-Xg_Jnwhg4QUibhQ4zAaFHuQBmJiUhtoyeAHFzUtEwdDrUtEFeg/exec';
+    const FEATURE_SCRIPTS = {
+        html2canvas: 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+        jspdf: 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+        jspdfAutoTable: 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.4/jspdf.plugin.autotable.min.js',
+        xlsx: 'https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js',
+        pizzip: 'https://cdnjs.cloudflare.com/ajax/libs/pizzip/3.1.7/pizzip.min.js',
+        docxtemplater: 'https://cdn.jsdelivr.net/npm/docxtemplater@3.47.4/build/docxtemplater.js',
+        templates: './templates.js'
+    };
+    const featureScriptPromises = {};
     let masterData = [];
     let currentTenderId = null;
     let currentFilter = 'All';
@@ -1890,7 +1955,13 @@
             initSwipeBackGesture();
             initPinUnlockModal();
             const hasCachedData = hydrateMasterDataFromCache();
-            await fetchData({ silent: hasCachedData, timeoutMs: hasCachedData ? 10000 : 12000 });
+            document.getElementById('loadingOverlay')?.classList.toggle('hidden', hasCachedData);
+            const refreshPromise = fetchData({
+                silent: hasCachedData,
+                timeoutMs: hasCachedData ? 10000 : 12000,
+                background: hasCachedData
+            });
+            if (!hasCachedData) await refreshPromise;
             loadBgRegisterIndex().then(() => {
                 seedBgPortalMapFromRegister();
                 startBgPortalPreload().catch(() => {});
@@ -1906,9 +1977,84 @@
                 hydrateMasterDataFromCache();
                 if (!masterData.length) updateDashboard();
             }
-            showAppToast('Startup slow hai. Cached/empty dashboard dikha rahe hain.', 3600);
+            setSyncStatus('error', masterData.length ? 'Startup was slow. Showing saved data.' : 'No saved data available.');
         } finally {
             document.getElementById('loadingOverlay')?.classList.add('hidden');
+        }
+    }
+
+    function loadFeatureScript(key) {
+        if (!FEATURE_SCRIPTS[key]) return Promise.reject(new Error(`Unknown feature script: ${key}`));
+        if (featureScriptPromises[key]) return featureScriptPromises[key];
+        featureScriptPromises[key] = new Promise((resolve, reject) => {
+            const existing = document.querySelector(`script[data-feature-script="${key}"]`);
+            if (existing) {
+                existing.addEventListener('load', resolve, { once: true });
+                existing.addEventListener('error', () => reject(new Error(`Could not load ${key}.`)), { once: true });
+                if (existing.dataset.loaded === 'true') resolve();
+                return;
+            }
+            const script = document.createElement('script');
+            script.src = FEATURE_SCRIPTS[key];
+            script.async = true;
+            script.dataset.featureScript = key;
+            script.onload = () => {
+                script.dataset.loaded = 'true';
+                resolve();
+            };
+            script.onerror = () => {
+                delete featureScriptPromises[key];
+                reject(new Error(`Could not load ${key}. Please check your internet connection and try again.`));
+            };
+            document.head.appendChild(script);
+        });
+        return featureScriptPromises[key];
+    }
+
+    async function ensureXlsxLibrary() {
+        if (!window.XLSX) await loadFeatureScript('xlsx');
+        if (!window.XLSX) throw new Error('Excel export library could not be loaded. Please check your internet connection and try again.');
+    }
+
+    async function ensurePdfReportLibraries() {
+        if (!window.jspdf?.jsPDF) await loadFeatureScript('jspdf');
+        if (!window.jspdf?.jsPDF?.API?.autoTable) await loadFeatureScript('jspdfAutoTable');
+        if (!window.jspdf?.jsPDF?.API?.autoTable) throw new Error('PDF report library could not be loaded. Please check your internet connection and try again.');
+    }
+
+    async function ensureCaptureLibrary() {
+        if (!window.html2canvas) await loadFeatureScript('html2canvas');
+        if (!window.html2canvas) throw new Error('Capture library could not be loaded. Please check your internet connection and try again.');
+    }
+
+    async function ensureDocumentLibraries() {
+        if (!window.PizZip) await loadFeatureScript('pizzip');
+        if (!window.docxtemplater) await loadFeatureScript('docxtemplater');
+        if (!window.DADRI_DOCX_TEMPLATES) await loadFeatureScript('templates');
+        if (!window.PizZip || !window.docxtemplater || !window.DADRI_DOCX_TEMPLATES) {
+            throw new Error('Document template libraries could not be loaded. Please check your internet connection and try again.');
+        }
+    }
+
+    function setSyncStatus(type, message, options = {}) {
+        const status = document.getElementById('syncStatus');
+        const text = document.getElementById('syncStatusText');
+        if (!status || !text) return;
+        const icon = status.querySelector('i');
+        status.className = `sync-status ${type || ''}`.trim();
+        text.innerText = message;
+        if (icon) {
+            icon.className = type === 'syncing'
+                ? 'fa-solid fa-circle-notch fa-spin'
+                : type === 'success'
+                    ? 'fa-solid fa-circle-check'
+                    : type === 'error'
+                        ? 'fa-solid fa-triangle-exclamation'
+                        : 'fa-solid fa-circle-info';
+        }
+        if (options.autoHide !== false && type !== 'syncing') {
+            clearTimeout(setSyncStatus.timer);
+            setSyncStatus.timer = setTimeout(() => status.classList.add('idle'), options.duration || 2400);
         }
     }
 
@@ -2201,11 +2347,12 @@
     }
 
     async function fetchData(options = {}) {
-        const { silent = false, forceOverlay = false, timeoutMs = 12000 } = options;
+        const { silent = false, forceOverlay = false, timeoutMs = 12000, background = false } = options;
         if (masterDataRefreshPromise && silent) return masterDataRefreshPromise;
 
-        const shouldShowOverlay = forceOverlay || (!silent && !masterData.length);
+        const shouldShowOverlay = forceOverlay || (!silent && !background && !masterData.length);
         if (shouldShowOverlay) document.getElementById('loadingOverlay').classList.remove('hidden');
+        if (background || silent) setSyncStatus('syncing', 'Syncing latest data...', { autoHide: false });
 
         const refresh = (async () => {
             const controller = new AbortController();
@@ -2217,13 +2364,16 @@
                 masterData = Array.isArray(result.data) ? result.data.map(applyComputedStatusRules) : masterData;
                 writeStoredMasterData();
                 updateDashboard();
+                setSyncStatus('success', 'Latest data loaded.');
             } catch (e) {
                 console.error("Sync Error", e);
                 if (!masterData.length) {
                     hydrateMasterDataFromCache();
                     if (!masterData.length) updateDashboard();
                 }
-                if (!silent) showAppToast('Data refresh failed. Cached data dikha rahe hain.', 3200);
+                const fallbackMessage = masterData.length ? 'Could not refresh. Showing saved data.' : 'No saved data available.';
+                setSyncStatus('error', fallbackMessage, { duration: 3600 });
+                if (!silent && !background) showAppToast(fallbackMessage, 3200);
             } finally {
                 clearTimeout(timer);
                 if (shouldShowOverlay) document.getElementById('loadingOverlay').classList.add('hidden');
@@ -2538,16 +2688,16 @@
 
         if (mode === 'year') {
             const year = Number(document.getElementById('reportYear').value);
-            if (!year) throw new Error('Report year select karo.');
+            if (!year) throw new Error('Please select a report year.');
             startDate = new Date(year, 0, 1);
             endDate = new Date(year, 11, 31);
         } else if (mode === 'custom') {
             startDate = parseReportDate(document.getElementById('reportFromDate').value);
             endDate = parseReportDate(document.getElementById('reportToDate').value);
-            if (!startDate || !endDate) throw new Error('From aur To date select karo.');
+            if (!startDate || !endDate) throw new Error('Please select both From and To dates.');
         } else {
             const monthValue = document.getElementById('reportMonth').value;
-            if (!monthValue) throw new Error('Report month select karo.');
+            if (!monthValue) throw new Error('Please select a report month.');
             const [year, month] = monthValue.split('-').map(Number);
             startDate = new Date(year, month - 1, 1);
             endDate = new Date(year, month, 0);
@@ -2555,7 +2705,7 @@
 
         startDate.setHours(0, 0, 0, 0);
         endDate.setHours(0, 0, 0, 0);
-        if (startDate > endDate) throw new Error('From date To date se baad nahi ho sakti.');
+        if (startDate > endDate) throw new Error('The From date cannot be later than the To date.');
 
         return { startDate, endDate };
     }
@@ -2738,7 +2888,7 @@
         renderDeck();
         startBgPortalPreload(true).catch(e => {
             if (!Object.keys(bgPortalMap || {}).length) {
-                alert(e.message || 'BG Portal load nahi ho paya.');
+                alert(e.message || 'BG Portal could not be loaded.');
             }
         });
     }
@@ -2762,7 +2912,7 @@
     function requireSelectedBgReportSections() {
         const sections = getSelectedBgReportSections();
         if (!sections.all && !sections.bank && !sections.agency) {
-            throw new Error('Kam se kam ek BG report section select karo.');
+            throw new Error('Please select at least one BG report section.');
         }
         return sections;
     }
@@ -2972,7 +3122,7 @@
             .sort((a, b) => (a.workName || '').localeCompare(b.workName || '') || (a.tenderId || '').localeCompare(b.tenderId || ''));
 
         if (!works.length) {
-            throw new Error('Performance BG not available for submitted works .');
+            throw new Error('Performance BG is not available for the submitted works.');
         }
 
         const detailBlocks = [];
@@ -3700,7 +3850,7 @@
 
     function buildReportContext() {
         if (!masterData.length) {
-            throw new Error('No Data Available.');
+            throw new Error('No data available.');
         }
 
         const range = getReportRange();
@@ -3715,17 +3865,13 @@
         };
     }
 
-    function downloadWorksReportXlsx() {
-        if (!window.XLSX) {
-            alert('Please check Internet/CDN connection and try again.');
-            return;
-        }
-
+    async function downloadWorksReportXlsx() {
         let context;
         try {
+            await ensureXlsxLibrary();
             context = buildReportContext();
         } catch (e) {
-            alert(e.message || 'Check Report Duration.');
+            alert(e.message || 'Please check the report duration.');
             return;
         }
 
@@ -3890,17 +4036,13 @@
         return 24;
     }
 
-    function downloadWorksReportPdf() {
+    async function downloadWorksReportPdf() {
         let context;
         try {
+            await ensurePdfReportLibraries();
             context = buildReportContext();
         } catch (e) {
-            alert(e.message || 'Check Report Duration.');
-            return;
-        }
-
-        if (!window.jspdf || !window.jspdf.jsPDF || !window.jspdf.jsPDF.API.autoTable) {
-            alert('PDF table not loaded. check Internet/CDN.');
+            alert(e.message || 'Please check the report duration.');
             return;
         }
 
@@ -3984,13 +4126,9 @@
     }
 
     async function downloadBgReportXlsx() {
-        if (!window.XLSX) {
-            alert('Check Internet/CDN and retry.');
-            return;
-        }
-
         setBgReportButtonsLoading(true);
         try {
+            await ensureXlsxLibrary();
             const sections = requireSelectedBgReportSections();
             const context = await buildBgReportContext();
             const bankGroups = groupBgBlocks(
@@ -4013,7 +4151,7 @@
             XLSX.writeFile(wb, `${context.fileBase}.xlsx`);
         } catch (e) {
             console.error('BG XLSX report failed', e);
-            alert(e.message || 'BG report generate nahi ho payi.');
+            alert(e.message || 'BG report could not be generated.');
         } finally {
             setBgReportButtonsLoading(false);
         }
@@ -4206,13 +4344,9 @@
     }
 
     async function downloadBgReportPdf() {
-        if (!window.jspdf || !window.jspdf.jsPDF || !window.jspdf.jsPDF.API.autoTable) {
-            alert('PDF table library load nahi hui. Internet/CDN check karke dobara try karo.');
-            return;
-        }
-
         setBgReportButtonsLoading(true);
         try {
+            await ensurePdfReportLibraries();
             const sections = requireSelectedBgReportSections();
             const context = await buildBgReportContext();
             const bankGroups = groupBgBlocks(
@@ -4343,10 +4477,8 @@
         };
     }
 
-    function createDocxBlob(type, item, details) {
-        if (!window.PizZip || !window.docxtemplater || !window.DADRI_DOCX_TEMPLATES) {
-            throw new Error('Document template libraries load nahi hui. Internet connection/CDN check karo.');
-        }
+    async function createDocxBlob(type, item, details) {
+        await ensureDocumentLibraries();
 
         const hasSecondBg = Boolean(String(details.addNo || '').trim() || parseCurrencyAmount(details.addAmt) > 0);
         const templateBase64 = type === 'agreement'
@@ -4422,7 +4554,7 @@
 
     function openPdfFromUrl(url) {
         const win = window.open(url, '_blank', 'noopener');
-        if (!win) alert('Popup blocked.');
+        if (!win) alert('Popup was blocked.');
     }
 
     function readStoredBgRegisterDetails() {
@@ -4759,7 +4891,7 @@
         if (currentAppView === 'bgPortal') {
             const bgItems = getBgPortalItems();
             if (!bgItems.length) {
-                deck.innerHTML = `<div class="col-12"><div class="empty-state">${bgPortalRefreshing ? 'Refreshing BG data...' : 'No BG found'}</div></div>`;
+                deck.innerHTML = `<div class="col-12"><div class="empty-state">${bgPortalRefreshing ? 'Refreshing BG data...' : 'No BG records found'}</div></div>`;
                 return;
             }
             bgItems.forEach(details => deck.appendChild(createBgPortalCard(details)));
@@ -5059,12 +5191,12 @@
                 console.error("Invalid server response", text);
                 return {
                     status: "error",
-                    message: "Server response JSON nahi hai. Apps Script web app redeploy/check karo."
+                    message: "The server response is not valid JSON. Please check or redeploy the Apps Script web app."
                 };
             }
         } catch (e) {
             if (e.name === 'AbortError') {
-                return { status: 'error', message: 'Server response slow hai. Thodi der baad try karo.' };
+                return { status: 'error', message: 'The server response is taking too long. Please try again later.' };
             }
             throw e;
         } finally {
@@ -5169,7 +5301,7 @@
         const tenderId = getTenderId(item);
         const details = await getBgRegisterDetails(tenderId, item);
         if (!details) {
-            alert("Pehle BG details upload karo, uske baad download available hoga.");
+            alert("Please upload BG details before downloading this document.");
             return;
         }
 
@@ -5188,14 +5320,14 @@
             }, 90000);
 
             if (!isSuccessResponse(resp) || !resp.pdfUrl) {
-                throw new Error(resp?.message || resp?.error || 'PDF generate nahi ho paya.');
+                throw new Error(resp?.message || resp?.error || 'The PDF could not be generated.');
             }
 
             const fileName = `${isAgreement ? 'Agreement' : 'BG_Letter'}_${tenderId}.pdf`;
             downloadPdfFromUrl(resp.pdfUrl, fileName);
         } catch (e) {
             console.error('PDF download failed', e);
-            alert(e.message || 'PDF generate/download nahi ho paya.');
+            alert(e.message || 'The PDF could not be generated or downloaded.');
         } finally {
             if (btn) {
                 btn.disabled = false;
@@ -5306,7 +5438,7 @@
             return;
         }
         currentTenderId = getTenderId(item);
-        showAppToast('Upload BG first');
+        showAppToast('Please upload BG first.');
         const modalEl = document.getElementById('generateLettersModal');
         modalEl.addEventListener('hidden.bs.modal', () => openPbgUploadForm(details), { once: true });
         bootstrap.Modal.getOrCreateInstance(modalEl).hide();
@@ -5328,7 +5460,7 @@
         const item = selected?.item || masterData.find(d => String(getTenderId(d) || '').trim() === tenderId);
         const details = await getBgRegisterDetails(tenderId, item);
         if (!details) {
-            status.innerText = 'Upload BG first';
+            status.innerText = 'Please upload BG first.';
             openSelectedWorkBgUpload(item, bgRegisterMap[tenderId] || bgPortalMap[tenderId] || null);
             return;
         }
@@ -5340,14 +5472,14 @@
         try {
             const resp = await postJson({ method: isAgreement ? 'generateAgreementPdf' : 'generateBgLetterPdf', tenderId }, 90000);
             if (!isSuccessResponse(resp) || !resp.pdfUrl) {
-                throw new Error(resp?.message || resp?.error || 'PDF generate nahi ho paya.');
+                throw new Error(resp?.message || resp?.error || 'The PDF could not be generated.');
             }
             const fileName = `${isAgreement ? 'Agreement' : 'BG_Letter'}_${tenderId}.pdf`;
             downloadPdfFromUrl(resp.pdfUrl, fileName);
             status.innerText = 'Download started.';
         } catch (e) {
             console.error('Letter download failed', e);
-            status.innerText = e.message || 'PDF generate/download nahi ho paya.';
+            status.innerText = e.message || 'The PDF could not be generated or downloaded.';
         } finally {
             btn.disabled = false;
             btn.innerHTML = originalHtml;
@@ -5439,11 +5571,11 @@
             ['PBG Amount', formatCurrency(details.pbgAmt)],
             ['PBG No.', details.pbgNo],
             ['PBG Submission Date', details.pbgSubDate],
-            ['PBG Valid Upto', details.pbgValid],
+            ['PBG Valid Up To', details.pbgValid],
             ['Additional PBG Amount', details.addAmt ? formatCurrency(details.addAmt) : `${RUPEE}0.00`],
             ['Additional PBG No.', details.addNo || '-'],
             ['Additional PBG Submission Date', details.addSubDate || '-'],
-            ['Additional PBG Valid Upto', details.addValid || '-'],
+            ['Additional PBG Valid Up To', details.addValid || '-'],
             ['Bank Name', details.bankName],
             ...releaseRows,
             ['File Name', details.fileName]
@@ -5467,7 +5599,7 @@
             noFileText.classList.remove('hidden');
             noFileText.classList.remove('error');
             noFileText.classList.add('success');
-            noFileText.innerText = 'Still Uploading.....';
+            noFileText.innerText = 'Upload still in progress...';
             uploadFileBtn.classList.add('hidden');
         } else if (pending?.status === 'error') {
             photoLink.classList.add('hidden');
@@ -5542,7 +5674,7 @@
         const validDateText = getBgPartValidDate(currentReleaseDetails, type);
         const validDate = parseReportDate(validDateText);
         if (releaseDate && validDate && releaseDate < validDate) {
-            warning.innerText = `Validity yet to be expired : Valid Upto Date - ${validDateText}`;
+            warning.innerText = `Validity has not expired yet. Valid up to: ${validDateText}`;
             warning.classList.add('text-danger');
         } else {
             warning.innerText = '';
@@ -5566,7 +5698,7 @@
         const releaseDate = parseReportDate(releaseDateValue);
         const validDate = parseReportDate(validDateText);
         if (releaseDate && validDate && releaseDate < validDate) {
-            const ok = confirm(`Are you sure you want to release this ${getBgTypeLabel(releaseType)}? Valid Upto Date - ${validDateText}`);
+            const ok = confirm(`Are you sure you want to release this ${getBgTypeLabel(releaseType)}? Valid up to: ${validDateText}`);
             if (!ok) return;
         }
 
@@ -5585,7 +5717,7 @@
             });
 
             if (!isSuccessResponse(resp) || !resp.details) {
-                throw new Error(resp?.message || resp?.error || 'BG release save nahi ho paya.');
+                throw new Error(resp?.message || resp?.error || 'The BG release could not be saved.');
             }
 
             bgRegisterMap[tenderId] = resp.details;
@@ -5747,6 +5879,8 @@
     }
 
     async function buildPdfFromImages(files, options = {}) {
+        if (!window.jspdf?.jsPDF) await loadFeatureScript('jspdf');
+        if (!window.jspdf?.jsPDF) throw new Error('PDF library could not be loaded. Please check your internet connection and try again.');
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4', compress: true });
         const statusEl = options.statusElementId ? document.getElementById(options.statusElementId) : null;
@@ -5785,7 +5919,7 @@
         const files = Array.from(event.target.files || []);
         if (!files.length) return;
 
-        setPbgPhotoState('', '', '', 'Preparing PDF...', 'High quality PDF preparing', '');
+        setPbgPhotoState('', '', '', 'Preparing PDF...', 'Preparing a high-quality PDF...', '');
 
         const pdfFile = files.find(file => file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'));
         const imageFiles = files.filter(file => file.type.startsWith('image/'));
@@ -5994,7 +6128,7 @@
 
         const imageFiles = files.filter(file => file.type.startsWith('image/'));
         if (!imageFiles.length) {
-            document.getElementById('pbgQuickStatus').innerText = 'PDF ya image document select karo';
+            document.getElementById('pbgQuickStatus').innerText = 'Please select a PDF or image document.';
             event.target.value = '';
             return;
         }
@@ -6166,7 +6300,7 @@
         payload.fileUrl = /^https?:\/\//i.test(payload.fileName) ? payload.fileName : payload.fileUrl || '';
         setBgRegisterDetails(payload.tenderId, payload, item);
         if (item) updateBgRegisterAction(item);
-        showAppToast('Bg Saved Successfully ✅');
+        showAppToast('BG saved successfully.');
         reopenSavedBgDetailsFromUpload(payload);
         startBackgroundPbgUpload(payload);
         setTimeout(() => {
@@ -6198,22 +6332,22 @@
         if (!localPayload.E_TENDERID && localTenderId) localPayload.E_TENDERID = localTenderId;
         const localInsert = upsertLocalWork(localPayload, { temporary: true });
         bootstrap.Modal.getInstance(document.getElementById('addWorkModal'))?.hide();
-        showAppToast('Work added....');
+        showAppToast('Work added locally. Syncing sheet...');
 
         postJson({
             method: 'addWork',
             rowData: buildAddRowData(payload)
         }).then(resp => {
             if (!isSuccessResponse(resp)) {
-                throw new Error(resp?.message || resp?.error || "Add Work Failed");
+                throw new Error(resp?.message || resp?.error || "Work could not be added.");
             }
             showAppToast('Work synced to sheet.');
             refreshDataInBackground();
         }).catch(e => {
             console.error("Add failed", e);
             removeLocalWorkByTenderId(localTenderId || localInsert.tenderId, localInsert.item);
-            showAppToast(e.message || 'Add Work Failed. .', 4200);
-            alert(e.message || "Add Work Failed");
+            showAppToast(e.message || 'Work could not be added.', 4200);
+            alert(e.message || "Work could not be added.");
         }).finally(() => {
             addBtn.disabled = false;
             addBtn.innerHTML = originalHtml;
@@ -6233,6 +6367,7 @@
         if (shareHeader) shareHeader.style.opacity = '0';
 
         try {
+            await ensureCaptureLibrary();
             const captureScale = Math.max(3, Math.min(4, (window.devicePixelRatio || 1) * 2));
             const canvas = await html2canvas(capture, {
                 scale: captureScale,
@@ -6255,6 +6390,7 @@
             }, 'image/png');
         } catch (err) {
             console.error("Capture failed", err);
+            showAppToast(err.message || 'Could not capture the work details.', 3600);
         } finally {
             modal.classList.remove('capturing');
             actions.style.display = 'flex';
@@ -6275,11 +6411,11 @@
 
         upsertLocalWork(payload, { fallbackTenderId: currentTenderId });
         bootstrap.Modal.getInstance(document.getElementById('workModal'))?.hide();
-        showAppToast('Saved locally. Sheet syncing....');
+        showAppToast('Saved locally. Syncing sheet...');
 
         postJson({ action: 'updateWork', details: payload }).then(resp => {
             if (!isSuccessResponse(resp)) {
-                throw new Error(resp?.message || resp?.error || "Update Failed");
+                throw new Error(resp?.message || resp?.error || "Update failed.");
             }
             showAppToast('Work synced to sheet.');
             refreshDataInBackground();
@@ -6287,7 +6423,7 @@
             console.error("Update failed", e);
             if (previousItem) restoreLocalWorkAt(existingIndex, previousItem);
             showAppToast(e.message || 'Update failed.', 4200);
-            alert(e.message || "Update Failed");
+            alert(e.message || "Update failed.");
         }).finally(() => {
             saveBtn.disabled = false;
             saveBtn.innerHTML = originalHtml;
@@ -6392,7 +6528,7 @@ async function startScannerCamera() {
         video.srcObject = scannerStream;
         await video.play();
     } catch (e) {
-        alert('Camera access nahi mila: ' + e.message);
+        alert('Camera access was not granted: ' + e.message);
         closeDocScanner();
     }
 }
@@ -6474,7 +6610,7 @@ async function confirmScan() {
     const baseName = `PBG_${safeFilePart(currentTenderId || 'scan')}`;
     const pageCount = pbgSelectedImageFiles.length;
     const pageWord = pageCount === 1 ? 'page' : 'pages';
-    setPbgPhotoState('', '', '', 'Building PDF...', 'High quality PDF preparing...', currentScanDataUrl);
+    setPbgPhotoState('', '', '', 'Building PDF...', 'Preparing a high-quality PDF...', currentScanDataUrl);
 
     try {
         const pdfDataUrl = await buildPdfFromImages(pbgSelectedImageFiles, {
@@ -6492,7 +6628,7 @@ async function confirmScan() {
         showSubPageModal(document.getElementById('pbgUploadModal'), { replaceOpen: true });
     } catch (e) {
         console.error('PDF build failed', e);
-        setPbgPhotoState('', '', '', 'PDF failed', 'Document se PDF nahi ban payi', currentScanDataUrl);
+        setPbgPhotoState('', '', '', 'PDF failed', 'The document could not be converted to PDF.', currentScanDataUrl);
         showSubPageModal(document.getElementById('pbgUploadModal'), { replaceOpen: true });
     }
 }
