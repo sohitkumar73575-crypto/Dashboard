@@ -5359,7 +5359,8 @@
             }
         }
         if (!details) {
-            alert("Please upload BG details before downloading this document.");
+            alert("Please upload BG first.");
+            openPbgUploadForm(normalizeBgDetailsForAdditionalRequirement(findAnyBgDetails(tenderId), item));
             return;
         }
         details = normalizeBgDetailsForAdditionalRequirement(details, item);
@@ -5374,17 +5375,19 @@
         }
 
         try {
-            const resp = await generateLetterPdfWithRepair({
-                isAgreement,
-                tenderId,
-                details,
-                item
-            });
+            const resp = await requestLetterPdf(isAgreement, tenderId, details, item);
+            if (!isSuccessResponse(resp) || !resp.pdfUrl) {
+                throw new Error(resp?.message || resp?.error || 'The PDF could not be generated.');
+            }
             const fileName = `${isAgreement ? 'Agreement' : 'BG_Letter'}_${tenderId}.pdf`;
             downloadPdfFromUrl(resp.pdfUrl, fileName);
         } catch (e) {
             console.error('PDF download failed', e);
-            alert(e.message || 'The PDF could not be generated or downloaded.');
+            const message = e.message || 'The PDF could not be generated or downloaded.';
+            if (/upload\s+pbg/i.test(message)) {
+                openPbgUploadForm(normalizeBgDetailsForAdditionalRequirement(findAnyBgDetails(tenderId), item));
+            }
+            alert(message);
         } finally {
             if (btn) {
                 btn.disabled = false;
@@ -5501,73 +5504,23 @@
         bootstrap.Modal.getOrCreateInstance(modalEl).hide();
     }
 
-    function isCompleteBgDetailsServerError(error) {
-        return /complete\s+bg\s+details\s+first/i.test(String(error?.message || error || ''));
+    function getExpectedAdditionalBgAmount(item, details = null) {
+        if (item) return calculateBgForItem(item).additional || 0;
+        return parseCurrencyAmount(details?.addAmt) || 0;
     }
 
-    function wait(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
-    }
-
-    async function syncNormalizedBgDetailsForLetter(details, item) {
+    async function requestLetterPdf(isAgreement, tenderId, details, item) {
         const normalized = normalizeBgDetailsForAdditionalRequirement(details, item);
-        if (!normalized || !isBgDetailsComplete(normalized, item) || hasAdditionalBg(normalized)) return normalized;
-        if (!String(normalized.fileName || normalized.fileUrl || '').trim()) return normalized;
+        const expectedAdditionalAmount = getExpectedAdditionalBgAmount(item, normalized);
 
-        const payload = { ...normalized };
-        payload.fileUrl = payload.fileUrl || (/^https?:\/\//i.test(payload.fileName || '') ? payload.fileName : '');
-        setBgRegisterDetails(payload.tenderId, payload, item);
-        const resp = await postJson({
-            method: 'uploadToRegister',
-            formData: payload
+        return postJson({
+            method: isAgreement ? 'generateAgreementPdf' : 'generateBgLetterPdf',
+            action: isAgreement ? 'generateAgreementPdf' : 'generateBgLetterPdf',
+            tenderId,
+            additionalRequired: isAdditionalBgRequired(item, normalized),
+            expectedAdditionalAmount,
+            forceRegenerate: true
         }, 90000);
-        if (isSuccessResponse(resp)) {
-            const saved = {
-                ...payload,
-                fileUrl: resp.fileUrl || resp.fileLink || payload.fileUrl || '',
-                fileName: resp.fileUrl || resp.fileLink || payload.fileName || ''
-            };
-            setBgRegisterDetails(saved.tenderId, saved, item);
-            await wait(900);
-            await loadBgRegisterIndex(true);
-            return bgRegisterMap[String(saved.tenderId || '').trim()] || saved;
-        }
-        return normalized;
-    }
-
-    async function requestLetterPdf(isAgreement, tenderId) {
-        return postJson({ method: isAgreement ? 'generateAgreementPdf' : 'generateBgLetterPdf', tenderId }, 90000);
-    }
-
-    async function generateLetterPdfWithRepair({ isAgreement, tenderId, details, item, onStatus }) {
-        let normalized = normalizeBgDetailsForAdditionalRequirement(details, item);
-        setBgRegisterDetails(tenderId, normalized, item);
-        const canRepairZeroAdditional = isBgDetailsComplete(normalized, item) && !hasAdditionalBg(normalized);
-        let lastResp = null;
-
-        for (let attempt = 1; attempt <= 3; attempt += 1) {
-            if (attempt > 1) {
-                onStatus?.(`Generating PDF... (${attempt}/3)`);
-                await wait(700 * attempt);
-            }
-
-            lastResp = await requestLetterPdf(isAgreement, tenderId);
-            if (isSuccessResponse(lastResp) && lastResp.pdfUrl) return lastResp;
-
-            if (!canRepairZeroAdditional || !isCompleteBgDetailsServerError(lastResp?.message || lastResp?.error)) {
-                break;
-            }
-
-            onStatus?.('Updating BG details...');
-            normalized = await syncNormalizedBgDetailsForLetter(normalized, item);
-            onStatus?.('Generating PDF...');
-        }
-
-        if (canRepairZeroAdditional && isCompleteBgDetailsServerError(lastResp?.message || lastResp?.error)) {
-            throw new Error('The saved PBG details are complete, but the server is still asking for Additional PBG details. Please update the Apps Script validation to ignore Additional PBG when the amount is zero.');
-        }
-
-        throw new Error(lastResp?.message || lastResp?.error || 'The PDF could not be generated.');
     }
 
     async function generateSelectedLetter(type, triggerButton) {
@@ -5605,19 +5558,18 @@
         status.innerText = 'Generating PDF...';
 
         try {
-            const resp = await generateLetterPdfWithRepair({
-                isAgreement,
-                tenderId,
-                details,
-                item,
-                onStatus: message => { status.innerText = message; }
-            });
+            const resp = await requestLetterPdf(isAgreement, tenderId, details, item);
+            if (!isSuccessResponse(resp) || !resp.pdfUrl) {
+                throw new Error(resp?.message || resp?.error || 'The PDF could not be generated.');
+            }
             const fileName = `${isAgreement ? 'Agreement' : 'BG_Letter'}_${tenderId}.pdf`;
             downloadPdfFromUrl(resp.pdfUrl, fileName);
             status.innerText = 'Download started.';
         } catch (e) {
             console.error('Letter download failed', e);
-            status.innerText = e.message || 'The PDF could not be generated or downloaded.';
+            const message = e.message || 'The PDF could not be generated or downloaded.';
+            status.innerText = message;
+            if (/upload\s+pbg/i.test(message)) openSelectedWorkBgUpload(item, findAnyBgDetails(tenderId));
         } finally {
             btn.disabled = false;
             btn.innerHTML = originalHtml;
