@@ -5510,6 +5510,16 @@
         return getAddFieldKeys().map(key => normalized[key] || "");
     }
 
+    function collectEditableWorkPayload() {
+        const payload = { tenderId: currentTenderId };
+        document.querySelectorAll('#editForm .field-edit').forEach(input => {
+            if (!input.name) return;
+            if (input.readOnly && !input.classList.contains('unlocked-field')) return;
+            payload[input.name] = typeof input.value === 'string' ? input.value.trim() : input.value;
+        });
+        return payload;
+    }
+
     async function postJson(body, timeoutMs = 25000, retryAuth = true) {
         body = body || {};
         const needsAdminKey = requestNeedsAdminKey(body);
@@ -6873,7 +6883,7 @@
     }
 
     async function saveDetails() {
-        const payload = { tenderId: currentTenderId, ...collectFormPayload('editForm') };
+        const payload = collectEditableWorkPayload();
         const forceEdit = Boolean(document.querySelector('#editForm .field-edit.unlocked-field'));
         const saveBtn = document.getElementById('saveBtn');
         const originalHtml = saveBtn.innerHTML;
