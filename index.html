@@ -1626,37 +1626,42 @@
 
                         <div class="col-12">
                             <div class="row g-3 bank-photo-row">
-                                <div class="col-md-6">
-                            <label class="detail-label" for="bankName">Name of Bank</label>
-                            <input id="bankName" name="bankName" class="edit-input text-uppercase" list="bankNameOptions" oninput="forceUppercase(this)" autocomplete="off" required>
-                            <datalist id="bankNameOptions">
-                                <option value="STATE BANK OF INDIA"></option>
-                                <option value="PUNJAB NATIONAL BANK"></option>
-                                <option value="SARVA HARYANA GRAMIN BANK"></option>
-                                <option value="BANK OF BARODA"></option>
-                                <option value="HDFC BANK"></option>
-                                <option value="IDBI BANK"></option>
-                                <option value="AU SMALL FINANCE BANK"></option>
-                                <option value="AXIS BANK"></option>
-                                <option value="UNION BANK OF INDIA"></option>
-                                <option value="THE BHIWANI CENTRAL CO-OPERATIVE BANK LTD"></option>
-                                <option value="ICICI BANK"></option>
-                                <option value="CANARA BANK"></option>
-                                <option value="PUNJAB AND SIND BANK"></option>
-                                <option value="INDIAN BANK"></option>
-                                <option value="CENTRAL BANK OF INDIA"></option>
-                                <option value="BANK OF INDIA"></option>
-                                <option value="UCO BANK"></option>
-                                <option value="INDIAN OVERSEAS BANK"></option>
-                                <option value="YES BANK"></option>
-                                <option value="KOTAK MAHINDRA BANK"></option>
-                                <option value="FEDERAL BANK"></option>
-                                <option value="INDUSIND BANK"></option>
-                                <option value="BANDHAN BANK"></option>
-                                <option value="IDFC FIRST BANK"></option>
-                            </datalist>
+                                <div class="col-md-4">
+                                    <label class="detail-label" for="bankName">Name of Bank</label>
+                                    <input id="bankName" name="bankName" class="edit-input text-uppercase" list="bankNameOptions" oninput="forceUppercase(this)" autocomplete="off" required>
+                                    <datalist id="bankNameOptions">
+                                        <option value="STATE BANK OF INDIA"></option>
+                                        <option value="PUNJAB NATIONAL BANK"></option>
+                                        <option value="SARVA HARYANA GRAMIN BANK"></option>
+                                        <option value="BANK OF BARODA"></option>
+                                        <option value="HDFC BANK"></option>
+                                        <option value="IDBI BANK"></option>
+                                        <option value="AU SMALL FINANCE BANK"></option>
+                                        <option value="AXIS BANK"></option>
+                                        <option value="UNION BANK OF INDIA"></option>
+                                        <option value="THE BHIWANI CENTRAL CO-OPERATIVE BANK LTD"></option>
+                                        <option value="ICICI BANK"></option>
+                                        <option value="CANARA BANK"></option>
+                                        <option value="PUNJAB AND SIND BANK"></option>
+                                        <option value="INDIAN BANK"></option>
+                                        <option value="CENTRAL BANK OF INDIA"></option>
+                                        <option value="BANK OF INDIA"></option>
+                                        <option value="UCO BANK"></option>
+                                        <option value="INDIAN OVERSEAS BANK"></option>
+                                        <option value="YES BANK"></option>
+                                        <option value="KOTAK MAHINDRA BANK"></option>
+                                        <option value="FEDERAL BANK"></option>
+                                        <option value="INDUSIND BANK"></option>
+                                        <option value="BANDHAN BANK"></option>
+                                        <option value="IDFC FIRST BANK"></option>
+                                    </datalist>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-4">
+                                    <label class="detail-label" for="branchName">Branch Name</label>
+                                    <input id="branchName" name="branchName" class="edit-input text-uppercase" list="branchNameOptions" oninput="forceUppercase(this)" autocomplete="off">
+                                    <datalist id="branchNameOptions"></datalist>
+                                </div>
+                                <div class="col-md-4">
                             <label class="detail-label">PBG Document</label>
                             <div class="photo-upload-box">
                                 <input id="pbgPhotoInput" type="file" accept="image/*,application/pdf,.pdf" multiple class="hidden" onchange="handlePbgPhotoSelected(event)">
@@ -1889,6 +1894,7 @@
     let appToastTimer = null;
     let masterDataRefreshPromise = null;
     const BG_REGISTER_STORE_KEY = 'dadriworksBgRegisterDetails';
+    const BG_BRANCH_STORE_KEY = 'dadriworksBgBranches';
     const MASTER_DATA_STORE_KEY = 'dadriworksMasterData';
     const RUPEE = String.fromCharCode(8377);
     const MAJOR_WORK_THRESHOLD = 10000000;
@@ -1967,6 +1973,7 @@
             if (!hasCachedData) await refreshPromise;
             loadBgRegisterIndex().then(() => {
                 seedBgPortalMapFromRegister();
+                refreshBgBranchOptions();
                 startBgPortalPreload().catch(() => {});
             }).catch(e => {
                 console.error('BG register startup load failed', e);
@@ -2856,6 +2863,7 @@
 
     function seedBgPortalMapFromRegister() {
         bgPortalMap = { ...(bgRegisterMap || {}), ...(bgPortalMap || {}) };
+        refreshBgBranchOptions();
     }
 
     function startBgPortalPreload(force = false) {
@@ -2865,6 +2873,7 @@
             .then(map => {
                 bgPortalMap = { ...(bgPortalMap || {}), ...(map || {}) };
                 bgPortalLoaded = true;
+                refreshBgBranchOptions();
                 return bgPortalMap;
             })
             .catch(e => {
@@ -2955,6 +2964,13 @@
     function normalizeBgDetailsForAdditionalRequirement(details, item = null) {
         if (!details) return details;
         const normalized = { ...details };
+        const rawBankName = String(normalized.bankName || '').replace(/\s+/g, ' ').trim();
+        const explicitBranchName = normalizeBgBranchInput(
+            normalized.branchName || normalized.BranchName || normalized.BRANCH_NAME || normalized.branch || ''
+        );
+        const parsedBank = getBankBranchInfo(rawBankName);
+        normalized.bankName = (!explicitBranchName && parsedBank.branchName ? parsedBank.bankName : rawBankName).toUpperCase();
+        normalized.branchName = explicitBranchName || normalizeBgBranchInput(parsedBank.branchName);
         const additionalRequired = isAdditionalBgRequired(item, normalized);
         normalized.additionalRequired = additionalRequired;
         if (!additionalRequired) {
@@ -3024,7 +3040,7 @@
             workName: base.workName,
             tenderId: base.tenderId,
             agencyName: base.agencyName,
-            bankName: base.bankName,
+            bankName: getBankBranchDisplay(base),
             bgType: type,
             bgNo: number,
             amount: parseCurrencyAmount(amount),
@@ -3043,6 +3059,10 @@
             text.replace(/\bch\.?\s*dadri\b/ig, 'Charkhi Dadri'),
             ''
         ).replace(/\bCharkhi Dadri\b/i, 'Charkhi Dadri');
+    }
+
+    function normalizeBgBranchInput(value) {
+        return String(value || '').replace(/\s+/g, ' ').trim().toUpperCase();
     }
 
     function getBankBranchInfo(value) {
@@ -3067,7 +3087,7 @@
         for (const item of patterns) {
             const match = original.match(item.re);
             if (!match) continue;
-            const branchName = normalizeBgBranchName(original.slice(match[0].length));
+            const branchName = normalizeBgBranchInput(normalizeBgBranchName(original.slice(match[0].length)));
             const branchLabel = branchName ? `${item.bank.replace(/\s+Bank$/i, '')} ${branchName}` : '';
             return {
                 bankName: item.bank,
@@ -3086,6 +3106,81 @@
             displayName: bankName,
             key: normalizeBankName(bankName)
         };
+    }
+
+    function getBgParsedBankInfo(detailsOrBankName = {}) {
+        const bankName = typeof detailsOrBankName === 'string'
+            ? detailsOrBankName
+            : detailsOrBankName?.bankName;
+        return getBankBranchInfo(bankName);
+    }
+
+    function getBgBranchName(details = {}) {
+        const explicit = normalizeBgBranchInput(
+            details.branchName || details.BranchName || details.BRANCH_NAME || details.branch || ''
+        );
+        if (explicit) return explicit;
+        return normalizeBgBranchInput(getBgParsedBankInfo(details).branchName);
+    }
+
+    function getBgBankNameOnly(details = {}) {
+        const bankName = String(details.bankName || '').replace(/\s+/g, ' ').trim();
+        if (!bankName) return '';
+        if (getBgBranchName(details) && !normalizeBgBranchInput(details.branchName)) {
+            return getBgParsedBankInfo(details).bankName || bankName;
+        }
+        return bankName;
+    }
+
+    function getBankBranchDisplay(details = {}) {
+        const branchName = getBgBranchName(details);
+        const bankName = getBgBankNameOnly(details).toUpperCase();
+        return [bankName, branchName].filter(Boolean).join(', ');
+    }
+
+    function readStoredBgBranches() {
+        try {
+            const branches = JSON.parse(localStorage.getItem(BG_BRANCH_STORE_KEY) || '[]');
+            return Array.isArray(branches) ? branches.map(normalizeBgBranchInput).filter(Boolean) : [];
+        } catch (e) {
+            console.warn('BG branch suggestions read failed', e);
+            return [];
+        }
+    }
+
+    function writeStoredBgBranches(branches) {
+        try {
+            const uniqueBranches = Array.from(new Set((branches || []).map(normalizeBgBranchInput).filter(Boolean))).sort();
+            localStorage.setItem(BG_BRANCH_STORE_KEY, JSON.stringify(uniqueBranches));
+            return uniqueBranches;
+        } catch (e) {
+            console.warn('BG branch suggestions write failed', e);
+            return [];
+        }
+    }
+
+    function collectBgBranchesFromMap(map = {}) {
+        return Object.values(map || {}).map(getBgBranchName).filter(Boolean);
+    }
+
+    function refreshBgBranchOptions() {
+        const branches = writeStoredBgBranches([
+            ...readStoredBgBranches(),
+            ...collectBgBranchesFromMap(bgRegisterMap),
+            ...collectBgBranchesFromMap(bgPortalMap)
+        ]);
+        const datalist = document.getElementById('branchNameOptions');
+        if (datalist) {
+            datalist.innerHTML = branches.map(branch => `<option value="${escapeHtml(branch)}"></option>`).join('');
+        }
+        return branches;
+    }
+
+    function rememberBgBranch(value) {
+        const branch = normalizeBgBranchInput(value);
+        if (!branch) return;
+        writeStoredBgBranches([...readStoredBgBranches(), branch]);
+        refreshBgBranchOptions();
     }
 
     async function fetchBgReportMap() {
@@ -3119,6 +3214,7 @@
                     tenderId,
                     agencyName: normalizedDetails.agencyName || (item ? getAgencyName(item) : ''),
                     bankName: normalizedDetails.bankName || '',
+                    branchName: getBgBranchName(normalizedDetails),
                     pbgAmt: normalizedDetails.pbgAmt,
                     pbgNo: normalizedDetails.pbgNo,
                     pbgSubDate: normalizedDetails.pbgSubDate,
@@ -3189,7 +3285,7 @@
 
             detailBlocks.push({
                 work,
-                bank: getBankBranchInfo(work.bankName),
+                bank: { ...getBankBranchInfo(getBgBankNameOnly(work)), branchName: work.branchName || '' },
                 rows
             });
         });
@@ -4194,7 +4290,7 @@
                     { content: block.work.workName, rowSpan, styles: { valign: 'middle' } },
                     { content: block.work.tenderId, rowSpan, styles: { valign: 'middle' } },
                     { content: block.work.agencyName, rowSpan, styles: { valign: 'middle' } },
-                    { content: block.work.bankName, rowSpan, styles: { valign: 'middle' } }
+                    { content: getBankBranchDisplay(block.work), rowSpan, styles: { valign: 'middle' } }
                 ] : [];
 
                 if (entry.type === 'note') {
@@ -4485,7 +4581,7 @@
             TENDER_ID: details.tenderId || getTenderId(item),
             AGENCY_NAME: details.agencyName || getAgencyName(item),
             CONTRACTOR: details.agencyName || getAgencyName(item),
-            BANK_NAME: details.bankName || '',
+            BANK_NAME: getBankBranchDisplay(details),
             BG1_NO: details.pbgNo || '',
             BG1_AMOUNT: formatAmountForTemplate(details.pbgAmt),
             BG1_VALID: details.pbgValid || '',
@@ -4620,6 +4716,7 @@
             } finally {
                 bgRegisterIndexLoaded = true;
                 bgRegisterIndexPromise = null;
+                refreshBgBranchOptions();
             }
 
             return bgRegisterMap;
@@ -4662,11 +4759,13 @@
         if (isBgDetailsComplete(normalized, item)) {
             bgRegisterMap[key] = { ...(bgRegisterMap[key] || {}), ...normalized };
             if (currentAppView === 'bgPortal' || bgPortalMap[key]) bgPortalMap[key] = { ...(bgPortalMap[key] || {}), ...bgRegisterMap[key] };
+            rememberBgBranch(normalized.branchName);
         } else {
             delete bgRegisterMap[key];
             if (bgPortalMap[key]) delete bgPortalMap[key];
         }
         writeStoredBgRegisterDetails();
+        refreshBgBranchOptions();
     }
 
     function normalizeTenderLookupKey(value) {
@@ -4814,7 +4913,7 @@
                 merged.statusInfo = getBgStatusInfo(merged);
                 return merged;
             })
-            .sort((a, b) => (a.bankName || '').localeCompare(b.bankName || '') || (a.workName || '').localeCompare(b.workName || ''));
+            .sort((a, b) => getBankBranchDisplay(a).localeCompare(getBankBranchDisplay(b)) || (a.workName || '').localeCompare(b.workName || ''));
 
         if (currentFilter && currentFilter !== 'All') {
             const wanted = String(currentFilter).toLowerCase();
@@ -4826,7 +4925,7 @@
                 details.tenderId,
                 details.workName,
                 details.agencyName,
-                details.bankName,
+                getBankBranchDisplay(details),
                 details.pbgAmt,
                 details.addAmt,
                 details.statusInfo.label
@@ -4857,7 +4956,7 @@
 
                         <div class="meta-row">
                             <span class="meta-icon date"><i class="fa-solid fa-building-columns"></i></span>
-                            <div class="meta-text text-truncate">${escapeHtml(details.bankName || 'Unknown Bank')}</div>
+                            <div class="meta-text text-truncate">${escapeHtml(getBankBranchDisplay(details) || 'Unknown Bank')}</div>
                         </div>
                     </div>
 
@@ -5673,7 +5772,7 @@
                 ['Additional PBG Submission Date', details.addSubDate || '-'],
                 ['Additional PBG Valid Up To', details.addValid || '-']
             ] : []),
-            ['Bank Name', details.bankName],
+            ['Bank Name', getBankBranchDisplay(details)],
             ...releaseRows,
             ['File Name', details.fileName]
         ];
@@ -5881,7 +5980,8 @@
             'addNo',
             'addSubDate',
             'addValid',
-            'bankName'
+            'bankName',
+            'branchName'
         ];
 
         lockableIds.forEach(id => {
@@ -6079,7 +6179,8 @@
             document.getElementById('addSubDate').value = formatDateInputValue(details.addSubDate);
             document.getElementById('addValid').value = formatDateInputValue(details.addValid);
         }
-        document.getElementById('bankName').value = details.bankName || '';
+        document.getElementById('bankName').value = getBgBankNameOnly(details).toUpperCase();
+        document.getElementById('branchName').value = getBgBranchName(details);
         if (details.fileUrl || details.fileName) {
             setPbgPhotoState(
                 details.fileUrl || details.fileName,
@@ -6138,6 +6239,7 @@
         pbgSelectedImageFiles = [];
         document.getElementById('pbgPhotoInput').value = '';
         setPbgPhotoState('', '', '', 'No document selected', '', '');
+        refreshBgBranchOptions();
         setAdditionalPbgVisibility(additionalRequired);
         fillPbgUploadFormFromDetails(normalizedPrefill);
         setAdditionalPbgVisibility(additionalRequired);
