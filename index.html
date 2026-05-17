@@ -4669,12 +4669,36 @@
         writeStoredBgRegisterDetails();
     }
 
+    function normalizeTenderLookupKey(value) {
+        return String(value || '').replace(/[^a-z0-9]/gi, '').toLowerCase();
+    }
+
+    function findBgDetailsInMap(map, tenderId) {
+        const directKey = String(tenderId || '').trim();
+        if (!directKey || !map) return null;
+        if (map[directKey]) return map[directKey];
+
+        const targetKey = normalizeTenderLookupKey(directKey);
+        const match = Object.entries(map).find(([key, value]) =>
+            normalizeTenderLookupKey(key) === targetKey ||
+            normalizeTenderLookupKey(value?.tenderId) === targetKey ||
+            normalizeTenderLookupKey(value?.E_TENDERID || value?.E_TenderID) === targetKey
+        );
+        return match ? match[1] : null;
+    }
+
+    function findAnyBgDetails(tenderId) {
+        return findBgDetailsInMap(bgRegisterMap, tenderId) || findBgDetailsInMap(bgPortalMap, tenderId) || null;
+    }
+
     async function getBgRegisterDetails(tenderId, item = null) {
         await loadBgRegisterIndex();
         const key = String(tenderId || '').trim();
-        const details = bgRegisterMap[key] || null;
+        const details = findAnyBgDetails(key);
         const normalized = normalizeBgDetailsForAdditionalRequirement(details, item);
-        return isBgDetailsComplete(normalized, item) ? normalized : null;
+        if (!isBgDetailsComplete(normalized, item)) return null;
+        if (!bgRegisterMap[key]) setBgRegisterDetails(key, normalized, item);
+        return normalized;
     }
 
     function updateDashboard() {
@@ -5328,6 +5352,13 @@
         const tenderId = getTenderId(item);
         let details = await getBgRegisterDetails(tenderId, item);
         if (!details) {
+            const fallbackDetails = normalizeBgDetailsForAdditionalRequirement(findAnyBgDetails(tenderId), item);
+            if (isBgDetailsComplete(fallbackDetails, item)) {
+                details = fallbackDetails;
+                setBgRegisterDetails(tenderId, details, item);
+            }
+        }
+        if (!details) {
             alert("Please upload BG details before downloading this document.");
             return;
         }
@@ -5555,8 +5586,15 @@
         const item = selected?.item || masterData.find(d => String(getTenderId(d) || '').trim() === tenderId);
         let details = await getBgRegisterDetails(tenderId, item);
         if (!details) {
+            const fallbackDetails = normalizeBgDetailsForAdditionalRequirement(findAnyBgDetails(tenderId), item);
+            if (isBgDetailsComplete(fallbackDetails, item)) {
+                details = fallbackDetails;
+                setBgRegisterDetails(tenderId, details, item);
+            }
+        }
+        if (!details) {
             status.innerText = 'Please upload BG first.';
-            openSelectedWorkBgUpload(item, bgRegisterMap[tenderId] || bgPortalMap[tenderId] || null);
+            openSelectedWorkBgUpload(item, findAnyBgDetails(tenderId));
             return;
         }
         details = normalizeBgDetailsForAdditionalRequirement(details, item);
