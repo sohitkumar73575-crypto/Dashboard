@@ -12,8 +12,8 @@
     <link rel="manifest" href="./manifest.json">
     <link rel="icon" href="./icons/dadri-work-icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="./icons/dadri-work-192.png">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous">
     <style>
         :root {
             --primary: #0b1f33;
@@ -864,14 +864,14 @@
             min-height: 68px;
             max-width: 100%;
             overflow: hidden;
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) auto;
-            align-items: center;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
             gap: 0.85rem;
         }
         .photo-action-grid {
             display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-columns: repeat(2, minmax(120px, 1fr));
             gap: 0.65rem;
         }
         .photo-action-btn {
@@ -881,7 +881,8 @@
             align-items: center;
             justify-content: center;
             gap: 0.45rem;
-            white-space: nowrap;
+            white-space: normal;
+            line-height: 1.15;
         }
         .bank-photo-row { align-items: end; }
         .bank-photo-row .edit-input,
@@ -892,6 +893,9 @@
             border-radius: var(--radius);
             border: 1px solid var(--line);
             object-fit: cover;
+        }
+        .photo-upload-box .min-width-0 {
+            width: 100%;
         }
         .min-width-0 { min-width: 0; }
         .photo-name {
@@ -1291,18 +1295,18 @@
     </div>
 </div>
 
-<!-- PIN Unlock Modal -->
+<!-- Admin Unlock Modal -->
 <div class="modal fade" id="pinUnlockModal" tabindex="-1" aria-labelledby="pinUnlockTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered pin-unlock-dialog">
         <div class="modal-content border-0 shadow-lg">
             <div class="modal-header border-0 pb-0 px-4 pt-4">
-                <h5 class="modal-title fw-bold text-dark" id="pinUnlockTitle">Enter PIN to continue</h5>
+                <h5 class="modal-title fw-bold text-dark" id="pinUnlockTitle">Enter admin key to continue</h5>
                 <button type="button" class="modal-close-red" data-bs-dismiss="modal" aria-label="Close">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
             <div class="modal-body px-4 pb-2">
-                <input id="pinUnlockInput" type="password" inputmode="numeric" autocomplete="one-time-code" class="edit-input mb-1" aria-describedby="pinUnlockError">
+                <input id="pinUnlockInput" type="password" autocomplete="current-password" class="edit-input mb-1" aria-describedby="pinUnlockError">
                 <div id="pinUnlockError" class="pin-unlock-error" aria-live="polite"></div>
             </div>
             <div class="modal-footer border-0 px-4 pb-4 pt-2 justify-content-end">
@@ -1852,7 +1856,7 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
 <script>
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxOKN15Szd7A3OGEM1-Xg_Jnwhg4QUibhQ4zAaFHuQBmJiUhtoyeAHFzUtEwdDrUtEFeg/exec';
     const FEATURE_SCRIPTS = {
@@ -1860,9 +1864,17 @@
         jspdf: 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
         jspdfAutoTable: 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.4/jspdf.plugin.autotable.min.js',
         xlsx: 'https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js',
-        pizzip: 'https://cdnjs.cloudflare.com/ajax/libs/pizzip/3.1.7/pizzip.min.js',
+        pizzip: 'https://cdn.jsdelivr.net/npm/pizzip@3.1.7/dist/pizzip.min.js',
         docxtemplater: 'https://cdn.jsdelivr.net/npm/docxtemplater@3.47.4/build/docxtemplater.js',
         templates: './templates.js'
+    };
+    const FEATURE_SCRIPT_INTEGRITY = {
+        html2canvas: 'sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H',
+        jspdf: 'sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk',
+        jspdfAutoTable: 'sha384-Xl/CUCfJbzsngMp0CFxkmF0VW/8C160IsGujqeQlIhaGxKz2+JsIGORFqtCPeldF',
+        xlsx: 'sha384-OUW9euuUyxyHcAhTqbhI+Iyb8LMssXt/cpz0yXhs9UWG2/R/uaWdakx/4cfww7Vb',
+        pizzip: 'sha384-3mvYicTS7UKJFuQYjm4TLHd0AEsGqivIvpOz05D1WC6EY0wjrdMXxlwRAdckMW73',
+        docxtemplater: 'sha384-9g1qA3JJ7daJkEwH5BRlTZ1pnDFmMuZ40lkDqrTKAkLeTMqEd956eUOmp2uZ5QVQ'
     };
     const featureScriptPromises = {};
     let masterData = [];
@@ -1890,6 +1902,7 @@
     let letterWorkChoices = [];
     let viewSearchValues = { works: '', bgPortal: '' };
     let pendingPinAction = null;
+    let pendingAdminKeyResolve = null;
     let pendingForceBgDetails = null;
     let appToastTimer = null;
     let masterDataRefreshPromise = null;
@@ -1951,7 +1964,9 @@
         "E_TENDERID": ["E_TenderID", "Tender ID", "TenderID"],
         "Agency_Name": ["Agency Name", "AGENCY_NAME"]
     };
-    const LOCKED_FIELDS_PIN = '0557';
+    const ADMIN_KEY_STORE_KEY = 'dadriworksAdminKey';
+    const MAX_UPLOAD_FILE_BYTES = 8 * 1024 * 1024;
+    const MAX_UPLOAD_TOTAL_BYTES = 10 * 1024 * 1024;
     let modalHistoryDepth = 0;
     let suppressNextPopClose = false;
     let closingModalFromHistory = false;
@@ -2008,6 +2023,10 @@
             script.src = FEATURE_SCRIPTS[key];
             script.async = true;
             script.dataset.featureScript = key;
+            if (FEATURE_SCRIPT_INTEGRITY[key]) {
+                script.integrity = FEATURE_SCRIPT_INTEGRITY[key];
+                script.crossOrigin = 'anonymous';
+            }
             script.onload = () => {
                 script.dataset.loaded = 'true';
                 resolve();
@@ -2104,10 +2123,95 @@
             const error = document.getElementById('pinUnlockError');
             if (error) error.innerText = '';
             const title = document.getElementById('pinUnlockTitle');
-            if (title) title.innerText = 'Enter PIN to continue';
+            if (title) title.innerText = 'Enter admin key to continue';
             const unlockBtn = document.getElementById('unlockFieldsBtn');
             if (unlockBtn && !unlockBtn.classList.contains('hidden')) unlockBtn.focus();
         });
+    }
+
+    function getAdminKey() {
+        try {
+            return sessionStorage.getItem(ADMIN_KEY_STORE_KEY) || '';
+        } catch (e) {
+            return '';
+        }
+    }
+
+    function setAdminKey(key) {
+        try {
+            if (key) sessionStorage.setItem(ADMIN_KEY_STORE_KEY, key);
+            else sessionStorage.removeItem(ADMIN_KEY_STORE_KEY);
+        } catch (e) {
+            console.warn('Admin session storage unavailable', e);
+        }
+    }
+
+    function clearSensitiveSession(options = {}) {
+        setAdminKey('');
+        bgRegisterMap = {};
+        bgPortalMap = {};
+        bgRegisterIndexLoaded = false;
+        bgRegisterIndexPromise = null;
+        pendingBgUploads = {};
+        localStorage.removeItem(BG_REGISTER_STORE_KEY);
+        if (options.clearMaster) localStorage.removeItem(MASTER_DATA_STORE_KEY);
+    }
+
+    function clearLocalDashboardData() {
+        clearSensitiveSession({ clearMaster: true });
+        localStorage.removeItem(BG_BRANCH_STORE_KEY);
+        masterData = [];
+        updateDashboard();
+        closeReportMenu();
+        showAppToast('Local data cleared.');
+        fetchData({ forceOverlay: true });
+    }
+
+    function promptAdminKey(message = '') {
+        const pinInput = document.getElementById('pinUnlockInput');
+        const pinError = document.getElementById('pinUnlockError');
+        const pinModal = document.getElementById('pinUnlockModal');
+        if (!pinInput || !pinError || !pinModal) return Promise.resolve('');
+
+        pinInput.value = '';
+        pinError.innerText = message;
+        pendingPinAction = 'adminKey';
+        document.getElementById('pinUnlockTitle').innerText = 'Enter admin key to continue';
+
+        return new Promise(resolve => {
+            pendingAdminKeyResolve = resolve;
+            pinModal.addEventListener('hidden.bs.modal', () => {
+                if (pendingAdminKeyResolve === resolve) {
+                    pendingAdminKeyResolve = null;
+                    pendingPinAction = null;
+                    resolve('');
+                }
+            }, { once: true });
+            showPinUnlockModal(pinModal);
+        });
+    }
+
+    async function ensureAdminKey(message = '') {
+        const existing = getAdminKey();
+        if (existing) return existing;
+        return promptAdminKey(message);
+    }
+
+    function handleAuthError(message = 'Admin key required') {
+        clearSensitiveSession({ clearMaster: true });
+        setSyncStatus('error', message);
+        showAppToast(message, 3200);
+    }
+
+    function requestNeedsAdminKey(body = {}) {
+        const action = body.method || body.action || '';
+        return [
+            'calculateAndStore',
+            'uploadToRegister',
+            'releaseBg',
+            'addWork',
+            'updateWork'
+        ].includes(action);
     }
 
     function getTopOpenModal() {
@@ -2365,12 +2469,11 @@
         if (background || silent) setSyncStatus('syncing', 'Syncing latest data...', { autoHide: false });
 
         const refresh = (async () => {
-            const controller = new AbortController();
-            const timer = setTimeout(() => controller.abort(), timeoutMs);
             try {
-                const res = await fetch(SCRIPT_URL, { signal: controller.signal });
-                if (!res.ok) throw new Error(`Data request failed: ${res.status}`);
-                const result = await res.json();
+                const result = await postJson({ method: 'getMasterData' }, timeoutMs);
+                if (result.status === 'auth_error') {
+                    return [];
+                }
                 masterData = Array.isArray(result.data) ? result.data.map(applyComputedStatusRules) : masterData;
                 writeStoredMasterData();
                 updateDashboard();
@@ -2385,7 +2488,6 @@
                 setSyncStatus('error', fallbackMessage, { duration: 3600 });
                 if (!silent && !background) showAppToast(fallbackMessage, 3200);
             } finally {
-                clearTimeout(timer);
                 if (shouldShowOverlay) document.getElementById('loadingOverlay').classList.add('hidden');
                 masterDataRefreshPromise = null;
             }
@@ -2869,11 +2971,17 @@
     function startBgPortalPreload(force = false) {
         if (bgPortalLoadPromise && !force) return bgPortalLoadPromise;
         bgPortalRefreshing = true;
+        if (currentAppView === 'bgPortal') {
+            document.getElementById('viewTitle').innerText = 'BG Portal - Loading...';
+            setSyncStatus('syncing', 'Loading BG Portal...', { autoHide: false });
+            renderDeck();
+        }
         bgPortalLoadPromise = fetchBgReportMap()
             .then(map => {
                 bgPortalMap = { ...(bgPortalMap || {}), ...(map || {}) };
                 bgPortalLoaded = true;
                 refreshBgBranchOptions();
+                if (currentAppView === 'bgPortal') setSyncStatus('success', 'BG Portal loaded.');
                 return bgPortalMap;
             })
             .catch(e => {
@@ -2883,7 +2991,10 @@
             .finally(() => {
                 bgPortalRefreshing = false;
                 bgPortalLoadPromise = null;
-                if (currentAppView === 'bgPortal') renderDeck();
+                if (currentAppView === 'bgPortal') {
+                    document.getElementById('viewTitle').innerText = 'BG Portal';
+                    renderDeck();
+                }
             });
         return bgPortalLoadPromise;
     }
@@ -4675,23 +4786,14 @@
     }
 
     function readStoredBgRegisterDetails() {
-        try {
-            return JSON.parse(localStorage.getItem(BG_REGISTER_STORE_KEY) || '{}') || {};
-        } catch (e) {
-            console.warn('BG_Register cache read failed', e);
-            return {};
-        }
+        return {};
     }
 
     function writeStoredBgRegisterDetails(map = bgRegisterMap) {
         try {
-            const sanitized = {};
-            Object.entries(map || {}).forEach(([key, value]) => {
-                sanitized[key] = { ...(value || {}), fileData: '', fileMimeType: value?.fileMimeType || '' };
-            });
-            localStorage.setItem(BG_REGISTER_STORE_KEY, JSON.stringify(sanitized));
+            localStorage.removeItem(BG_REGISTER_STORE_KEY);
         } catch (e) {
-            console.warn('BG_Register cache write failed', e);
+            console.warn('BG_Register cache clear failed', e);
         }
     }
 
@@ -5144,41 +5246,29 @@
     }
 
     function unlockLockedFields() {
-        const pinInput = document.getElementById('pinUnlockInput');
-        const pinError = document.getElementById('pinUnlockError');
-        const pinModal = document.getElementById('pinUnlockModal');
-        if (!pinInput || !pinError || !pinModal) return;
-
-        pendingPinAction = null;
-        pinInput.value = '';
-        pinError.innerText = '';
-        document.getElementById('pinUnlockTitle').innerText = 'Please enter security key to continue';
-        showPinUnlockModal(pinModal);
+        ensureAdminKey('Admin key required to edit locked fields.').then(key => {
+            if (key) unlockReadonlyFields();
+        });
     }
 
     function requestForceBgEditUnlock(details) {
-        const pinInput = document.getElementById('pinUnlockInput');
-        const pinError = document.getElementById('pinUnlockError');
-        const pinModal = document.getElementById('pinUnlockModal');
-        if (!pinInput || !pinError || !pinModal) return;
-
-        pendingPinAction = 'forceBgEdit';
         pendingForceBgDetails = details;
-        pinInput.value = '';
-        pinError.innerText = '';
-        document.getElementById('pinUnlockTitle').innerText = 'Please enter security key to continue';
-
-        const viewModal = document.getElementById('viewBgDetailsModal');
-        if (viewModal?.classList.contains('show')) {
-            viewModal.dataset.skipHistoryBack = '1';
-            viewModal.addEventListener('hidden.bs.modal', () => {
-                setTimeout(() => showPinUnlockModal(pinModal), 100);
-            }, { once: true });
-            hideModalElement(viewModal);
-            return;
-        }
-
-        showPinUnlockModal(pinModal);
+        ensureAdminKey('Admin key required to edit BG details.').then(key => {
+            if (!key) return;
+            const viewModal = document.getElementById('viewBgDetailsModal');
+            if (viewModal?.classList.contains('show')) {
+                const detailsToEdit = pendingForceBgDetails;
+                viewModal.dataset.skipHistoryBack = '1';
+                viewModal.addEventListener('hidden.bs.modal', () => {
+                    setTimeout(() => openPbgUploadForm(detailsToEdit, { unlockEditable: true }), 100);
+                    pendingForceBgDetails = null;
+                }, { once: true });
+                hideModalElement(viewModal);
+                return;
+            }
+            openPbgUploadForm(pendingForceBgDetails, { unlockEditable: true });
+            pendingForceBgDetails = null;
+        });
     }
 
     function confirmPinUnlock() {
@@ -5187,24 +5277,29 @@
         const pinModal = document.getElementById('pinUnlockModal');
         if (!pinInput || !pinError || !pinModal) return;
 
-        if (pinInput.value.trim() !== LOCKED_FIELDS_PIN) {
-            pinError.innerText = 'Wrong PIN';
+        const key = pinInput.value.trim();
+        if (!key) {
+            pinError.innerText = 'Admin key required';
             pinInput.select();
             return;
         }
 
-        if (pendingPinAction === 'forceBgEdit') {
-            const details = pendingForceBgDetails;
+        if (pendingPinAction === 'adminKey') {
+            setAdminKey(key);
+            const resolve = pendingAdminKeyResolve;
+            pendingAdminKeyResolve = null;
             pendingPinAction = null;
-            pendingForceBgDetails = null;
-            const modalInstance = bootstrap.Modal.getOrCreateInstance(pinModal);
-            pinModal.addEventListener('hidden.bs.modal', () => {
-                setTimeout(() => openPbgUploadForm(details, { unlockEditable: true }), 150);
-            }, { once: true });
-            modalInstance.hide();
+            bootstrap.Modal.getOrCreateInstance(pinModal).hide();
+            if (resolve) resolve(key);
             return;
         }
 
+        setAdminKey(key);
+        unlockReadonlyFields();
+        bootstrap.Modal.getOrCreateInstance(pinModal).hide();
+    }
+
+    function unlockReadonlyFields() {
         const alwaysLockedPbgIds = new Set(['pbgWorkName', 'pbgTenderId', 'pbgAgencyName']);
         document.querySelectorAll('#editForm .field-edit[readonly], #pbgUploadForm .edit-input[readonly]').forEach(input => {
             if (input.dataset.releaseLocked === 'true') return;
@@ -5214,7 +5309,6 @@
         });
         updateUnlockButtonState();
         updateBgUploadUnlockButtonState();
-        bootstrap.Modal.getOrCreateInstance(pinModal).hide();
     }
 
     function filterData(f) {
@@ -5321,19 +5415,30 @@
         return getAddFieldKeys().map(key => normalized[key] || "");
     }
 
-    async function postJson(body, timeoutMs = 25000) {
+    async function postJson(body, timeoutMs = 25000, retryAuth = true) {
+        body = body || {};
+        const needsAdminKey = requestNeedsAdminKey(body);
+        const adminKey = needsAdminKey ? await ensureAdminKey() : '';
+        if (needsAdminKey && !adminKey) return { status: 'auth_error', message: 'Admin key required' };
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), timeoutMs);
 
         try {
+            const requestBody = needsAdminKey ? { ...body, adminKey } : body;
             const res = await fetch(SCRIPT_URL, {
                 method: 'POST',
-                body: JSON.stringify(body),
+                body: JSON.stringify(requestBody),
                 signal: controller.signal
             });
             const text = await res.text();
             try {
-                return JSON.parse(text);
+                const parsed = JSON.parse(text);
+                if (parsed?.status === 'auth_error') {
+                    handleAuthError(parsed.message || 'Admin key required');
+                    const newKey = needsAdminKey && retryAuth ? await ensureAdminKey(parsed.message || 'Admin key required') : '';
+                    if (newKey && retryAuth) return postJson(body, timeoutMs, false);
+                }
+                return parsed;
             } catch (e) {
                 console.error("Invalid server response", text);
                 return {
@@ -6054,6 +6159,25 @@
         });
     }
 
+    function isAllowedUploadFile(file) {
+        const name = String(file?.name || '').toLowerCase();
+        const type = String(file?.type || '').toLowerCase();
+        return type === 'application/pdf' || name.endsWith('.pdf') || type.startsWith('image/');
+    }
+
+    function validateSelectedUploadFiles(files, options = {}) {
+        const list = Array.from(files || []);
+        const totalBytes = list.reduce((sum, file) => sum + (file.size || 0), 0);
+        const maxFiles = options.maxFiles || 25;
+        if (list.length > maxFiles) return `Please select ${maxFiles} files or fewer.`;
+        const unsupported = list.find(file => !isAllowedUploadFile(file));
+        if (unsupported) return 'Only PDF or image documents are allowed.';
+        const tooLarge = list.find(file => (file.size || 0) > MAX_UPLOAD_FILE_BYTES);
+        if (tooLarge) return `Each file must be ${Math.round(MAX_UPLOAD_FILE_BYTES / 1024 / 1024)} MB or smaller.`;
+        if (totalBytes > MAX_UPLOAD_TOTAL_BYTES) return `Selected files must be ${Math.round(MAX_UPLOAD_TOTAL_BYTES / 1024 / 1024)} MB or smaller in total.`;
+        return '';
+    }
+
     async function normalizeImageDataUrl(dataUrl, maxSide = 2400, quality = 0.94) {
         const img = await dataUrlToImage(dataUrl);
         const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
@@ -6115,6 +6239,12 @@
     async function handlePbgPhotoSelected(event) {
         const files = Array.from(event.target.files || []);
         if (!files.length) return;
+        const validationError = validateSelectedUploadFiles(files);
+        if (validationError) {
+            setPbgPhotoState('', '', '', 'No supported document selected', validationError, '');
+            event.target.value = '';
+            return;
+        }
 
         setPbgPhotoState('', '', '', 'Preparing PDF...', 'Preparing a high-quality PDF...', '');
 
@@ -6322,6 +6452,12 @@
     async function handlePbgQuickGallerySelected(event) {
         const files = Array.from(event.target.files || []);
         if (!files.length) return;
+        const validationError = validateSelectedUploadFiles(files);
+        if (validationError) {
+            document.getElementById('pbgQuickStatus').innerText = validationError;
+            event.target.value = '';
+            return;
+        }
 
         const pdfFile = files.find(file => file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'));
         if (pdfFile) {
@@ -6466,7 +6602,7 @@
             const saved = {
                 ...payload,
                 fileUrl: resp.fileUrl || resp.fileLink || payload.fileUrl || '',
-                fileName: resp.fileUrl || resp.fileLink || payload.fileName || ''
+                fileName: payload.fileName || ''
             };
             delete pendingBgUploads[tenderId];
             setBgRegisterDetails(tenderId, saved, item);
@@ -6505,19 +6641,37 @@
         }
 
         const btn = document.getElementById('submitPbgUploadBtn');
+        const originalHtml = btn.innerHTML;
         btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-check me-2"></i>Saved';
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Uploading...';
 
         payload.fileUrl = /^https?:\/\//i.test(payload.fileName) ? payload.fileName : payload.fileUrl || '';
-        setBgRegisterDetails(payload.tenderId, payload, item);
-        if (item) updateBgRegisterAction(item);
-        showAppToast('BG saved successfully.');
-        reopenSavedBgDetailsFromUpload(payload);
-        startBackgroundPbgUpload(payload);
-        setTimeout(() => {
+        try {
+            const resp = await postJson({
+                method: 'uploadToRegister',
+                formData: payload
+            }, 90000);
+            if (!isSuccessResponse(resp)) {
+                throw new Error(resp?.message || resp?.error || 'PBG upload failed');
+            }
+            const saved = {
+                ...payload,
+                fileUrl: resp.fileUrl || resp.fileLink || payload.fileUrl || '',
+                fileName: payload.fileName || ''
+            };
+            setBgRegisterDetails(saved.tenderId, saved, item);
+            if (item) updateBgRegisterAction(item);
+            showAppToast('BG saved successfully.');
+            reopenSavedBgDetailsFromUpload(saved);
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('pbgUploadModal'))?.hide();
+        } catch (e) {
+            console.error('PBG upload failed', e);
+            showAppToast(e.message || 'PBG upload failed.', 4200);
+            alert(e.message || 'PBG upload failed.');
+        } finally {
             btn.disabled = false;
-            btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up me-2"></i>Save to BG Register';
-        }, 300);
+            btn.innerHTML = originalHtml;
+        }
     }
 
     async function saveNewWork() {
