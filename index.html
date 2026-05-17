@@ -430,6 +430,9 @@
             border-top: 1px solid var(--line);
             padding-top: 1rem;
         }
+        .bg-card-amounts.single {
+            grid-template-columns: 1fr;
+        }
         .bg-card-amount {
             min-width: 0;
             border: 1px solid #e6eef8;
@@ -1334,7 +1337,7 @@
                 </div>
 
                 <div class="row g-3 mb-4">
-                    <div class="col-md-6">
+                    <div class="col-md-6" id="bgPbgAmountCardCol">
                         <div class="bg-amount-card pbg">
                             <div>
                                 <div class="detail-label">Performance BG</div>
@@ -1343,7 +1346,7 @@
                             <div class="amount" id="bgPbgAmount">&#8377;0.00</div>
                         </div>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-6" id="bgAdditionalAmountCardCol">
                         <div class="bg-amount-card additional">
                             <div>
                                 <div class="detail-label">Additional PBG</div>
@@ -2943,6 +2946,25 @@
             String(details.addValid || '').trim());
     }
 
+    function isAdditionalBgRequired(item = null, details = null) {
+        if (item) return calculateBgForItem(item).additional > 0;
+        if (typeof details?.additionalRequired === 'boolean') return details.additionalRequired;
+        return parseCurrencyAmount(details?.addAmt) > 0;
+    }
+
+    function normalizeBgDetailsForAdditionalRequirement(details, item = null) {
+        if (!details) return details;
+        const normalized = { ...details };
+        const additionalRequired = isAdditionalBgRequired(item, normalized);
+        normalized.additionalRequired = additionalRequired;
+        if (!additionalRequired) {
+            ['addAmt', 'addNo', 'addSubDate', 'addValid', 'addReleaseStatus', 'addReleaseDate', 'addReleaseRemarks'].forEach(key => {
+                normalized[key] = '';
+            });
+        }
+        return normalized;
+    }
+
     function normalizeGroupText(value) {
         return String(value || '')
             .toLowerCase()
@@ -3090,33 +3112,32 @@
             .map(details => {
                 const tenderId = String(details.tenderId || '').trim();
                 const item = workByTender.get(tenderId) || null;
-                const additionalRequired = typeof details.additionalRequired === 'boolean'
-                    ? details.additionalRequired
-                    : (item ? calculateBgForItem(item).additional > 0 : parseCurrencyAmount(details.addAmt) > 0);
+                const normalizedDetails = normalizeBgDetailsForAdditionalRequirement(details, item);
+                const additionalRequired = normalizedDetails.additionalRequired;
                 return {
-                    workName: details.workName || (item ? getWorkName(item) : ''),
+                    workName: normalizedDetails.workName || (item ? getWorkName(item) : ''),
                     tenderId,
-                    agencyName: details.agencyName || (item ? getAgencyName(item) : ''),
-                    bankName: details.bankName || '',
-                    pbgAmt: details.pbgAmt,
-                    pbgNo: details.pbgNo,
-                    pbgSubDate: details.pbgSubDate,
-                    pbgValid: details.pbgValid,
-                    addAmt: details.addAmt,
-                    addNo: details.addNo,
-                    addSubDate: details.addSubDate,
-                    addValid: details.addValid,
+                    agencyName: normalizedDetails.agencyName || (item ? getAgencyName(item) : ''),
+                    bankName: normalizedDetails.bankName || '',
+                    pbgAmt: normalizedDetails.pbgAmt,
+                    pbgNo: normalizedDetails.pbgNo,
+                    pbgSubDate: normalizedDetails.pbgSubDate,
+                    pbgValid: normalizedDetails.pbgValid,
+                    addAmt: normalizedDetails.addAmt,
+                    addNo: normalizedDetails.addNo,
+                    addSubDate: normalizedDetails.addSubDate,
+                    addValid: normalizedDetails.addValid,
                     additionalRequired,
-                    additionalSubmitted: additionalRequired && isAdditionalBgComplete(details),
-                    releaseStatus: details.releaseStatus || '',
-                    releaseDate: details.releaseDate || '',
-                    releaseRemarks: details.releaseRemarks || '',
-                    pbgReleaseStatus: details.pbgReleaseStatus || '',
-                    pbgReleaseDate: details.pbgReleaseDate || '',
-                    pbgReleaseRemarks: details.pbgReleaseRemarks || '',
-                    addReleaseStatus: details.addReleaseStatus || '',
-                    addReleaseDate: details.addReleaseDate || '',
-                    addReleaseRemarks: details.addReleaseRemarks || ''
+                    additionalSubmitted: additionalRequired && isAdditionalBgComplete(normalizedDetails),
+                    releaseStatus: normalizedDetails.releaseStatus || '',
+                    releaseDate: normalizedDetails.releaseDate || '',
+                    releaseRemarks: normalizedDetails.releaseRemarks || '',
+                    pbgReleaseStatus: normalizedDetails.pbgReleaseStatus || '',
+                    pbgReleaseDate: normalizedDetails.pbgReleaseDate || '',
+                    pbgReleaseRemarks: normalizedDetails.pbgReleaseRemarks || '',
+                    addReleaseStatus: normalizedDetails.addReleaseStatus || '',
+                    addReleaseDate: normalizedDetails.addReleaseDate || '',
+                    addReleaseRemarks: normalizedDetails.addReleaseRemarks || ''
                 };
             })
             .sort((a, b) => (a.workName || '').localeCompare(b.workName || '') || (a.tenderId || '').localeCompare(b.tenderId || ''));
@@ -4480,7 +4501,7 @@
     async function createDocxBlob(type, item, details) {
         await ensureDocumentLibraries();
 
-        const hasSecondBg = Boolean(String(details.addNo || '').trim() || parseCurrencyAmount(details.addAmt) > 0);
+        const hasSecondBg = hasAdditionalBg(details);
         const templateBase64 = type === 'agreement'
             ? window.DADRI_DOCX_TEMPLATES.agreement
             : hasSecondBg
@@ -4609,28 +4630,27 @@
 
     function isBgDetailsComplete(details, item = null) {
         if (!details || !String(details.tenderId || '').trim()) return false;
+        const normalized = normalizeBgDetailsForAdditionalRequirement(details, item);
 
         const bg1Complete = Boolean(
-            String(details.pbgAmt || '').trim() &&
-            String(details.pbgNo || '').trim() &&
-            String(details.pbgSubDate || '').trim() &&
-            String(details.pbgValid || '').trim() &&
-            String(details.bankName || '').trim()
+            String(normalized.pbgAmt || '').trim() &&
+            String(normalized.pbgNo || '').trim() &&
+            String(normalized.pbgSubDate || '').trim() &&
+            String(normalized.pbgValid || '').trim() &&
+            String(normalized.bankName || '').trim()
         );
 
         if (!bg1Complete) return false;
 
-        const additionalRequired = item
-            ? calculateBgForItem(item).additional > 0
-            : parseCurrencyAmount(details.addAmt) > 0;
+        const additionalRequired = isAdditionalBgRequired(item, normalized);
 
         if (!additionalRequired) return true;
 
         return Boolean(
-            String(details.addAmt || '').trim() &&
-            String(details.addNo || '').trim() &&
-            String(details.addSubDate || '').trim() &&
-            String(details.addValid || '').trim()
+            String(normalized.addAmt || '').trim() &&
+            String(normalized.addNo || '').trim() &&
+            String(normalized.addSubDate || '').trim() &&
+            String(normalized.addValid || '').trim()
         );
     }
 
@@ -4638,8 +4658,9 @@
         const key = String(tenderId || '').trim();
         if (!key) return;
 
-        if (isBgDetailsComplete(details, item)) {
-            bgRegisterMap[key] = { ...(bgRegisterMap[key] || {}), ...details };
+        const normalized = normalizeBgDetailsForAdditionalRequirement(details, item);
+        if (isBgDetailsComplete(normalized, item)) {
+            bgRegisterMap[key] = { ...(bgRegisterMap[key] || {}), ...normalized };
             if (currentAppView === 'bgPortal' || bgPortalMap[key]) bgPortalMap[key] = { ...(bgPortalMap[key] || {}), ...bgRegisterMap[key] };
         } else {
             delete bgRegisterMap[key];
@@ -4652,7 +4673,8 @@
         await loadBgRegisterIndex();
         const key = String(tenderId || '').trim();
         const details = bgRegisterMap[key] || null;
-        return isBgDetailsComplete(details, item) ? details : null;
+        const normalized = normalizeBgDetailsForAdditionalRequirement(details, item);
+        return isBgDetailsComplete(normalized, item) ? normalized : null;
     }
 
     function updateDashboard() {
@@ -4733,7 +4755,7 @@
         }
 
         const dates = [parseReportDate(details?.pbgValid)];
-        if (String(details?.addValid || '').trim()) dates.push(parseReportDate(details.addValid));
+        if (hasAdditionalBg(details) && String(details?.addValid || '').trim()) dates.push(parseReportDate(details.addValid));
         const validDates = dates.filter(Boolean).sort((a, b) => a - b);
         const endDate = validDates[0] || null;
         if (!endDate) return { label: 'Valid', className: 'valid' };
@@ -4759,12 +4781,12 @@
             .map(details => {
                 const tenderId = String(details.tenderId || '').trim();
                 const item = workByTender.get(tenderId) || null;
-                const merged = {
+                const merged = normalizeBgDetailsForAdditionalRequirement({
                     ...details,
                     workName: details.workName || (item ? getWorkName(item) : ''),
                     agencyName: details.agencyName || (item ? getAgencyName(item) : ''),
                     tenderId
-                };
+                }, item);
                 merged.statusInfo = getBgStatusInfo(merged);
                 return merged;
             })
@@ -4815,15 +4837,17 @@
                         </div>
                     </div>
 
-                    <div class="bg-card-amounts">
+                    <div class="bg-card-amounts ${hasAdditionalBg(details) ? '' : 'single'}">
                         <div class="bg-card-amount">
                             <div class="detail-label">PBG Amount</div>
                             <div class="bg-card-amount-value">${escapeHtml(formatCurrency(details.pbgAmt))}</div>
                         </div>
+                        ${hasAdditionalBg(details) ? `
                         <div class="bg-card-amount">
                             <div class="detail-label">Additional PBG</div>
-                            <div class="bg-card-amount-value">${escapeHtml(details.addAmt ? formatCurrency(details.addAmt) : `${RUPEE}0.00`)}</div>
+                            <div class="bg-card-amount-value">${escapeHtml(formatCurrency(details.addAmt))}</div>
                         </div>
+                        ` : ''}
                     </div>
                 </div>
             </div>`;
@@ -5250,7 +5274,7 @@
     }
 
     function hasAdditionalBg(details) {
-        return Boolean(String(details?.addNo || '').trim() || parseCurrencyAmount(details?.addAmt) > 0);
+        return isAdditionalBgRequired(null, details);
     }
 
     async function openBgDetails() {
@@ -5270,6 +5294,9 @@
         document.getElementById('bgAgencyValue').innerText = bg.agency || '-';
         document.getElementById('bgPbgAmount').innerText = formatCurrency(bg.pbg);
         document.getElementById('bgAdditionalAmount').innerText = formatCurrency(bg.additional);
+        document.getElementById('bgAdditionalAmountCardCol')?.classList.toggle('hidden', bg.additional <= 0);
+        document.getElementById('bgPbgAmountCardCol')?.classList.toggle('col-md-12', bg.additional <= 0);
+        document.getElementById('bgPbgAmountCardCol')?.classList.toggle('col-md-6', bg.additional > 0);
         document.getElementById('bgPbgRate').innerText = bg.cooperative ? 'Co-op/Society rate: 2.5%' : 'Contractor rate: 5%';
         document.getElementById('bgDiffText').innerText = bg.dnitAmt ? `${Math.max(bg.diffPercent, 0).toFixed(2)}% below DNIT` : 'DNIT missing';
 
@@ -5299,11 +5326,13 @@
         }
 
         const tenderId = getTenderId(item);
-        const details = await getBgRegisterDetails(tenderId, item);
+        let details = await getBgRegisterDetails(tenderId, item);
         if (!details) {
             alert("Please upload BG details before downloading this document.");
             return;
         }
+        details = normalizeBgDetailsForAdditionalRequirement(details, item);
+        setBgRegisterDetails(tenderId, details, item);
 
         const isAgreement = type === 'agreement';
         const btn = triggerButton || document.getElementById(isAgreement ? 'printAgreementBtn' : 'printBgLetterBtn');
@@ -5314,10 +5343,11 @@
         }
 
         try {
-            const resp = await postJson({
-                method: isAgreement ? 'generateAgreementPdf' : 'generateBgLetterPdf',
-                tenderId: tenderId
-            }, 90000);
+            let resp = await requestLetterPdf(isAgreement, tenderId);
+            if (!isSuccessResponse(resp) && isCompleteBgDetailsServerError(resp?.message || resp?.error) && isBgDetailsComplete(details, item) && !hasAdditionalBg(details)) {
+                await syncNormalizedBgDetailsForLetter(details, item);
+                resp = await requestLetterPdf(isAgreement, tenderId);
+            }
 
             if (!isSuccessResponse(resp) || !resp.pdfUrl) {
                 throw new Error(resp?.message || resp?.error || 'The PDF could not be generated.');
@@ -5327,7 +5357,11 @@
             downloadPdfFromUrl(resp.pdfUrl, fileName);
         } catch (e) {
             console.error('PDF download failed', e);
-            alert(e.message || 'The PDF could not be generated or downloaded.');
+            if (isCompleteBgDetailsServerError(e) && isBgDetailsComplete(details, item) && !hasAdditionalBg(details)) {
+                alert('BG details were updated. Please try generating the document again.');
+            } else {
+                alert(e.message || 'The PDF could not be generated or downloaded.');
+            }
         } finally {
             if (btn) {
                 btn.disabled = false;
@@ -5440,8 +5474,39 @@
         currentTenderId = getTenderId(item);
         showAppToast('Please upload BG first.');
         const modalEl = document.getElementById('generateLettersModal');
-        modalEl.addEventListener('hidden.bs.modal', () => openPbgUploadForm(details), { once: true });
+        modalEl.addEventListener('hidden.bs.modal', () => openPbgUploadForm(normalizeBgDetailsForAdditionalRequirement(details, item)), { once: true });
         bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+    }
+
+    function isCompleteBgDetailsServerError(error) {
+        return /complete\s+bg\s+details\s+first/i.test(String(error?.message || error || ''));
+    }
+
+    async function syncNormalizedBgDetailsForLetter(details, item) {
+        const normalized = normalizeBgDetailsForAdditionalRequirement(details, item);
+        if (!normalized || !isBgDetailsComplete(normalized, item) || hasAdditionalBg(normalized)) return normalized;
+        if (!String(normalized.fileName || normalized.fileUrl || '').trim()) return normalized;
+
+        const payload = { ...normalized };
+        payload.fileUrl = payload.fileUrl || (/^https?:\/\//i.test(payload.fileName || '') ? payload.fileName : '');
+        const resp = await postJson({
+            method: 'uploadToRegister',
+            formData: payload
+        }, 90000);
+        if (isSuccessResponse(resp)) {
+            const saved = {
+                ...payload,
+                fileUrl: resp.fileUrl || resp.fileLink || payload.fileUrl || '',
+                fileName: resp.fileUrl || resp.fileLink || payload.fileName || ''
+            };
+            setBgRegisterDetails(saved.tenderId, saved, item);
+            return bgRegisterMap[String(saved.tenderId || '').trim()] || saved;
+        }
+        return normalized;
+    }
+
+    async function requestLetterPdf(isAgreement, tenderId) {
+        return postJson({ method: isAgreement ? 'generateAgreementPdf' : 'generateBgLetterPdf', tenderId }, 90000);
     }
 
     async function generateSelectedLetter(type, triggerButton) {
@@ -5458,19 +5523,27 @@
         }
 
         const item = selected?.item || masterData.find(d => String(getTenderId(d) || '').trim() === tenderId);
-        const details = await getBgRegisterDetails(tenderId, item);
+        let details = await getBgRegisterDetails(tenderId, item);
         if (!details) {
             status.innerText = 'Please upload BG first.';
             openSelectedWorkBgUpload(item, bgRegisterMap[tenderId] || bgPortalMap[tenderId] || null);
             return;
         }
+        details = normalizeBgDetailsForAdditionalRequirement(details, item);
+        setBgRegisterDetails(tenderId, details, item);
 
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generating...';
         status.innerText = 'Generating PDF...';
 
         try {
-            const resp = await postJson({ method: isAgreement ? 'generateAgreementPdf' : 'generateBgLetterPdf', tenderId }, 90000);
+            let resp = await requestLetterPdf(isAgreement, tenderId);
+            if (!isSuccessResponse(resp) && isCompleteBgDetailsServerError(resp?.message || resp?.error) && isBgDetailsComplete(details, item) && !hasAdditionalBg(details)) {
+                status.innerText = 'Updating BG details...';
+                await syncNormalizedBgDetailsForLetter(details, item);
+                status.innerText = 'Generating PDF...';
+                resp = await requestLetterPdf(isAgreement, tenderId);
+            }
             if (!isSuccessResponse(resp) || !resp.pdfUrl) {
                 throw new Error(resp?.message || resp?.error || 'The PDF could not be generated.');
             }
@@ -5479,7 +5552,11 @@
             status.innerText = 'Download started.';
         } catch (e) {
             console.error('Letter download failed', e);
-            status.innerText = e.message || 'The PDF could not be generated or downloaded.';
+            if (isCompleteBgDetailsServerError(e) && isBgDetailsComplete(details, item) && !hasAdditionalBg(details)) {
+                status.innerText = 'BG details were updated. Please try generating the document again.';
+            } else {
+                status.innerText = e.message || 'The PDF could not be generated or downloaded.';
+            }
         } finally {
             btn.disabled = false;
             btn.innerHTML = originalHtml;
@@ -5550,20 +5627,25 @@
     }
 
     function openStoredBgDetails(details, source = 'work') {
+        const item = masterData.find(d => String(getTenderId(d) || '').trim() === String(details?.tenderId || currentTenderId || '').trim());
+        details = normalizeBgDetailsForAdditionalRequirement(details, item);
         currentTenderId = details.tenderId || currentTenderId;
         currentViewBgDetails = details;
         currentBgDetailsSource = source === 'bgPortal' ? 'bgPortal' : 'work';
         const pbgRelease = getBgReleaseInfo(details, 'pbg');
         const addRelease = getBgReleaseInfo(details, 'additional');
+        const additionalRequired = hasAdditionalBg(details);
         document.getElementById('viewBgTenderLabel').innerText = `Tender ID: ${details.tenderId || '-'}`;
         const content = document.getElementById('viewBgContent');
         const releaseRows = [
             ['PBG Release Status', pbgRelease.status],
             ['PBG Release Date', pbgRelease.date],
             ['PBG Release Remarks', pbgRelease.remarks],
-            ['Additional PBG Release Status', hasAdditionalBg(details) ? addRelease.status : ''],
-            ['Additional PBG Release Date', hasAdditionalBg(details) ? addRelease.date : ''],
-            ['Additional PBG Release Remarks', hasAdditionalBg(details) ? addRelease.remarks : '']
+            ...(additionalRequired ? [
+                ['Additional PBG Release Status', addRelease.status],
+                ['Additional PBG Release Date', addRelease.date],
+                ['Additional PBG Release Remarks', addRelease.remarks]
+            ] : [])
         ].filter(([, value]) => hasDisplayValue(value));
         const rows = [
             ['Work Name', details.workName],
@@ -5572,10 +5654,12 @@
             ['PBG No.', details.pbgNo],
             ['PBG Submission Date', details.pbgSubDate],
             ['PBG Valid Up To', details.pbgValid],
-            ['Additional PBG Amount', details.addAmt ? formatCurrency(details.addAmt) : `${RUPEE}0.00`],
-            ['Additional PBG No.', details.addNo || '-'],
-            ['Additional PBG Submission Date', details.addSubDate || '-'],
-            ['Additional PBG Valid Up To', details.addValid || '-'],
+            ...(additionalRequired ? [
+                ['Additional PBG Amount', formatCurrency(details.addAmt)],
+                ['Additional PBG No.', details.addNo || '-'],
+                ['Additional PBG Submission Date', details.addSubDate || '-'],
+                ['Additional PBG Valid Up To', details.addValid || '-']
+            ] : []),
             ['Bank Name', details.bankName],
             ...releaseRows,
             ['File Name', details.fileName]
@@ -5757,7 +5841,7 @@
         ['addAmt', 'addNo', 'addSubDate', 'addValid'].forEach(id => {
             const input = document.getElementById(id);
             input.required = show;
-            if (!show && id !== 'addAmt') input.value = '';
+            if (!show) input.value = '';
         });
     }
 
@@ -5966,6 +6050,8 @@
 
     function fillPbgUploadFormFromDetails(details) {
         if (!details) return;
+        const item = masterData.find(d => String(getTenderId(d) || '').trim() === String(details.tenderId || currentTenderId || '').trim());
+        details = normalizeBgDetailsForAdditionalRequirement(details, item);
 
         document.getElementById('pbgWorkName').value = details.workName || document.getElementById('pbgWorkName').value;
         document.getElementById('pbgTenderId').value = details.tenderId || document.getElementById('pbgTenderId').value;
@@ -5974,10 +6060,12 @@
         document.getElementById('pbgNo').value = details.pbgNo || '';
         document.getElementById('pbgSubDate').value = formatDateInputValue(details.pbgSubDate);
         document.getElementById('pbgValid').value = formatDateInputValue(details.pbgValid);
-        document.getElementById('addAmt').value = details.addAmt ? (parseCurrencyAmount(details.addAmt) || details.addAmt) : document.getElementById('addAmt').value;
-        document.getElementById('addNo').value = details.addNo || '';
-        document.getElementById('addSubDate').value = formatDateInputValue(details.addSubDate);
-        document.getElementById('addValid').value = formatDateInputValue(details.addValid);
+        if (hasAdditionalBg(details)) {
+            document.getElementById('addAmt').value = details.addAmt ? (parseCurrencyAmount(details.addAmt) || details.addAmt) : document.getElementById('addAmt').value;
+            document.getElementById('addNo').value = details.addNo || '';
+            document.getElementById('addSubDate').value = formatDateInputValue(details.addSubDate);
+            document.getElementById('addValid').value = formatDateInputValue(details.addValid);
+        }
         document.getElementById('bankName').value = details.bankName || '';
         if (details.fileUrl || details.fileName) {
             setPbgPhotoState(
@@ -6009,35 +6097,38 @@
             return;
         }
 
+        const normalizedPrefill = normalizeBgDetailsForAdditionalRequirement(prefillDetails, item);
         const bg = item
             ? calculateBgForItem(item)
             : {
-                agency: prefillDetails?.agencyName || '',
+                agency: normalizedPrefill?.agencyName || '',
                 quotedAmt: true,
-                pbg: parseCurrencyAmount(prefillDetails?.pbgAmt) || prefillDetails?.pbgAmt || '',
-                additional: parseCurrencyAmount(prefillDetails?.addAmt) || 0
+                pbg: parseCurrencyAmount(normalizedPrefill?.pbgAmt) || normalizedPrefill?.pbgAmt || '',
+                additional: parseCurrencyAmount(normalizedPrefill?.addAmt) || 0
             };
+        const additionalRequired = item ? bg.additional > 0 : isAdditionalBgRequired(null, normalizedPrefill);
 
-        if (!prefillDetails && (!bg.agency || !bg.quotedAmt)) {
+        if (!normalizedPrefill && (!bg.agency || !bg.quotedAmt)) {
             alert("Please generate LOA first");
             return;
         }
 
         document.getElementById('pbgUploadForm').reset();
-        document.getElementById('pbgWorkName').value = item ? getWorkName(item) : prefillDetails?.workName || '';
-        document.getElementById('pbgTenderId').value = item ? getTenderId(item) : prefillDetails?.tenderId || currentTenderId || '';
+        document.getElementById('pbgWorkName').value = item ? getWorkName(item) : normalizedPrefill?.workName || '';
+        document.getElementById('pbgTenderId').value = item ? getTenderId(item) : normalizedPrefill?.tenderId || currentTenderId || '';
         document.getElementById('pbgAgencyName').value = bg.agency || '';
         document.getElementById('pbgWorkName').readOnly = true;
         document.getElementById('pbgTenderId').readOnly = true;
         document.getElementById('pbgAgencyName').readOnly = true;
         document.getElementById('pbgAmt').value = bg.pbg || '';
-        document.getElementById('addAmt').value = bg.additional || '';
+        document.getElementById('addAmt').value = additionalRequired ? bg.additional || '' : '';
         pbgSelectedImageFiles = [];
         document.getElementById('pbgPhotoInput').value = '';
         setPbgPhotoState('', '', '', 'No document selected', '', '');
-        setAdditionalPbgVisibility(bg.additional > 0);
-        fillPbgUploadFormFromDetails(prefillDetails);
-        setPbgUploadFieldLocks(Boolean(prefillDetails), prefillDetails);
+        setAdditionalPbgVisibility(additionalRequired);
+        fillPbgUploadFormFromDetails(normalizedPrefill);
+        setAdditionalPbgVisibility(additionalRequired);
+        setPbgUploadFieldLocks(Boolean(normalizedPrefill), normalizedPrefill);
         if (options.unlockEditable) unlockEditablePbgFields();
 
         showSubPageModal(document.getElementById('pbgUploadModal'), { replaceOpen: true });
@@ -6070,6 +6161,8 @@
     }
 
     function openPbgQuickUpload(details) {
+        const item = masterData.find(d => String(getTenderId(d) || '').trim() === String(details?.tenderId || currentTenderId || '').trim());
+        details = normalizeBgDetailsForAdditionalRequirement(details, item);
         pbgQuickUploadDetails = { ...details };
         document.getElementById('pbgQuickTenderLabel').innerText = `Tender ID: ${details.tenderId || '-'}`;
         resetPbgQuickUploadState();
@@ -6178,7 +6271,7 @@
                 fileMimeType = 'application/pdf';
             }
 
-            const payload = {
+            let payload = {
                 ...pbgQuickUploadDetails,
                 pbgSubDate: toRegisterDate(formatDateInputValue(pbgQuickUploadDetails.pbgSubDate) || pbgQuickUploadDetails.pbgSubDate),
                 pbgValid: toRegisterDate(formatDateInputValue(pbgQuickUploadDetails.pbgValid) || pbgQuickUploadDetails.pbgValid),
@@ -6190,6 +6283,8 @@
             };
             const existingRelease = bgPortalMap[String(payload.tenderId || '').trim()] || bgRegisterMap[String(payload.tenderId || '').trim()] || {};
             mergeReleaseFields(payload, existingRelease);
+            const item = masterData.find(d => getTenderId(d) == currentTenderId);
+            payload = normalizeBgDetailsForAdditionalRequirement(payload, item);
 
             const resp = await postJson({
                 method: 'uploadToRegister',
@@ -6201,7 +6296,6 @@
             }
 
             payload.fileUrl = resp.fileUrl || resp.fileLink || '';
-            const item = masterData.find(d => getTenderId(d) == currentTenderId);
             setBgRegisterDetails(payload.tenderId, payload, item);
             if (item) updateBgRegisterAction(item);
 
@@ -6241,6 +6335,8 @@
     }
 
     function startBackgroundPbgUpload(payload) {
+        const item = masterData.find(d => getTenderId(d) == payload?.tenderId);
+        payload = normalizeBgDetailsForAdditionalRequirement(payload, item);
         const tenderId = String(payload.tenderId || '').trim();
         if (!tenderId) return;
         pendingBgUploads[tenderId] = { status: 'uploading', payload };
@@ -6252,7 +6348,6 @@
             if (!isSuccessResponse(resp)) {
                 throw new Error(resp?.message || resp?.error || 'PBG upload failed');
             }
-            const item = masterData.find(d => getTenderId(d) == tenderId);
             const saved = {
                 ...payload,
                 fileUrl: resp.fileUrl || resp.fileLink || payload.fileUrl || '',
@@ -6275,7 +6370,7 @@
         if (!form.reportValidity()) return;
 
         const formData = new FormData(form);
-        const payload = {};
+        let payload = {};
         formData.forEach((v, k) => {
             payload[k] = typeof v === 'string' ? v.trim() : v;
         });
@@ -6286,6 +6381,8 @@
         payload.addValid = toRegisterDate(payload.addValid);
         const existingRelease = bgPortalMap[String(payload.tenderId || '').trim()] || bgRegisterMap[String(payload.tenderId || '').trim()] || {};
         mergeReleaseFields(payload, existingRelease);
+        const item = masterData.find(d => getTenderId(d) == currentTenderId);
+        payload = normalizeBgDetailsForAdditionalRequirement(payload, item);
 
         if (!payload.fileName || (!payload.fileData && !/^https?:\/\//i.test(payload.fileName))) {
             alert("Please add PBG document");
@@ -6296,7 +6393,6 @@
         btn.disabled = true;
         btn.innerHTML = '<i class="fa-solid fa-check me-2"></i>Saved';
 
-        const item = masterData.find(d => getTenderId(d) == currentTenderId);
         payload.fileUrl = /^https?:\/\//i.test(payload.fileName) ? payload.fileName : payload.fileUrl || '';
         setBgRegisterDetails(payload.tenderId, payload, item);
         if (item) updateBgRegisterAction(item);
