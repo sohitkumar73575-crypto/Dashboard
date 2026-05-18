@@ -472,22 +472,6 @@
             background: white;
         }
         .edit-input[readonly] { background-color: #eef2f7; color: var(--muted); border-color: #d4dde8; cursor: not-allowed; }
-        .edit-input.unlocked-field { background: #fff; color: var(--text); border-color: rgba(15,110,203,0.45); box-shadow: 0 0 0 3px rgba(15,110,203,0.08); cursor: text; }
-        .unlock-fields-btn {
-            width: 44px;
-            min-width: 44px;
-            height: 42px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0;
-        }
-        .pin-unlock-dialog { max-width: 360px; margin-left: auto; margin-right: auto; }
-        .modal.show .pin-unlock-dialog { transform: translateY(-8vh); }
-        .pin-unlock-error { min-height: 1.25rem; font-size: 0.82rem; font-weight: 700; color: var(--danger); }
-        #pinUnlockModal { z-index: 20010; }
-        .modal-backdrop.pin-unlock-backdrop { z-index: 20000; }
-
         .btn { border-radius: var(--radius) !important; }
         .fab-add-work {
             position: fixed;
@@ -1288,34 +1272,9 @@
                 <button id="editToggleBtn" type="button" class="btn btn-dark px-4 py-2 rounded-3 fw-bold hidden" onclick="enableEditMode()">
                     <i class="fa fa-edit me-2"></i>Edit Details
                 </button>
-                <button id="unlockFieldsBtn" type="button" class="btn btn-outline-primary unlock-fields-btn hidden" onclick="unlockLockedFields()" title="Unlock locked fields" aria-label="Unlock locked fields">
-                    <i class="fa-solid fa-key"></i>
-                </button>
                 <button id="saveBtn" type="button" class="btn btn-primary px-5 py-2 rounded-3 fw-bold hidden" onclick="saveDetails()">
                     <i class="fa fa-save me-2"></i>Save Changes
                 </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Admin Unlock Modal -->
-<div class="modal fade" id="pinUnlockModal" tabindex="-1" aria-labelledby="pinUnlockTitle" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered pin-unlock-dialog">
-        <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header border-0 pb-0 px-4 pt-4">
-                <h5 class="modal-title fw-bold text-dark" id="pinUnlockTitle">Enter admin key to continue</h5>
-                <button type="button" class="modal-close-red" data-bs-dismiss="modal" aria-label="Close">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
-            </div>
-            <div class="modal-body px-4 pb-2">
-                <input id="pinUnlockInput" type="password" autocomplete="current-password" class="edit-input mb-1" aria-describedby="pinUnlockError">
-                <div id="pinUnlockError" class="pin-unlock-error" aria-live="polite"></div>
-            </div>
-            <div class="modal-footer border-0 px-4 pb-4 pt-2 justify-content-end">
-                <button type="button" class="btn btn-light fw-bold px-4" data-bs-dismiss="modal">Cancel</button>
-                <button id="confirmPinUnlockBtn" type="button" class="btn btn-primary fw-bold px-4" onclick="confirmPinUnlock()">OK</button>
             </div>
         </div>
     </div>
@@ -1430,9 +1389,6 @@
                 </div>
             </div>
             <div id="viewBgActions" class="modal-footer border-0 p-4 pt-0 view-bg-actions hidden">
-                <button id="viewBgForceEditBtn" type="button" class="btn btn-dark icon-action-btn" onclick="editCurrentBgDetails()" title="Force edit" aria-label="Force edit">
-                    <i class="fa-solid fa-key"></i>
-                </button>
                 <button id="viewBgReleaseBtn" type="button" class="btn bg-release-btn icon-action-btn" onclick="openReleaseBgModal()" title="Release BG" aria-label="Release BG">
                     <i class="fa-solid fa-lock-open"></i>
                 </button>
@@ -1698,9 +1654,6 @@
             </div>
 
             <div class="modal-footer border-0 justify-content-center p-4 pt-0">
-                <button id="unlockBgFieldsBtn" type="button" class="btn btn-outline-primary unlock-fields-btn hidden" onclick="unlockLockedFields()" title="Unlock locked fields" aria-label="Unlock locked fields">
-                    <i class="fa-solid fa-key"></i>
-                </button>
                 <button id="submitPbgUploadBtn" type="button" class="btn btn-primary px-5 py-2 rounded-3 fw-bold" onclick="uploadPbgDetails()">
                     <i class="fa-solid fa-cloud-arrow-up me-2"></i>Save to BG Register
                 </button>
@@ -1889,7 +1842,6 @@
     let pbgQuickImageFiles = [];
     let pbgQuickPdfFile = null;
     let pbgQuickPreviewUrls = [];
-    let currentPbgEditingExisting = false;
     let scannerReturnContext = 'form';
     let currentAppView = 'works';
     let bgPortalMap = {};
@@ -1905,9 +1857,6 @@
     let bgPortalRefreshing = false;
     let letterWorkChoices = [];
     let viewSearchValues = { works: '', bgPortal: '' };
-    let pendingPinAction = null;
-    let pendingAdminKeyResolve = null;
-    let pendingForceBgDetails = null;
     let appToastTimer = null;
     let masterDataRefreshPromise = null;
     const BG_REGISTER_STORE_KEY = 'dadriworksBgRegisterDetails';
@@ -1971,7 +1920,6 @@
         "E_TENDERID": ["E_TenderID", "Tender ID", "TenderID"],
         "Agency_Name": ["Agency Name", "AGENCY_NAME"]
     };
-    const ADMIN_KEY_STORE_KEY = 'dadriworksAdminKey';
     const MAX_UPLOAD_FILE_BYTES = 8 * 1024 * 1024;
     const MAX_UPLOAD_TOTAL_BYTES = 10 * 1024 * 1024;
     let modalHistoryDepth = 0;
@@ -1984,7 +1932,6 @@
         try {
             initModalGestureLock();
             initSwipeBackGesture();
-            initPinUnlockModal();
             const hasCachedData = hydrateMasterDataFromCache();
             document.getElementById('loadingOverlay')?.classList.toggle('hidden', hasCachedData);
             const refreshPromise = fetchData({
@@ -2108,53 +2055,7 @@
         });
     }
 
-    function initPinUnlockModal() {
-        const pinInput = document.getElementById('pinUnlockInput');
-        const pinModal = document.getElementById('pinUnlockModal');
-        if (!pinInput || !pinModal) return;
-
-        pinInput.addEventListener('keydown', event => {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                confirmPinUnlock();
-            }
-        });
-
-        pinModal.addEventListener('shown.bs.modal', () => {
-            pinInput.focus();
-            setTimeout(() => pinInput.scrollIntoView({ block: 'center', behavior: 'smooth' }), 80);
-        });
-
-        pinModal.addEventListener('hidden.bs.modal', () => {
-            pinInput.value = '';
-            const error = document.getElementById('pinUnlockError');
-            if (error) error.innerText = '';
-            const title = document.getElementById('pinUnlockTitle');
-            if (title) title.innerText = 'Enter admin key to continue';
-            const unlockBtn = document.getElementById('unlockFieldsBtn');
-            if (unlockBtn && !unlockBtn.classList.contains('hidden')) unlockBtn.focus();
-        });
-    }
-
-    function getAdminKey() {
-        try {
-            return sessionStorage.getItem(ADMIN_KEY_STORE_KEY) || '';
-        } catch (e) {
-            return '';
-        }
-    }
-
-    function setAdminKey(key) {
-        try {
-            if (key) sessionStorage.setItem(ADMIN_KEY_STORE_KEY, key);
-            else sessionStorage.removeItem(ADMIN_KEY_STORE_KEY);
-        } catch (e) {
-            console.warn('Admin session storage unavailable', e);
-        }
-    }
-
     function clearSensitiveSession(options = {}) {
-        setAdminKey('');
         bgRegisterMap = {};
         bgPortalMap = {};
         bgRegisterIndexLoaded = false;
@@ -2172,52 +2073,6 @@
         closeReportMenu();
         showAppToast('Local data cleared.');
         fetchData({ forceOverlay: true });
-    }
-
-    function promptAdminKey(message = '') {
-        const pinInput = document.getElementById('pinUnlockInput');
-        const pinError = document.getElementById('pinUnlockError');
-        const pinModal = document.getElementById('pinUnlockModal');
-        if (!pinInput || !pinError || !pinModal) return Promise.resolve('');
-
-        pinInput.value = '';
-        pinError.innerText = message;
-        pendingPinAction = 'adminKey';
-        document.getElementById('pinUnlockTitle').innerText = 'Enter admin key to continue';
-
-        return new Promise(resolve => {
-            pendingAdminKeyResolve = resolve;
-            pinModal.addEventListener('hidden.bs.modal', () => {
-                if (pendingAdminKeyResolve === resolve) {
-                    pendingAdminKeyResolve = null;
-                    pendingPinAction = null;
-                    resolve('');
-                }
-            }, { once: true });
-            showPinUnlockModal(pinModal);
-        });
-    }
-
-    async function ensureAdminKey(message = '') {
-        const existing = getAdminKey();
-        if (existing) return existing;
-        return promptAdminKey(message);
-    }
-
-    function handleAuthError(message = 'Admin key required') {
-        setAdminKey('');
-        setSyncStatus('error', message);
-        showAppToast(message, 3200);
-    }
-
-    function requestNeedsAdminKey(body = {}) {
-        const action = body.method || body.action || '';
-        if (body.forceEdit === true) return true;
-        return [
-            'calculateAndStore',
-            'releaseBg',
-            'addWork'
-        ].includes(action);
     }
 
     function getTopOpenModal() {
@@ -5299,7 +5154,6 @@
         document.querySelectorAll('.field-edit').forEach(el => el.classList.add('hidden'));
         document.getElementById('editToggleBtn').classList.add('hidden');
         document.getElementById('saveBtn').classList.add('hidden');
-        document.getElementById('unlockFieldsBtn').classList.add('hidden');
         document.getElementById('shareBtn').classList.add('hidden');
         document.getElementById('shareHeaderBtn').classList.remove('hidden');
         document.getElementById('bgDetailsBtn').classList.remove('hidden');
@@ -5317,93 +5171,6 @@
         document.getElementById('shareHeaderBtn').classList.add('hidden');
         document.getElementById('bgDetailsBtn').classList.add('hidden');
         document.getElementById('saveBtn').classList.remove('hidden');
-        updateUnlockButtonState();
-    }
-
-    function updateUnlockButtonState() {
-        const unlockBtn = document.getElementById('unlockFieldsBtn');
-        if (!unlockBtn) return;
-        const hasLockedFields = Boolean(document.querySelector('#editForm .field-edit[readonly]'));
-        unlockBtn.classList.toggle('hidden', !hasLockedFields);
-    }
-
-    function showPinUnlockModal(pinModal) {
-        pinModal.addEventListener('shown.bs.modal', () => {
-            const backdrops = Array.from(document.querySelectorAll('.modal-backdrop'));
-            backdrops.at(-1)?.classList.add('pin-unlock-backdrop');
-        }, { once: true });
-        pinModal.addEventListener('hidden.bs.modal', () => {
-            document.querySelectorAll('.pin-unlock-backdrop').forEach(backdrop => {
-                backdrop.classList.remove('pin-unlock-backdrop');
-            });
-        }, { once: true });
-        bootstrap.Modal.getOrCreateInstance(pinModal).show();
-    }
-
-    function unlockLockedFields() {
-        ensureAdminKey('Admin key required to edit locked fields.').then(key => {
-            if (key) unlockReadonlyFields();
-        });
-    }
-
-    function requestForceBgEditUnlock(details) {
-        pendingForceBgDetails = details;
-        ensureAdminKey('Admin key required to edit BG details.').then(key => {
-            if (!key) return;
-            const viewModal = document.getElementById('viewBgDetailsModal');
-            if (viewModal?.classList.contains('show')) {
-                const detailsToEdit = pendingForceBgDetails;
-                viewModal.dataset.skipHistoryBack = '1';
-                viewModal.addEventListener('hidden.bs.modal', () => {
-                    setTimeout(() => openPbgUploadForm(detailsToEdit, { unlockEditable: true }), 100);
-                    pendingForceBgDetails = null;
-                }, { once: true });
-                hideModalElement(viewModal);
-                return;
-            }
-            openPbgUploadForm(pendingForceBgDetails, { unlockEditable: true });
-            pendingForceBgDetails = null;
-        });
-    }
-
-    function confirmPinUnlock() {
-        const pinInput = document.getElementById('pinUnlockInput');
-        const pinError = document.getElementById('pinUnlockError');
-        const pinModal = document.getElementById('pinUnlockModal');
-        if (!pinInput || !pinError || !pinModal) return;
-
-        const key = pinInput.value.trim();
-        if (!key) {
-            pinError.innerText = 'Admin key required';
-            pinInput.select();
-            return;
-        }
-
-        if (pendingPinAction === 'adminKey') {
-            setAdminKey(key);
-            const resolve = pendingAdminKeyResolve;
-            pendingAdminKeyResolve = null;
-            pendingPinAction = null;
-            bootstrap.Modal.getOrCreateInstance(pinModal).hide();
-            if (resolve) resolve(key);
-            return;
-        }
-
-        setAdminKey(key);
-        unlockReadonlyFields();
-        bootstrap.Modal.getOrCreateInstance(pinModal).hide();
-    }
-
-    function unlockReadonlyFields() {
-        const alwaysLockedPbgIds = new Set(['pbgWorkName', 'pbgTenderId', 'pbgAgencyName']);
-        document.querySelectorAll('#editForm .field-edit[readonly], #pbgUploadForm .edit-input[readonly]').forEach(input => {
-            if (input.dataset.releaseLocked === 'true') return;
-            if (alwaysLockedPbgIds.has(input.id)) return;
-            input.removeAttribute('readonly');
-            input.classList.add('unlocked-field');
-        });
-        updateUnlockButtonState();
-        updateBgUploadUnlockButtonState();
     }
 
     function filterData(f) {
@@ -5514,36 +5281,27 @@
         const payload = { tenderId: currentTenderId };
         document.querySelectorAll('#editForm .field-edit').forEach(input => {
             if (!input.name) return;
-            if (input.readOnly && !input.classList.contains('unlocked-field')) return;
+            if (input.readOnly) return;
             payload[input.name] = typeof input.value === 'string' ? input.value.trim() : input.value;
         });
         return payload;
     }
 
-    async function postJson(body, timeoutMs = 25000, retryAuth = true) {
+    async function postJson(body, timeoutMs = 25000) {
         body = body || {};
-        const needsAdminKey = requestNeedsAdminKey(body);
-        const adminKey = needsAdminKey ? await ensureAdminKey() : '';
-        if (needsAdminKey && !adminKey) return { status: 'auth_error', message: 'Admin key required' };
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), timeoutMs);
         const requestBodyBase = { ...body };
 
         try {
-            const requestBody = needsAdminKey ? { ...requestBodyBase, adminKey } : requestBodyBase;
             const res = await fetch(SCRIPT_URL, {
                 method: 'POST',
-                body: JSON.stringify(requestBody),
+                body: JSON.stringify(requestBodyBase),
                 signal: controller.signal
             });
             const text = await res.text();
             try {
                 const parsed = JSON.parse(text);
-                if (parsed?.status === 'auth_error') {
-                    handleAuthError(parsed.message || 'Admin key required');
-                    const newKey = needsAdminKey && retryAuth ? await ensureAdminKey(parsed.message || 'Admin key required') : '';
-                    if (newKey && retryAuth) return postJson(body, timeoutMs, false);
-                }
                 return parsed;
             } catch (e) {
                 console.error("Invalid server response", text);
@@ -6032,28 +5790,10 @@
 
         const bgReleased = isBgReleased(details);
         const actions = document.getElementById('viewBgActions');
-        const forceEditBtn = document.getElementById('viewBgForceEditBtn');
         const releaseBtn = document.getElementById('viewBgReleaseBtn');
         actions.classList.toggle('hidden', currentBgDetailsSource !== 'bgPortal' || bgReleased);
-        if (forceEditBtn) forceEditBtn.classList.toggle('hidden', bgReleased);
         if (releaseBtn) releaseBtn.classList.toggle('hidden', bgReleased);
         showSubPageModal(document.getElementById('viewBgDetailsModal'), { replaceOpen: true });
-    }
-
-    async function editCurrentBgDetails() {
-        const item = masterData.find(d => getTenderId(d) == currentTenderId);
-        let details = null;
-        if (item) details = await getBgRegisterDetails(currentTenderId, item);
-        details = details || bgPortalMap[String(currentTenderId || '').trim()] || null;
-        if (!details) {
-            alert('BG details not found');
-            return;
-        }
-        if (isBgReleased(details)) {
-            showAppToast('BG already released. Details are view only.', 3200);
-            return;
-        }
-        requestForceBgEditUnlock(details);
     }
 
     async function openReleaseBgModal() {
@@ -6178,17 +5918,7 @@
         });
     }
 
-    function updateBgUploadUnlockButtonState() {
-        const unlockBtn = document.getElementById('unlockBgFieldsBtn');
-        if (!unlockBtn) return;
-        const alwaysLockedPbgIds = new Set(['pbgWorkName', 'pbgTenderId', 'pbgAgencyName']);
-        const hasLockedFields = currentPbgEditingExisting && Array.from(document.querySelectorAll('#pbgUploadForm .edit-input[readonly]'))
-            .some(input => !alwaysLockedPbgIds.has(input.id) && input.dataset.releaseLocked !== 'true');
-        unlockBtn.classList.toggle('hidden', !hasLockedFields);
-    }
-
     function setPbgUploadFieldLocks(enabled, details = null) {
-        currentPbgEditingExisting = enabled;
         const lockableIds = [
             'pbgWorkName',
             'pbgTenderId',
@@ -6208,7 +5938,6 @@
         lockableIds.forEach(id => {
             const input = document.getElementById(id);
             if (!input) return;
-            input.classList.remove('unlocked-field');
             input.dataset.releaseLocked = 'false';
             const hasValue = String(input.value || '').trim() !== '';
             const pbgReleased = details && isBgPartReleased(details, 'pbg') && ['pbgAmt', 'pbgNo', 'pbgSubDate', 'pbgValid'].includes(id);
@@ -6226,7 +5955,6 @@
         document.getElementById('pbgWorkName').readOnly = true;
         document.getElementById('pbgTenderId').readOnly = true;
         document.getElementById('pbgAgencyName').readOnly = true;
-        updateBgUploadUnlockButtonState();
     }
 
     function safeFilePart(value) {
@@ -6439,17 +6167,7 @@
         }
     }
 
-    function unlockEditablePbgFields() {
-        const alwaysLockedPbgIds = new Set(['pbgWorkName', 'pbgTenderId', 'pbgAgencyName']);
-        document.querySelectorAll('#pbgUploadForm .edit-input[readonly]').forEach(input => {
-            if (alwaysLockedPbgIds.has(input.id) || input.dataset.releaseLocked === 'true') return;
-            input.removeAttribute('readonly');
-            input.classList.add('unlocked-field');
-        });
-        updateBgUploadUnlockButtonState();
-    }
-
-    function openPbgUploadForm(prefillDetails = null, options = {}) {
+    function openPbgUploadForm(prefillDetails = null) {
         const item = masterData.find(d => getTenderId(d) == currentTenderId);
 
         if (!item && !prefillDetails) {
@@ -6490,7 +6208,6 @@
         fillPbgUploadFormFromDetails(normalizedPrefill);
         setAdditionalPbgVisibility(additionalRequired);
         setPbgUploadFieldLocks(Boolean(normalizedPrefill), normalizedPrefill);
-        if (options.unlockEditable) unlockEditablePbgFields();
 
         showSubPageModal(document.getElementById('pbgUploadModal'), { replaceOpen: true });
     }
@@ -6758,7 +6475,6 @@
 
         const btn = document.getElementById('submitPbgUploadBtn');
         const originalHtml = btn.innerHTML;
-        const forceEdit = Boolean(document.querySelector('#pbgUploadForm .edit-input.unlocked-field'));
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Uploading...';
 
@@ -6766,8 +6482,7 @@
         try {
             const resp = await postJson({
                 method: 'uploadToRegister',
-                formData: payload,
-                forceEdit
+                formData: payload
             }, 90000);
             if (!isSuccessResponse(resp)) {
                 throw new Error(resp?.message || resp?.error || 'PBG upload failed');
@@ -6884,7 +6599,6 @@
 
     async function saveDetails() {
         const payload = collectEditableWorkPayload();
-        const forceEdit = Boolean(document.querySelector('#editForm .field-edit.unlocked-field'));
         const saveBtn = document.getElementById('saveBtn');
         const originalHtml = saveBtn.innerHTML;
         const existingIndex = masterData.findIndex(item => String(getTenderId(item) || '').trim() === String(currentTenderId || '').trim());
@@ -6897,7 +6611,7 @@
         bootstrap.Modal.getInstance(document.getElementById('workModal'))?.hide();
         showAppToast('Saved locally. Syncing sheet...');
 
-        postJson({ action: 'updateWork', details: payload, forceEdit }).then(resp => {
+        postJson({ action: 'updateWork', details: payload }).then(resp => {
             if (!isSuccessResponse(resp)) {
                 throw new Error(resp?.message || resp?.error || "Update failed.");
             }
