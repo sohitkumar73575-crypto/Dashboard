@@ -752,6 +752,16 @@
             opacity: 1;
             transform: translateX(-50%) translateY(-4px);
         }
+        .performa-docx-render {
+            position: fixed;
+            left: -10000px;
+            top: 0;
+            width: 210mm;
+            padding: 12mm;
+            background: #fff;
+            color: #000;
+            font-family: "Times New Roman", serif;
+        }
         .letter-choice-grid {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1406,7 +1416,7 @@
                     <span class="add-work-title-icon"><i class="fa-solid fa-file-pdf"></i></span>
                     <div>
                         <h5 class="modal-title fw-bold text-dark mb-0">Generate Letters</h5>
-                        <small class="text-secondary fw-semibold">Agreement and BG Verification Letter</small>
+                        <small class="text-secondary fw-semibold">Agreement, BG, Monitoring, Completion &amp; Sampling</small>
                     </div>
                 </div>
                 <button type="button" class="modal-close-red" data-bs-dismiss="modal" aria-label="Close">
@@ -1429,8 +1439,107 @@
                     <button id="generateAgreementBtn" type="button" class="btn btn-primary fw-bold py-3" onclick="generateSelectedLetter('agreement', this)">
                         <i class="fa-solid fa-file-contract me-2"></i>Generate Agreement
                     </button>
+                    <button id="generateMonitoringBtn" type="button" class="btn btn-success fw-bold py-3" onclick="openMonitoringPerformaModal()">
+                        <i class="fa-solid fa-clipboard-list me-2"></i>Monitoring Performa
+                    </button>
+                    <button id="generateCompletionBtn" type="button" class="btn btn-warning fw-bold py-3 text-dark" onclick="generatePerforma('completionCertificate', this)">
+                        <i class="fa-solid fa-certificate me-2"></i>Completion Certificate
+                    </button>
+                    <button id="generateSamplingBtn" type="button" class="btn btn-info fw-bold py-3 text-dark" onclick="generatePerforma('sampling', this)">
+                        <i class="fa-solid fa-vial me-2"></i>Sampling Performa
+                    </button>
                 </div>
                 <div id="letterDownloadStatus" class="photo-hint mt-3"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Monitoring Performa modal -->
+<div class="modal fade" id="monitoringPerformaModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg overflow-hidden">
+            <div class="modal-header border-0 px-4 pt-4 pb-2">
+                <div class="d-flex align-items-center gap-3">
+                    <span class="add-work-title-icon"><i class="fa-solid fa-clipboard-list"></i></span>
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark mb-0">Monitoring Performa</h5>
+                        <small class="text-secondary fw-semibold">Fill details and download PDF</small>
+                    </div>
+                </div>
+                <button type="button" class="modal-close-red" data-bs-dismiss="modal" aria-label="Close">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="modal-body p-4">
+                <label class="detail-label">Selected Work</label>
+                <div id="monitoringWorkLabel" class="photo-hint mb-3">No work selected</div>
+
+                <label class="detail-label" for="monitoringAgencyName">Name of Agency</label>
+                <input id="monitoringAgencyName" class="edit-input mb-3" readonly>
+
+                <label class="detail-label" for="monitoringEstCostLacs">Estimated Cost (in Lacs)</label>
+                <input id="monitoringEstCostLacs" class="edit-input mb-3" readonly>
+
+                <label class="detail-label" for="monitoringGrossAmtLacs">Gross Amount (in Lacs) *</label>
+                <input id="monitoringGrossAmtLacs" type="number" inputmode="decimal" step="0.01" min="0" class="edit-input mb-3" required>
+
+                <label class="detail-label" for="monitoringNetAmtLacs">Net Amount (in Lacs)</label>
+                <input id="monitoringNetAmtLacs" type="number" inputmode="decimal" step="0.01" min="0" class="edit-input mb-3">
+
+                <label class="detail-label" for="monitoringSampleReport">Sample Report</label>
+                <select id="monitoringSampleReport" class="edit-input mb-3" onchange="updateMonitoringCommentsPreview()">
+                    <option value="Attached">Attached</option>
+                    <option value="Not Attached">Not Attached</option>
+                </select>
+
+                <label class="detail-label" for="monitoringBillType">Bill Type</label>
+                <select id="monitoringBillType" class="edit-input mb-3" onchange="syncMonitoringBillNumberOptions()">
+                    <option value="running">Running Bill</option>
+                    <option value="final">Final Bill</option>
+                </select>
+
+                <label class="detail-label" for="monitoringBillNumber">Bill Number</label>
+                <select id="monitoringBillNumber" class="edit-input mb-3" onchange="updateMonitoringCommentsPreview()"></select>
+
+                <label class="detail-label" for="monitoringCommentsPreview">Comments if Any (auto)</label>
+                <input id="monitoringCommentsPreview" class="edit-input mb-2" readonly>
+                <div id="monitoringFormStatus" class="photo-hint"></div>
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4 pt-0 justify-content-end">
+                <button type="button" class="btn btn-light fw-bold px-4" data-bs-dismiss="modal">Cancel</button>
+                <button id="generateMonitoringPdfBtn" type="button" class="btn btn-danger fw-bold px-4" onclick="generateMonitoringPdfFromModal()">
+                    <i class="fa-solid fa-file-pdf me-2"></i>Generate PDF
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Performa manual fields modal -->
+<div class="modal fade" id="performaFieldsModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg overflow-hidden">
+            <div class="modal-header border-0 px-4 pt-4 pb-2">
+                <div class="d-flex align-items-center gap-3">
+                    <span class="add-work-title-icon"><i class="fa-solid fa-pen-to-square"></i></span>
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark mb-0" id="performaFieldsTitle">Fill missing details</h5>
+                        <small class="text-secondary fw-semibold" id="performaFieldsSubtitle">Fields not found in your sheet</small>
+                    </div>
+                </div>
+                <button type="button" class="modal-close-red" data-bs-dismiss="modal" aria-label="Close">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="performaFieldsForm" onsubmit="event.preventDefault(); submitPerformaFieldsForm();"></form>
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4 pt-0 justify-content-end">
+                <button type="button" class="btn btn-light fw-bold px-4" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger fw-bold px-4" onclick="submitPerformaFieldsForm()">
+                    <i class="fa-solid fa-file-pdf me-2"></i>Generate PDF
+                </button>
             </div>
         </div>
     </div>
@@ -1823,7 +1932,9 @@
         xlsx: 'https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js',
         pizzip: 'https://cdn.jsdelivr.net/npm/pizzip@3.1.7/dist/pizzip.min.js',
         docxtemplater: 'https://cdn.jsdelivr.net/npm/docxtemplater@3.47.4/build/docxtemplater.js',
-        templates: './templates.js'
+        templates: './templates.js',
+        performaTemplates: './performa-templates.js',
+        docxPreview: 'https://cdn.jsdelivr.net/npm/docx-preview@0.3.5/dist/docx-preview.min.js'
     };
     const FEATURE_SCRIPT_INTEGRITY = {
         html2canvas: 'sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H',
@@ -2019,6 +2130,545 @@
         }
     }
 
+    async function ensurePerformaDocxLibraries() {
+        if (!window.PizZip) await loadFeatureScript('pizzip');
+        if (!window.docxtemplater) await loadFeatureScript('docxtemplater');
+        if (!window.DADRI_PERFORMA_TEMPLATES) await loadFeatureScript('performaTemplates');
+        if (!window.PizZip || !window.docxtemplater || !window.DADRI_PERFORMA_TEMPLATES) {
+            throw new Error('Performa DOCX libraries could not be loaded. Check your internet connection or open the app via http://localhost (not file://).');
+        }
+    }
+
+    async function ensurePerformaPdfLibraries() {
+        if (!window.docx) await loadFeatureScript('docxPreview');
+        await ensureCaptureLibrary();
+        await ensurePdfReportLibraries();
+        if (!window.docx?.renderAsync) {
+            throw new Error('PDF conversion libraries could not be loaded. Check your internet connection or open the app via http://localhost (not file://).');
+        }
+    }
+
+    async function ensurePerformaLibraries() {
+        await ensurePerformaDocxLibraries();
+        await ensurePerformaPdfLibraries();
+    }
+
+    let monitoringPerformaContext = null;
+
+    const PERFORMA_FIELD_DEFS = {
+        completionCertificate: [
+            { key: 'WORK_NAME', label: 'Name of Work', required: true },
+            { key: 'ESTIMATE_RS', label: 'Estimate (Rs.)', required: true },
+            { key: 'EXPENDITURE_RS', label: 'Expenditure (Rs.)', required: true },
+            { key: 'COMMENCEMENT_DATE', label: 'Date of Commencement', required: true },
+            { key: 'COMPLETION_DATE', label: 'Date of Completion', required: true },
+            { key: 'PERIOD_FROM', label: 'Period From', required: true },
+            { key: 'PERIOD_TO', label: 'Period To', required: true },
+            { key: 'AGENCY_NAME', label: 'Agency / Contractor', required: true },
+            { key: 'CERTIFICATE_DATE', label: 'Certificate Date', required: true }
+        ],
+        sampling: [
+            { key: 'LETTER_REF', label: 'Reference No.', required: true },
+            { key: 'LETTER_DATE', label: 'Letter Date', required: true },
+            { key: 'WORK_NAME', label: 'Name of Work', required: true },
+            { key: 'SAMPLE_TYPE', label: 'Type of Sample', required: true }
+        ]
+    };
+
+    let performaPendingContext = null;
+
+    function formatPerformaDotDate(value) {
+        const d = parseReportDate(value);
+        if (!d) return String(value || '').trim();
+        const day = pad2(d.getDate());
+        const month = pad2(d.getMonth() + 1);
+        return `${day}.${month}.${d.getFullYear()}`;
+    }
+
+    function formatPerformaDisplayDate(value) {
+        const d = parseReportDate(value);
+        if (!d) return String(value || '').trim();
+        return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+
+    function amountToLacs(value) {
+        const amount = parseCurrencyAmount(value);
+        if (!amount) return '';
+        return (amount / 100000).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function getBillOrdinalSuffix(number) {
+        const n = parseInt(number, 10);
+        if (n === 1) return 'st';
+        if (n === 2) return 'nd';
+        if (n === 3) return 'rd';
+        return 'th';
+    }
+
+    function buildMonitoringComments(billType, billNumber) {
+        const n = parseInt(billNumber, 10);
+        if (!n || n < 1) return '';
+        const ordinal = `${n}${getBillOrdinalSuffix(n)}`;
+        if (billType === 'final') return `${ordinal} & Final Bill`;
+        return `${ordinal} Running Bill`;
+    }
+
+    function syncMonitoringBillNumberOptions() {
+        const billType = document.getElementById('monitoringBillType')?.value || 'running';
+        const select = document.getElementById('monitoringBillNumber');
+        if (!select) return;
+
+        const max = billType === 'final' ? 5 : 8;
+        const previous = select.value;
+        select.innerHTML = Array.from({ length: max }, (_, i) => {
+            const value = String(i + 1);
+            return `<option value="${value}">${value}</option>`;
+        }).join('');
+        if (previous && Number(previous) <= max) select.value = previous;
+        updateMonitoringCommentsPreview();
+    }
+
+    function updateMonitoringCommentsPreview() {
+        const billType = document.getElementById('monitoringBillType')?.value || 'running';
+        const billNumber = document.getElementById('monitoringBillNumber')?.value || '1';
+        const preview = document.getElementById('monitoringCommentsPreview');
+        if (preview) preview.value = buildMonitoringComments(billType, billNumber);
+    }
+
+    function populateMonitoringFormFromItem(item) {
+        if (!item) return;
+        const tenderId = getTenderId(item);
+        const estimate = getEstimateCostColumnValue(item) || getEstimateAmount(item);
+
+        document.getElementById('monitoringWorkLabel').innerText = getLetterWorkLabel(item);
+        document.getElementById('monitoringAgencyName').value = getAgencyName(item) || '';
+        document.getElementById('monitoringEstCostLacs').value = amountToLacs(estimate);
+        document.getElementById('monitoringGrossAmtLacs').value = '';
+        document.getElementById('monitoringNetAmtLacs').value = '';
+        document.getElementById('monitoringSampleReport').value = 'Not Attached';
+        document.getElementById('monitoringBillType').value = 'running';
+        syncMonitoringBillNumberOptions();
+        document.getElementById('monitoringFormStatus').innerText = '';
+        monitoringPerformaContext = { item, tenderId };
+    }
+
+    function getMonitoringFormPayload() {
+        const ctx = monitoringPerformaContext || {};
+        const billType = document.getElementById('monitoringBillType')?.value || 'running';
+        const billNumber = document.getElementById('monitoringBillNumber')?.value || '1';
+        const comments = buildMonitoringComments(billType, billNumber);
+        const sampleReport = document.getElementById('monitoringSampleReport')?.value || 'Not Attached';
+
+        return {
+            tenderId: ctx.tenderId || '',
+            workName: ctx.item ? getWorkName(ctx.item) : '',
+            agencyName: document.getElementById('monitoringAgencyName')?.value || '',
+            estCostLacs: document.getElementById('monitoringEstCostLacs')?.value || '',
+            grossAmtLacs: document.getElementById('monitoringGrossAmtLacs')?.value || '',
+            netAmtLacs: document.getElementById('monitoringNetAmtLacs')?.value || '',
+            sampleReport,
+            comments,
+            templateData: {
+                WORK_NAME: ctx.item ? getWorkName(ctx.item) : '',
+                AGENCY_NAME: document.getElementById('monitoringAgencyName')?.value || '',
+                EST_COST_LACS: document.getElementById('monitoringEstCostLacs')?.value || '',
+                GROSS_AMT_LACS: document.getElementById('monitoringGrossAmtLacs')?.value || '',
+                NET_AMT_LACS: document.getElementById('monitoringNetAmtLacs')?.value || '',
+                SAMPLE_REPORT: sampleReport,
+                COMMENTS: comments
+            }
+        };
+    }
+
+    function openMonitoringPerformaModal() {
+        const selected = syncSelectedLetterWork();
+        const tenderId = selected?.tenderId || document.getElementById('letterTenderId').value;
+        const item = selected?.item || masterData.find(d => String(getTenderId(d) || '').trim() === tenderId);
+
+        if (!tenderId || !item) {
+            const status = document.getElementById('letterDownloadStatus');
+            if (status) status.innerText = 'Please select work first.';
+            alert('Please select work first.');
+            return;
+        }
+
+        populateMonitoringFormFromItem(item);
+        showSubPageModal(document.getElementById('monitoringPerformaModal'), { keepIds: ['generateLettersModal'] });
+    }
+
+    async function requestMonitoringPdf(payload) {
+        return postJson({
+            method: 'generateMonitoringPdf',
+            action: 'generateMonitoringPdf',
+            tenderId: payload.tenderId,
+            workName: payload.workName,
+            agencyName: payload.agencyName,
+            estCostLacs: payload.estCostLacs,
+            grossAmtLacs: payload.grossAmtLacs,
+            netAmtLacs: payload.netAmtLacs,
+            sampleReport: payload.sampleReport,
+            comments: payload.comments
+        }, 90000);
+    }
+
+    function formatMonitoringPdfError(serverError, fallbackError) {
+        const serverMsg = String(serverError?.message || '');
+        const fallbackMsg = String(fallbackError?.message || '');
+        const combined = fallbackMsg || serverMsg;
+
+        if (/MONITORING_TEMPLATE_ID|template is not configured|Monitoring template/i.test(serverMsg)) {
+            return 'Server: Monitoring template not configured. Upload MONITORING.docx to Drive, set MONITORING_TEMPLATE_ID in Apps Script, and redeploy. See MONITORING_TEMPLATE_README.md.';
+        }
+        if (/PizZip|docxtemplater|Performa DOCX|PDF conversion libraries|internet connection|file:\/\//i.test(combined)) {
+            return `${combined} Try opening via a local web server (e.g. npx serve) instead of file://.`;
+        }
+        if (/template file is invalid|template not found/i.test(combined)) {
+            return `${combined} The embedded performa template may be corrupt; restore performa-templates.js from the repository.`;
+        }
+        if (/loadAsync/i.test(combined)) {
+            return 'DOCX template could not be read. Check internet for CDN scripts or open the app via http://localhost (not file://).';
+        }
+        return combined || 'PDF could not be generated.';
+    }
+
+    async function generateMonitoringPdfFromModal() {
+        const payload = getMonitoringFormPayload();
+        const statusEl = document.getElementById('monitoringFormStatus');
+        const btn = document.getElementById('generateMonitoringPdfBtn');
+        const originalHtml = btn?.innerHTML;
+
+        if (!payload.tenderId) {
+            alert('Please select work first.');
+            return;
+        }
+        if (!String(payload.grossAmtLacs || '').trim()) {
+            alert('Gross Amount (in Lacs) is required.');
+            document.getElementById('monitoringGrossAmtLacs')?.focus();
+            return;
+        }
+        if (!String(payload.comments || '').trim()) {
+            alert('Please select bill type and number.');
+            return;
+        }
+
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generating...';
+        }
+        if (statusEl) statusEl.innerText = 'Generating PDF...';
+
+        const fileName = `Monitoring_${payload.tenderId}.pdf`;
+
+        try {
+            const resp = await requestMonitoringPdf(payload);
+            if (isSuccessResponse(resp) && resp.pdfUrl) {
+                downloadPdfFromUrl(resp.pdfUrl, fileName);
+                if (statusEl) statusEl.innerText = 'PDF download started.';
+                const modalEl = document.getElementById('monitoringPerformaModal');
+                modalEl.dataset.skipHistoryBack = '1';
+                bootstrap.Modal.getInstance(modalEl)?.hide();
+                return;
+            }
+            throw new Error(resp?.message || resp?.error || 'Server PDF generation failed.');
+        } catch (serverError) {
+            console.warn('Monitoring server PDF failed, trying client fallback.', serverError);
+            if (statusEl) statusEl.innerText = 'Server unavailable. Preparing PDF locally...';
+            try {
+                await finalizePerformaDownload('monitoring', payload.tenderId, payload.templateData, statusEl);
+                const modalEl = document.getElementById('monitoringPerformaModal');
+                modalEl.dataset.skipHistoryBack = '1';
+                bootstrap.Modal.getInstance(modalEl)?.hide();
+            } catch (fallbackError) {
+                console.error('Monitoring PDF fallback failed', fallbackError);
+                const message = formatMonitoringPdfError(serverError, fallbackError);
+                if (statusEl) statusEl.innerText = message;
+                alert(message);
+            }
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+        }
+    }
+
+    function formatPerformaRs(value) {
+        const amount = parseCurrencyAmount(value);
+        if (!amount) return '';
+        return amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function buildPerformaAutoData(type, item) {
+        const estimate = getEstimateCostColumnValue(item) || getEstimateAmount(item);
+        const agreement = getAgreementAmount(item);
+        const commencement = getReportValue(item, 'Agreement Start Date');
+        const completion = getReportValue(item, 'Completion_Date');
+        const today = getPrintDate();
+
+        const common = {
+            WORK_NAME: getWorkName(item),
+            AGENCY_NAME: getAgencyName(item),
+            TENDER_ID: getTenderId(item)
+        };
+
+        if (type === 'completionCertificate') {
+            return {
+                ...common,
+                ESTIMATE_RS: formatPerformaRs(estimate),
+                EXPENDITURE_RS: formatPerformaRs(agreement || estimate),
+                COMMENCEMENT_DATE: formatPerformaDotDate(commencement),
+                COMPLETION_DATE: formatPerformaDotDate(completion),
+                PERIOD_FROM: formatPerformaDotDate(commencement),
+                PERIOD_TO: formatPerformaDotDate(completion),
+                CERTIFICATE_DATE: formatPerformaDotDate(today)
+            };
+        }
+
+        return {
+            ...common,
+            LETTER_REF: common.TENDER_ID ? `Tender ${common.TENDER_ID}` : '',
+            LETTER_DATE: formatPerformaDisplayDate(today),
+            SAMPLE_TYPE: 'Building Material'
+        };
+    }
+
+    function getPerformaMissingFields(type, data) {
+        return (PERFORMA_FIELD_DEFS[type] || []).filter(field => {
+            if (!field.required) return false;
+            return !String(data[field.key] ?? '').trim();
+        });
+    }
+
+    function openPerformaFieldsModal(type, data, onSubmit) {
+        performaPendingContext = { type, data: { ...data }, onSubmit };
+        const titles = {
+            completionCertificate: 'Completion Certificate',
+            sampling: 'Sampling Performa'
+        };
+        document.getElementById('performaFieldsTitle').innerText = titles[type] || 'Fill missing details';
+        document.getElementById('performaFieldsSubtitle').innerText = 'Review or complete fields before PDF download';
+
+        const form = document.getElementById('performaFieldsForm');
+        const missingKeys = new Set(getPerformaMissingFields(type, data).map(f => f.key));
+        form.innerHTML = (PERFORMA_FIELD_DEFS[type] || []).map(field => {
+            const value = escapeHtml(String(data[field.key] ?? ''));
+            const required = field.required ? 'required' : '';
+            const highlight = missingKeys.has(field.key) ? 'border border-warning' : '';
+            return `
+                <label class="detail-label" for="performaField_${field.key}">${escapeHtml(field.label)}${field.required ? ' *' : ''}</label>
+                <input id="performaField_${field.key}" class="edit-input mb-3 ${highlight}" name="${field.key}" value="${value}" ${required}>
+            `;
+        }).join('');
+
+        showSubPageModal(document.getElementById('performaFieldsModal'), { keepIds: ['generateLettersModal'] });
+    }
+
+    function readPerformaFieldsFromModal(type) {
+        const data = { ...(performaPendingContext?.data || {}) };
+        (PERFORMA_FIELD_DEFS[type] || []).forEach(field => {
+            const input = document.getElementById(`performaField_${field.key}`);
+            if (input) data[field.key] = String(input.value || '').trim();
+        });
+        return data;
+    }
+
+    function submitPerformaFieldsForm() {
+        if (!performaPendingContext) return;
+        const { type, onSubmit } = performaPendingContext;
+        const form = document.getElementById('performaFieldsForm');
+        if (!form.reportValidity()) return;
+        const data = readPerformaFieldsFromModal(type);
+        const stillMissing = getPerformaMissingFields(type, data);
+        if (stillMissing.length) {
+            alert(`Please fill: ${stillMissing.map(f => f.label).join(', ')}`);
+            return;
+        }
+        const modalEl = document.getElementById('performaFieldsModal');
+        modalEl.dataset.skipHistoryBack = '1';
+        bootstrap.Modal.getInstance(modalEl)?.hide();
+        performaPendingContext = null;
+        onSubmit(data);
+    }
+
+    async function createPerformaDocxBlob(type, data) {
+        await ensurePerformaDocxLibraries();
+        const templateBase64 = window.DADRI_PERFORMA_TEMPLATES[type];
+        if (!templateBase64) throw new Error(`Performa template not found (${type}).`);
+
+        const PizZipCtor = window.PizZip;
+        if (!PizZipCtor) {
+            throw new Error('PizZip failed to load. Check your internet connection or open the app via http://localhost (not file://).');
+        }
+
+        const zip = new PizZipCtor(base64ToArrayBuffer(templateBase64));
+        if (!zip?.files || Object.keys(zip.files).length === 0) {
+            throw new Error(`Performa template file is invalid (${type}). Restore performa-templates.js from the repository.`);
+        }
+
+        const doc = new window.docxtemplater(zip, {
+            paragraphLoop: true,
+            linebreaks: true,
+            delimiters: { start: '{{', end: '}}' },
+            nullGetter: () => ''
+        });
+
+        try {
+            doc.render(data);
+        } catch (e) {
+            const templateErrors = e.properties?.errors?.map(err => err.properties?.explanation || err.message).filter(Boolean);
+            throw new Error(templateErrors?.length ? templateErrors.join('\n') : (e.message || 'Template render error'));
+        }
+
+        return doc.getZip().generate({
+            type: 'blob',
+            mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        });
+    }
+
+    async function blobToBase64(blob) {
+        const buffer = await blob.arrayBuffer();
+        let binary = '';
+        const bytes = new Uint8Array(buffer);
+        for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+        return btoa(binary);
+    }
+
+    async function requestPerformaPdf(type, tenderId, docxBlob) {
+        const docxBase64 = await blobToBase64(docxBlob);
+        return postJson({
+            method: 'generatePerformaPdf',
+            action: 'generatePerformaPdf',
+            performaType: type,
+            tenderId,
+            docxBase64
+        }, 90000);
+    }
+
+    async function downloadPerformaPdfFromDocx(docxBlob, fileName) {
+        await ensurePerformaPdfLibraries();
+
+        let container = document.getElementById('performaDocxRender');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'performaDocxRender';
+            container.className = 'performa-docx-render';
+            document.body.appendChild(container);
+        }
+        container.innerHTML = '';
+
+        await window.docx.renderAsync(await docxBlob.arrayBuffer(), container, null, {
+            className: 'docx',
+            inWrapper: false,
+            ignoreWidth: false,
+            ignoreHeight: false
+        });
+
+        const canvas = await window.html2canvas(container, {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: '#ffffff',
+            logging: false
+        });
+
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        const margin = 8;
+        const usableWidth = pageWidth - margin * 2;
+        const imgHeight = (canvas.height * usableWidth) / canvas.width;
+        const imgData = canvas.toDataURL('image/jpeg', 0.92);
+        let heightLeft = imgHeight;
+        let position = margin;
+
+        pdf.addImage(imgData, 'JPEG', margin, position, usableWidth, imgHeight);
+        heightLeft -= pageHeight - margin * 2;
+
+        while (heightLeft > 0) {
+            position = margin - (imgHeight - heightLeft);
+            pdf.addPage();
+            pdf.addImage(imgData, 'JPEG', margin, position, usableWidth, imgHeight);
+            heightLeft -= pageHeight - margin * 2;
+        }
+
+        pdf.save(fileName);
+        container.innerHTML = '';
+    }
+
+    async function finalizePerformaDownload(type, tenderId, data, statusEl) {
+        const labels = {
+            monitoring: 'Monitoring',
+            completionCertificate: 'Completion_Certificate',
+            sampling: 'Sampling'
+        };
+        const fileName = `${labels[type] || 'Performa'}_${tenderId || 'work'}.pdf`;
+        const docxBlob = await createPerformaDocxBlob(type, data);
+
+        try {
+            const resp = await requestPerformaPdf(type, tenderId, docxBlob);
+            if (isSuccessResponse(resp) && resp.pdfUrl) {
+                downloadPdfFromUrl(resp.pdfUrl, fileName);
+                if (statusEl) statusEl.innerText = 'PDF download started.';
+                return;
+            }
+        } catch (e) {
+            console.warn('Server performa PDF unavailable, using client conversion.', e);
+        }
+
+        if (statusEl) statusEl.innerText = 'Preparing PDF...';
+        await downloadPerformaPdfFromDocx(docxBlob, fileName);
+        if (statusEl) statusEl.innerText = 'PDF download started.';
+    }
+
+    async function generatePerforma(type, triggerButton) {
+        if (type === 'monitoring') {
+            openMonitoringPerformaModal();
+            return;
+        }
+
+        const selected = syncSelectedLetterWork();
+        const tenderId = selected?.tenderId || document.getElementById('letterTenderId').value;
+        const status = document.getElementById('letterDownloadStatus');
+        const item = selected?.item || masterData.find(d => String(getTenderId(d) || '').trim() === tenderId);
+
+        if (!tenderId || !item) {
+            if (status) status.innerText = 'Please select work.';
+            return;
+        }
+
+        const btn = triggerButton;
+        const originalHtml = btn?.innerHTML;
+        const autoData = buildPerformaAutoData(type, item);
+        const missing = getPerformaMissingFields(type, autoData);
+
+        const runDownload = async (data) => {
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generating...';
+            }
+            if (status) status.innerText = 'Generating PDF...';
+            try {
+                await finalizePerformaDownload(type, tenderId, data, status);
+            } catch (e) {
+                console.error('Performa PDF failed', e);
+                if (status) status.innerText = e.message || 'PDF could not be generated.';
+                alert(e.message || 'PDF could not be generated.');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalHtml;
+                }
+            }
+        };
+
+        if (missing.length) {
+            openPerformaFieldsModal(type, autoData, runDownload);
+            return;
+        }
+
+        await runDownload(autoData);
+    }
+
     function setSyncStatus(type, message, options = {}) {
         const status = document.getElementById('syncStatus');
         const text = document.getElementById('syncStatusText');
@@ -2141,7 +2791,7 @@
     }
 
     function showSubPageModal(modalEl, options = {}) {
-        const { replaceOpen = false, keepIds = [], modalOptions = {} } = options;
+        const { replaceOpen = true, keepIds = [], modalOptions = {} } = options;
         const openModals = Array.from(document.querySelectorAll('.modal.show'))
             .filter(openModal => openModal !== modalEl && !keepIds.includes(openModal.id));
 
@@ -4630,7 +5280,7 @@
         const binary = atob(base64);
         const bytes = new Uint8Array(binary.length);
         for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-        return bytes.buffer;
+        return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
     }
 
     function buildTemplateData(type, item, details) {
