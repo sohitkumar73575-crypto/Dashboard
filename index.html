@@ -1931,6 +1931,7 @@
         jspdfAutoTable: 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.4/jspdf.plugin.autotable.min.js',
         xlsx: 'https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js',
         pizzip: 'https://cdn.jsdelivr.net/npm/pizzip@3.1.7/dist/pizzip.min.js',
+        jszip: 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js',
         docxtemplater: 'https://cdn.jsdelivr.net/npm/docxtemplater@3.47.4/build/docxtemplater.js',
         templates: './templates.js',
         performaTemplates: './performa-templates.js',
@@ -2140,10 +2141,11 @@
     }
 
     async function ensurePerformaPdfLibraries() {
+        if (!window.JSZip?.loadAsync) await loadFeatureScript('jszip');
         if (!window.docx) await loadFeatureScript('docxPreview');
         await ensureCaptureLibrary();
         await ensurePdfReportLibraries();
-        if (!window.docx?.renderAsync) {
+        if (!window.JSZip?.loadAsync || !window.docx?.renderAsync) {
             throw new Error('PDF conversion libraries could not be loaded. Check your internet connection or open the app via http://localhost (not file://).');
         }
     }
@@ -2162,8 +2164,6 @@
             { key: 'EXPENDITURE_RS', label: 'Expenditure (Rs.)', required: true },
             { key: 'COMMENCEMENT_DATE', label: 'Date of Commencement', required: true },
             { key: 'COMPLETION_DATE', label: 'Date of Completion', required: true },
-            { key: 'PERIOD_FROM', label: 'Period From', required: true },
-            { key: 'PERIOD_TO', label: 'Period To', required: true },
             { key: 'AGENCY_NAME', label: 'Agency / Contractor', required: true },
             { key: 'CERTIFICATE_DATE', label: 'Certificate Date', required: true }
         ],
@@ -2189,6 +2189,24 @@
         const d = parseReportDate(value);
         if (!d) return String(value || '').trim();
         return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+
+    function formatPerformaDateInput(value) {
+        const d = parseReportDate(value);
+        return d ? toDateInputValue(d) : '';
+    }
+
+    function formatDateInputForSheet(value) {
+        const d = parseReportDate(value);
+        return d ? formatReportDateDisplay(d) : String(value || '').trim();
+    }
+
+    function isPerformaDateField(key) {
+        return ['COMMENCEMENT_DATE', 'COMPLETION_DATE', 'CERTIFICATE_DATE'].includes(key);
+    }
+
+    function isPerformaAmountEntryField(key) {
+        return key === 'EXPENDITURE_RS';
     }
 
     function amountToLacs(value) {
@@ -2400,7 +2418,6 @@
 
     function buildPerformaAutoData(type, item) {
         const estimate = getEstimateCostColumnValue(item) || getEstimateAmount(item);
-        const agreement = getAgreementAmount(item);
         const commencement = getReportValue(item, 'Agreement Start Date');
         const completion = getReportValue(item, 'Completion_Date');
         const today = getPrintDate();
@@ -2415,12 +2432,10 @@
             return {
                 ...common,
                 ESTIMATE_RS: formatPerformaRs(estimate),
-                EXPENDITURE_RS: formatPerformaRs(agreement || estimate),
-                COMMENCEMENT_DATE: formatPerformaDotDate(commencement),
-                COMPLETION_DATE: formatPerformaDotDate(completion),
-                PERIOD_FROM: formatPerformaDotDate(commencement),
-                PERIOD_TO: formatPerformaDotDate(completion),
-                CERTIFICATE_DATE: formatPerformaDotDate(today)
+                EXPENDITURE_RS: '',
+                COMMENCEMENT_DATE: formatPerformaDateInput(commencement),
+                COMPLETION_DATE: formatPerformaDateInput(completion),
+                CERTIFICATE_DATE: formatPerformaDateInput(today)
             };
         }
 
@@ -2454,9 +2469,12 @@
             const value = escapeHtml(String(data[field.key] ?? ''));
             const required = field.required ? 'required' : '';
             const highlight = missingKeys.has(field.key) ? 'border border-warning' : '';
+            const inputType = isPerformaDateField(field.key) ? 'date' : isPerformaAmountEntryField(field.key) ? 'number' : 'text';
+            const locked = value && !isPerformaAmountEntryField(field.key) ? 'readonly' : '';
+            const extraAttrs = isPerformaAmountEntryField(field.key) ? 'inputmode="decimal" step="0.01" min="0.01"' : '';
             return `
                 <label class="detail-label" for="performaField_${field.key}">${escapeHtml(field.label)}${field.required ? ' *' : ''}</label>
-                <input id="performaField_${field.key}" class="edit-input mb-3 ${highlight}" name="${field.key}" value="${value}" ${required}>
+                <input id="performaField_${field.key}" type="${inputType}" class="edit-input mb-3 ${highlight}" name="${field.key}" value="${value}" ${required} ${locked} ${extraAttrs}>
             `;
         }).join('');
 
@@ -2490,6 +2508,58 @@
         onSubmit(data);
     }
 
+    function normalizePerformaTemplateData(type, data) {
+        const normalized = { ...(data || {}) };
+        if (type === 'completionCertificate') {
+            normalized.COMMENCEMENT_DATE = formatPerformaDotDate(normalized.COMMENCEMENT_DATE);
+            normalized.COMPLETION_DATE = formatPerformaDotDate(normalized.COMPLETION_DATE);
+            normalized.CERTIFICATE_DATE = formatPerformaDotDate(normalized.CERTIFICATE_DATE);
+            normalized.PERIOD_FROM = normalized.COMMENCEMENT_DATE;
+            normalized.PERIOD_TO = normalized.COMPLETION_DATE;
+        }
+        return normalized;
+    }
+
+    function validateCompletionCertificateData(data) {
+        const expenditure = String(data?.EXPENDITURE_RS || '').trim();
+        if (!expenditure) {
+            throw new Error('Please fill Expenditure (Rs.).');
+        }
+        if (!/^[0-9]+(\.[0-9]{1,2})?$/.test(expenditure)) {
+            throw new Error('Expenditure (Rs.) must contain amount only.');
+        }
+        if ((parseFloat(expenditure) || 0) <= 0) {
+            throw new Error('Expenditure (Rs.) must be greater than zero.');
+        }
+    }
+
+    async function syncCompletionDateFromPerforma(type, tenderId, item, data, statusEl) {
+        if (type !== 'completionCertificate') return;
+
+        const existingCompletion = String(getReportValue(item, 'Completion_Date') || '').trim();
+        const completionDate = String(data?.COMPLETION_DATE || '').trim();
+        if (hasDisplayValue(existingCompletion) || !completionDate) return;
+
+        const sheetDate = formatDateInputForSheet(completionDate);
+        if (!sheetDate) return;
+
+        const payload = { tenderId, Completion_Date: sheetDate };
+        upsertLocalWork(payload, { fallbackTenderId: tenderId });
+        if (statusEl) statusEl.innerText = 'Saving completion date...';
+
+        try {
+            const resp = await postJson({ action: 'updateWork', details: payload }, 25000);
+            if (!isSuccessResponse(resp)) {
+                throw new Error(resp?.message || resp?.error || 'Completion date sync failed.');
+            }
+            showAppToast('Completion date saved to work details.');
+            refreshDataInBackground();
+        } catch (e) {
+            console.error('Completion date sync failed', e);
+            showAppToast(e.message || 'Completion date sync failed.', 4200);
+        }
+    }
+
     async function createPerformaDocxBlob(type, data) {
         await ensurePerformaDocxLibraries();
         const templateBase64 = window.DADRI_PERFORMA_TEMPLATES[type];
@@ -2513,7 +2583,7 @@
         });
 
         try {
-            doc.render(data);
+            doc.render(normalizePerformaTemplateData(type, data));
         } catch (e) {
             const templateErrors = e.properties?.errors?.map(err => err.properties?.explanation || err.message).filter(Boolean);
             throw new Error(templateErrors?.length ? templateErrors.join('\n') : (e.message || 'Template render error'));
@@ -2531,6 +2601,21 @@
         const bytes = new Uint8Array(buffer);
         for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
         return btoa(binary);
+    }
+
+    async function requestCompletionCertificatePdf(tenderId, data) {
+        return postJson({
+            method: 'generateCompletionCertificatePdf',
+            action: 'generateCompletionCertificatePdf',
+            tenderId,
+            workName: data.WORK_NAME,
+            estimateRs: data.ESTIMATE_RS,
+            expenditureRs: data.EXPENDITURE_RS,
+            commencementDate: data.COMMENCEMENT_DATE,
+            completionDate: data.COMPLETION_DATE,
+            agencyName: data.AGENCY_NAME,
+            certificateDate: data.CERTIFICATE_DATE
+        }, 90000);
     }
 
     async function requestPerformaPdf(type, tenderId, docxBlob) {
@@ -2602,6 +2687,18 @@
             sampling: 'Sampling'
         };
         const fileName = `${labels[type] || 'Performa'}_${tenderId || 'work'}.pdf`;
+
+        if (type === 'completionCertificate') {
+            validateCompletionCertificateData(data);
+            const resp = await requestCompletionCertificatePdf(tenderId, data);
+            if (isSuccessResponse(resp) && resp.pdfUrl) {
+                downloadPdfFromUrl(resp.pdfUrl, fileName);
+                if (statusEl) statusEl.innerText = 'PDF download started.';
+                return;
+            }
+            throw new Error(resp?.message || resp?.error || 'Completion Certificate PDF could not be generated.');
+        }
+
         const docxBlob = await createPerformaDocxBlob(type, data);
 
         try {
@@ -2616,7 +2713,14 @@
         }
 
         if (statusEl) statusEl.innerText = 'Preparing PDF...';
-        await downloadPerformaPdfFromDocx(docxBlob, fileName);
+        try {
+            await downloadPerformaPdfFromDocx(docxBlob, fileName);
+        } catch (e) {
+            if (/loadAsync/i.test(String(e?.message || e))) {
+                throw new Error('PDF conversion could not read the DOCX. Please refresh the app so the latest conversion library loads, then try again.');
+            }
+            throw e;
+        }
         if (statusEl) statusEl.innerText = 'PDF download started.';
     }
 
@@ -2648,6 +2752,7 @@
             }
             if (status) status.innerText = 'Generating PDF...';
             try {
+                await syncCompletionDateFromPerforma(type, tenderId, item, data, status);
                 await finalizePerformaDownload(type, tenderId, data, status);
             } catch (e) {
                 console.error('Performa PDF failed', e);
@@ -2661,7 +2766,7 @@
             }
         };
 
-        if (missing.length) {
+        if (type === 'completionCertificate' || missing.length) {
             openPerformaFieldsModal(type, autoData, runDownload);
             return;
         }
