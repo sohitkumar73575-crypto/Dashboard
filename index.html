@@ -3579,6 +3579,12 @@
         return getReportDate(item, "Revised_End Date(if any)") || getReportDate(item, "Agreement End Date");
     }
 
+    function hasAnyActiveAgreementEndDate(item, asOfDate = getTodayDateOnly()) {
+        const agreementEndDate = getReportDate(item, "Agreement End Date");
+        const revisedEndDate = getReportDate(item, "Revised_End Date(if any)");
+        return Boolean((agreementEndDate && agreementEndDate >= asOfDate) || (revisedEndDate && revisedEndDate >= asOfDate));
+    }
+
     function isWorkUnderDlp(item, asOfDate = getTodayDateOnly()) {
         const completionDate = getReportDate(item, "Completion_Date");
         const dlpEndDate = getDlpEndDate(item);
@@ -3592,8 +3598,7 @@
         const publishDate = getReportDate(normalized, "T_PUB_DATE");
         const bidSubDate = getReportDate(normalized, "T_BIDSUB_END_DATE");
         const allotDate = getReportDate(normalized, "Allotement_Date");
-        const completionDate = getReportDate(normalized, "Completion_Date");
-        const endDate = getEffectiveAgreementEndDate(normalized);
+        const completionFilled = hasDisplayValue(getReportValue(normalized, "Completion_Date"));
 
         if (publishDate && publishDate <= today && bidSubDate && bidSubDate > today) {
             normalized.computedStatus = 'Live Tender';
@@ -3601,7 +3606,7 @@
             normalized.computedStatus = 'Yet to be Allotted';
         } else if (isWorkUnderDlp(normalized, today)) {
             normalized.computedStatus = 'Under DLP';
-        } else if (allotDate && allotDate <= today && !completionDate && endDate && endDate > today) {
+        } else if (allotDate && allotDate <= today && !completionFilled && hasAnyActiveAgreementEndDate(normalized, today)) {
             normalized.computedStatus = 'In Progress';
         } else {
             normalized.computedStatus = 'Other';
