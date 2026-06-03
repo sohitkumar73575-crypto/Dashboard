@@ -472,6 +472,80 @@
             background: white;
         }
         .edit-input[readonly] { background-color: #eef2f7; color: var(--muted); border-color: #d4dde8; cursor: not-allowed; }
+        .bill-stepper {
+            display: grid;
+            grid-template-columns: 48px minmax(0, 1fr) 48px;
+            gap: 10px;
+            align-items: stretch;
+        }
+        .bill-stepper .edit-input {
+            text-align: center;
+            margin-bottom: 0;
+            color: var(--text);
+            cursor: default;
+        }
+        .bill-stepper-btn {
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background: #f8fafc;
+            color: var(--text);
+            font-weight: 900;
+            min-height: 46px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+        }
+        .bill-stepper-btn:hover:not(:disabled),
+        .bill-stepper-btn:focus-visible:not(:disabled) {
+            background: #e0f2fe;
+            border-color: rgba(14,116,144,0.45);
+            color: var(--accent);
+        }
+        .bill-stepper-btn:disabled {
+            color: #94a3b8;
+            background: #f1f5f9;
+            cursor: not-allowed;
+        }
+        .sample-choice-groups {
+            display: grid;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+        .sample-choice-group {
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background: #fbfdff;
+            padding: 12px;
+        }
+        .sample-choice-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 8px;
+        }
+        .sample-choice {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid #dbe5ef;
+            border-radius: var(--radius);
+            background: #fff;
+            padding: 9px 10px;
+            color: var(--text);
+            font-weight: 750;
+            line-height: 1.2;
+            cursor: pointer;
+        }
+        .sample-choice input {
+            width: 16px;
+            height: 16px;
+            flex: 0 0 auto;
+            accent-color: var(--accent);
+        }
+        .sample-choice:has(input:checked) {
+            border-color: rgba(37,99,235,0.5);
+            background: #eff6ff;
+        }
         .btn { border-radius: var(--radius) !important; }
         .fab-add-work {
             position: fixed;
@@ -1499,8 +1573,16 @@
                     <option value="final">Final Bill</option>
                 </select>
 
-                <label class="detail-label" for="monitoringBillNumber">Bill Number</label>
-                <select id="monitoringBillNumber" class="edit-input mb-3" onchange="updateMonitoringCommentsPreview()"></select>
+                <label class="detail-label" for="monitoringBillNumber">Bill No.</label>
+                <div class="bill-stepper mb-3">
+                    <button id="monitoringBillMinusBtn" type="button" class="bill-stepper-btn" onclick="adjustMonitoringBillNumber(-1)" title="Decrease bill number" aria-label="Decrease bill number">
+                        <i class="fa-solid fa-minus"></i>
+                    </button>
+                    <input id="monitoringBillNumber" type="number" inputmode="numeric" min="1" max="8" step="1" class="edit-input" value="1" readonly aria-label="Bill number">
+                    <button id="monitoringBillPlusBtn" type="button" class="bill-stepper-btn" onclick="adjustMonitoringBillNumber(1)" title="Increase bill number" aria-label="Increase bill number">
+                        <i class="fa-solid fa-plus"></i>
+                    </button>
+                </div>
 
                 <label class="detail-label" for="monitoringCommentsPreview">Comments if Any (auto)</label>
                 <input id="monitoringCommentsPreview" class="edit-input mb-2" readonly>
@@ -2157,6 +2239,38 @@
 
     let monitoringPerformaContext = null;
 
+    const SAMPLING_TEMPLATE_ID = '1D5DlT4Bc-nc_3ahpIo_H-gCWPW0DYj8oabColMn5Jxc';
+
+    const PERFORMA_TEMPLATE_IDS = {
+        sampling: SAMPLING_TEMPLATE_ID
+    };
+
+    const SAMPLING_SAMPLE_GROUPS = [
+        {
+            label: 'IPB',
+            options: ['80 mm M40', '60 mm M40', '40 mm M40']
+        },
+        {
+            label: 'CC',
+            options: [
+                'Nominal Mix M5',
+                'Nominal Mix M7.5',
+                'Nominal Mix M10',
+                'Nominal Mix M15',
+                'Nominal Mix M20',
+                'Design Mix M20',
+                'Design Mix M25',
+                'Design Mix M30',
+                'Design Mix M35',
+                'Design Mix M40'
+            ]
+        },
+        {
+            label: 'Bricks',
+            options: ['Class Designation 7.5', 'Class Designation 10.5']
+        }
+    ];
+
     const PERFORMA_FIELD_DEFS = {
         completionCertificate: [
             { key: 'WORK_NAME', label: 'Name of Work', required: true },
@@ -2231,18 +2345,45 @@
         return `${ordinal} Running Bill`;
     }
 
-    function syncMonitoringBillNumberOptions() {
+    function getMonitoringBillNumberMax() {
         const billType = document.getElementById('monitoringBillType')?.value || 'running';
-        const select = document.getElementById('monitoringBillNumber');
-        if (!select) return;
+        return billType === 'final' ? 5 : 8;
+    }
 
-        const max = billType === 'final' ? 5 : 8;
-        const previous = select.value;
-        select.innerHTML = Array.from({ length: max }, (_, i) => {
-            const value = String(i + 1);
-            return `<option value="${value}">${value}</option>`;
-        }).join('');
-        if (previous && Number(previous) <= max) select.value = previous;
+    function syncMonitoringBillNumberOptions() {
+        const input = document.getElementById('monitoringBillNumber');
+        if (!input) return;
+
+        const max = getMonitoringBillNumberMax();
+        const previous = parseInt(input.value, 10) || 1;
+        const value = Math.min(Math.max(previous, 1), max);
+        input.min = '1';
+        input.max = String(max);
+        input.value = String(value);
+        updateMonitoringBillStepperButtons();
+        updateMonitoringCommentsPreview();
+    }
+
+    function updateMonitoringBillStepperButtons() {
+        const input = document.getElementById('monitoringBillNumber');
+        const minus = document.getElementById('monitoringBillMinusBtn');
+        const plus = document.getElementById('monitoringBillPlusBtn');
+        if (!input) return;
+
+        const value = parseInt(input.value, 10) || 1;
+        const max = getMonitoringBillNumberMax();
+        if (minus) minus.disabled = value <= 1;
+        if (plus) plus.disabled = value >= max;
+    }
+
+    function adjustMonitoringBillNumber(delta) {
+        const input = document.getElementById('monitoringBillNumber');
+        if (!input) return;
+
+        const max = getMonitoringBillNumberMax();
+        const current = parseInt(input.value, 10) || 1;
+        input.value = String(Math.min(Math.max(current + delta, 1), max));
+        updateMonitoringBillStepperButtons();
         updateMonitoringCommentsPreview();
     }
 
@@ -2443,7 +2584,7 @@
             ...common,
             LETTER_REF: common.TENDER_ID ? `Tender ${common.TENDER_ID}` : '',
             LETTER_DATE: formatPerformaDisplayDate(today),
-            SAMPLE_TYPE: 'Building Material'
+            SAMPLE_TYPE: ''
         };
     }
 
@@ -2466,6 +2607,9 @@
         const form = document.getElementById('performaFieldsForm');
         const missingKeys = new Set(getPerformaMissingFields(type, data).map(f => f.key));
         form.innerHTML = (PERFORMA_FIELD_DEFS[type] || []).map(field => {
+            if (type === 'sampling' && field.key === 'SAMPLE_TYPE') {
+                return renderSamplingSampleField(field, data[field.key], missingKeys.has(field.key));
+            }
             const value = escapeHtml(String(data[field.key] ?? ''));
             const required = field.required ? 'required' : '';
             const highlight = missingKeys.has(field.key) ? 'border border-warning' : '';
@@ -2481,9 +2625,66 @@
         showSubPageModal(document.getElementById('performaFieldsModal'), { keepIds: ['generateLettersModal'] });
     }
 
+    function getSamplingSelectedSet(value) {
+        const selected = new Set();
+        String(value || '').split(/,|\n/).map(v => v.trim()).filter(Boolean).forEach(item => {
+            const normalized = item.replace(/^\d+\.\s*/, '').trim();
+            selected.add(normalized);
+            SAMPLING_SAMPLE_GROUPS.forEach(group => {
+                const prefix = `${group.label} `;
+                if (normalized.toLowerCase().startsWith(prefix.toLowerCase())) {
+                    selected.add(normalized.slice(prefix.length).trim());
+                }
+            });
+        });
+        return selected;
+    }
+
+    function formatSamplingSampleLine(group, option, index) {
+        return `${index}. ${group} ${option}`.replace(/\bmm\b/gi, 'MM');
+    }
+
+    function renderSamplingSampleField(field, value, isMissing) {
+        const selected = getSamplingSelectedSet(value);
+        const groupsHtml = SAMPLING_SAMPLE_GROUPS.map((group, groupIndex) => {
+            const optionsHtml = group.options.map((option, optionIndex) => {
+                const id = `performaField_SAMPLE_TYPE_${groupIndex}_${optionIndex}`;
+                const checked = selected.has(option) ? 'checked' : '';
+                return `
+                    <label class="sample-choice" for="${id}">
+                        <input id="${id}" type="checkbox" name="SAMPLE_TYPE_OPTION" value="${escapeHtml(option)}" data-group="${escapeHtml(group.label)}" ${checked}>
+                        <span>${escapeHtml(option)}</span>
+                    </label>
+                `;
+            }).join('');
+            return `
+                <div class="sample-choice-group">
+                    <div class="detail-label">${escapeHtml(group.label)}</div>
+                    <div class="sample-choice-grid">${optionsHtml}</div>
+                </div>
+            `;
+        }).join('');
+        const highlight = isMissing ? ' border border-warning' : '';
+        return `
+            <label class="detail-label">${escapeHtml(field.label)}${field.required ? ' *' : ''}</label>
+            <div class="sample-choice-groups${highlight}">${groupsHtml}</div>
+        `;
+    }
+
     function readPerformaFieldsFromModal(type) {
         const data = { ...(performaPendingContext?.data || {}) };
         (PERFORMA_FIELD_DEFS[type] || []).forEach(field => {
+            if (type === 'sampling' && field.key === 'SAMPLE_TYPE') {
+                data[field.key] = Array.from(document.querySelectorAll('input[name="SAMPLE_TYPE_OPTION"]:checked'))
+                    .map((input, index) => formatSamplingSampleLine(
+                        String(input.dataset.group || '').trim(),
+                        String(input.value || '').trim(),
+                        index + 1
+                    ))
+                    .filter(Boolean)
+                    .join('\n');
+                return;
+            }
             const input = document.getElementById(`performaField_${field.key}`);
             if (input) data[field.key] = String(input.value || '').trim();
         });
@@ -2618,13 +2819,16 @@
         }, 90000);
     }
 
-    async function requestPerformaPdf(type, tenderId, docxBlob) {
+    async function requestPerformaPdf(type, tenderId, docxBlob, data) {
         const docxBase64 = await blobToBase64(docxBlob);
         return postJson({
             method: 'generatePerformaPdf',
             action: 'generatePerformaPdf',
             performaType: type,
             tenderId,
+            templateId: PERFORMA_TEMPLATE_IDS[type] || '',
+            samplingTemplateId: type === 'sampling' ? SAMPLING_TEMPLATE_ID : '',
+            templateData: normalizePerformaTemplateData(type, data),
             docxBase64
         }, 90000);
     }
@@ -2702,7 +2906,7 @@
         const docxBlob = await createPerformaDocxBlob(type, data);
 
         try {
-            const resp = await requestPerformaPdf(type, tenderId, docxBlob);
+            const resp = await requestPerformaPdf(type, tenderId, docxBlob, data);
             if (isSuccessResponse(resp) && resp.pdfUrl) {
                 downloadPdfFromUrl(resp.pdfUrl, fileName);
                 if (statusEl) statusEl.innerText = 'PDF download started.';
@@ -2766,7 +2970,7 @@
             }
         };
 
-        if (type === 'completionCertificate' || missing.length) {
+        if (type === 'completionCertificate' || type === 'sampling' || missing.length) {
             openPerformaFieldsModal(type, autoData, runDownload);
             return;
         }
