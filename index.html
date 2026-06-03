@@ -3575,6 +3575,10 @@
         return completionDate && dlpDays > 0 ? addDays(completionDate, dlpDays) : null;
     }
 
+    function getEffectiveAgreementEndDate(item) {
+        return getReportDate(item, "Revised_End Date(if any)") || getReportDate(item, "Agreement End Date");
+    }
+
     function isWorkUnderDlp(item, asOfDate = getTodayDateOnly()) {
         const completionDate = getReportDate(item, "Completion_Date");
         const dlpEndDate = getDlpEndDate(item);
@@ -3589,7 +3593,7 @@
         const bidSubDate = getReportDate(normalized, "T_BIDSUB_END_DATE");
         const allotDate = getReportDate(normalized, "Allotement_Date");
         const completionDate = getReportDate(normalized, "Completion_Date");
-        const endDate = getReportDate(normalized, "Agreement End Date");
+        const endDate = getEffectiveAgreementEndDate(normalized);
 
         if (publishDate && publishDate <= today && bidSubDate && bidSubDate > today) {
             normalized.computedStatus = 'Live Tender';
@@ -5167,8 +5171,7 @@
     }
 
     function getOverdueEffectiveDueDate(item) {
-        const revisedDate = getReportDate(item, "Revised_End Date(if any)");
-        return revisedDate || getReportDate(item, "Agreement End Date");
+        return getEffectiveAgreementEndDate(item);
     }
 
     function getOverdueWorks(asOfDate = getTodayDateOnly()) {
