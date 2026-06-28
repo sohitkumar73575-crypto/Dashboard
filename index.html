@@ -1967,7 +1967,7 @@
                     <span class="add-work-title-icon"><i class="fa-solid fa-file-import"></i></span>
                     <div>
                         <h5 class="modal-title fw-bold text-dark mb-0">Map Data</h5>
-                        <small class="text-secondary fw-semibold">Import Excel into works sheet</small>
+                        <small class="text-secondary fw-semibold">Import Excel — also fills sheet rows missing Tender ID</small>
                     </div>
                 </div>
                 <button type="button" class="modal-close-red" data-bs-dismiss="modal" aria-label="Close">
@@ -2181,6 +2181,7 @@
     const featureScriptPromises = {};
     let masterData = [];
     let currentTenderId = null;
+    let currentWorkLookupKey = '';
     let currentFilter = 'All';
     let pbgSelectedImageFiles = [];
     let pbgQuickUploadDetails = null;
@@ -3560,6 +3561,37 @@
         return item.E_TENDERID || item.E_TenderID || item.TenderID || item["Tender ID"] || "";
     }
 
+    function hasTenderId(item) {
+        return Boolean(String(getTenderId(item) || '').trim());
+    }
+
+    function getPayloadTenderId(payload) {
+        return String(
+            payload?.tenderId ||
+            payload?.E_TENDERID ||
+            payload?.E_TenderID ||
+            payload?.['Tender ID'] ||
+            ''
+        ).trim();
+    }
+
+    function getMapDataWorkSelectKey(item) {
+        const tenderId = String(getTenderId(item) || '').trim();
+        if (tenderId) return tenderId;
+        if (item?.rowIndex) return `row:${item.rowIndex}`;
+        return '';
+    }
+
+    function findMapDataWorkBySelectKey(selectKey) {
+        const key = String(selectKey || '').trim();
+        if (!key) return null;
+        if (key.startsWith('row:')) {
+            const rowIndex = key.slice(4);
+            return masterData.find(row => String(row.rowIndex) === String(rowIndex)) || null;
+        }
+        return masterData.find(row => String(getTenderId(row) || '').trim() === key) || null;
+    }
+
     function getWorkName(item) {
         return item["Work_Name"] || item["WORK NAME"] || item["Work Name"] || item["Name of Work"] || "Untitled Work";
     }
@@ -4496,13 +4528,33 @@
 
     function buildMapDataUpdatePayload(matchedItem, fieldsToApply) {
         const existingTenderId = String(getTenderId(matchedItem) || '').trim();
-        const excelTenderId = getExcelTenderIdFromFields(fieldsToApply);
         const payload = normalizePayloadDates({ ...fieldsToApply });
-        payload.tenderId = existingTenderId || excelTenderId;
+        if (existingTenderId) {
+            payload.tenderId = existingTenderId;
+        }
         if (matchedItem.rowIndex) payload.rowIndex = matchedItem.rowIndex;
         const workKey = canonicalMapDataKey('Work_Name', matchedItem);
         if (!payload[workKey]) payload[workKey] = getWorkName(matchedItem);
         return payload;
+    }
+
+    function usesMapDataRowIndexUpdate(matchedItem) {
+        return !String(getTenderId(matchedItem) || '').trim() && Boolean(matchedItem?.rowIndex);
+    }
+
+    async function submitMapDataUpdate(matchedItem, fieldsToApply) {
+        const payload = buildMapDataUpdatePayload(matchedItem, fieldsToApply);
+        if (usesMapDataRowIndexUpdate(matchedItem)) {
+            return postJson({
+                action: 'updateWorkByRowIndex',
+                method: 'updateWorkByRowIndex',
+                details: payload
+            }, 25000);
+        }
+        if (!payload.tenderId) {
+            throw new Error('Cannot update this work — no Tender ID on sheet and row index is missing.');
+        }
+        return postJson({ action: 'updateWork', method: 'updateWork', details: payload }, 25000);
     }
 
     function buildFieldsToApply(matchedItem, incoming) {
@@ -4517,9 +4569,9 @@
     }
 
     function resolvePreviewMatch(rowIndex, excelWorkName, incoming) {
-        const manualTenderId = mapDataState.manualMatches?.[rowIndex];
-        if (manualTenderId) {
-            const item = masterData.find(row => String(getTenderId(row) || '').trim() === String(manualTenderId).trim());
+        const manualSelectKey = mapDataState.manualMatches?.[rowIndex];
+        if (manualSelectKey) {
+            const item = findMapDataWorkBySelectKey(manualSelectKey);
             if (item) {
                 const score = scoreWorkNameMatch(excelWorkName, getWorkName(item)).score;
                 return { item, score, layer: 'manual' };
@@ -4563,7 +4615,9 @@
                 }
                 const existingTenderId = String(getTenderId(match.item) || '').trim();
                 const excelTenderId = getExcelTenderIdFromFields(fieldsToApply);
-                const note = !existingTenderId && excelTenderId ? 'Will fill Tender ID from Excel' : '';
+                const note = !existingTenderId && excelTenderId
+                    ? 'Will fill Tender ID from Excel (update by row number)'
+                    : (!existingTenderId ? 'Update by row number' : '');
                 return {
                     rowIndex,
                     action: 'update',
@@ -4594,24 +4648,26 @@
         });
     }
 
-    function setManualMapDataMatch(rowIndex, tenderId) {
+    function setManualMapDataMatch(rowIndex, selectKey) {
         if (!mapDataState) return;
         if (!mapDataState.manualMatches) mapDataState.manualMatches = {};
-        if (tenderId) {
-            mapDataState.manualMatches[rowIndex] = tenderId;
+        if (selectKey) {
+            mapDataState.manualMatches[rowIndex] = selectKey;
         } else {
             delete mapDataState.manualMatches[rowIndex];
         }
         renderMapDataPreview();
     }
 
-    function renderMapDataWorkMatchOptions(rowIndex, candidates, selectedTenderId) {
+    function renderMapDataWorkMatchOptions(rowIndex, candidates, selectedSelectKey) {
         const options = ['<option value="">— Auto / pick work —</option>']
             .concat(candidates.map(candidate => {
+                const selectKey = getMapDataWorkSelectKey(candidate.item);
+                const selected = String(selectedSelectKey || '') === String(selectKey || '') ? 'selected' : '';
                 const tid = getTenderId(candidate.item);
-                const selected = String(selectedTenderId || '') === String(tid || '') ? 'selected' : '';
-                const label = `${candidate.score}% · ${getWorkName(candidate.item).slice(0, 55)}${getWorkName(candidate.item).length > 55 ? '…' : ''}`;
-                return `<option value="${escapeHtml(tid)}" ${selected}>${escapeHtml(label)}</option>`;
+                const tidHint = tid ? `#${tid}` : `(row ${candidate.item.rowIndex || '?'})`;
+                const label = `${candidate.score}% · ${tidHint} · ${getWorkName(candidate.item).slice(0, 45)}${getWorkName(candidate.item).length > 45 ? '…' : ''}`;
+                return `<option value="${escapeHtml(selectKey)}" ${selected}>${escapeHtml(label)}</option>`;
             }));
         return `<select class="edit-input form-select form-select-sm" onchange="setManualMapDataMatch(${rowIndex}, this.value)">${options.join('')}</select>`;
     }
@@ -4641,10 +4697,10 @@
             const fieldsText = item.fieldLabels?.length
                 ? escapeHtml(item.fieldLabels.join(', '))
                 : (item.action === 'add' ? escapeHtml((item.fieldLabels || []).join(', ') || '—') : '—');
-            const manualTenderId = mapDataState.manualMatches?.[item.rowIndex] || (item.matchedItem ? getTenderId(item.matchedItem) : '');
+            const manualSelectKey = mapDataState.manualMatches?.[item.rowIndex] || (item.matchedItem ? getMapDataWorkSelectKey(item.matchedItem) : '');
             const showManualPick = item.action === 'add' || (item.score && item.score <= 92);
             const matchedCell = showManualPick
-                ? renderMapDataWorkMatchOptions(item.rowIndex, item.candidates || [], manualTenderId)
+                ? renderMapDataWorkMatchOptions(item.rowIndex, item.candidates || [], manualSelectKey)
                 : escapeHtml(item.matchedName || '—');
             return `
                 <tr class="${scoreClass}">
@@ -4681,7 +4737,6 @@
                 }
                 if (item.action === 'update') {
                     const payload = buildMapDataUpdatePayload(item.matchedItem, item.fieldsToApply);
-                    const lookupTenderId = String(payload.tenderId || '').trim();
                     const existingIndex = getMapDataMatchedIndex(item.matchedItem);
                     const previousItem = existingIndex >= 0 ? { ...masterData[existingIndex] } : null;
                     if (existingIndex >= 0) {
@@ -4691,12 +4746,16 @@
                         writeStoredMasterData();
                         updateDashboard();
                     } else {
-                        upsertLocalWork(payload, { fallbackTenderId: lookupTenderId });
+                        upsertLocalWork(payload, { fallbackTenderId: String(getTenderId(item.matchedItem) || getExcelTenderIdFromFields(item.fieldsToApply) || '').trim() });
                     }
-                    const resp = await postJson({ action: 'updateWork', details: payload }, 25000);
+                    const resp = await submitMapDataUpdate(item.matchedItem, item.fieldsToApply);
                     if (!isSuccessResponse(resp)) {
                         if (previousItem && existingIndex >= 0) restoreLocalWorkAt(existingIndex, previousItem);
-                        throw new Error(resp?.message || resp?.error || 'Update failed.');
+                        const serverMsg = resp?.message || resp?.error || 'Update failed.';
+                        if (usesMapDataRowIndexUpdate(item.matchedItem) && /unknown action/i.test(serverMsg)) {
+                            throw new Error('Sheet update needs redeploy — copy merged code.gs (updateWorkByRowIndex) to Apps Script and deploy a new web app version.');
+                        }
+                        throw new Error(serverMsg);
                     }
                     updated++;
                 } else if (item.action === 'add') {
@@ -7005,6 +7064,7 @@
         const dnitKey = getDnitKey(item);
         const dnitVal = getDnitValue(item);
         const tID = getTenderId(item);
+        const cardKey = getMapDataWorkSelectKey(item);
         const { badgeBg, badgeColor } = getStatusStyle(statusStr);
 
         const card = document.createElement('div');
@@ -7040,10 +7100,10 @@
                 </div>
             </div>`;
 
-        card.querySelector('.work-card').addEventListener('click', () => showModal(tID));
+        card.querySelector('.work-card').addEventListener('click', () => showModal(cardKey));
         card.querySelector('.edit-card-btn').addEventListener('click', event => {
             event.stopPropagation();
-            showModal(tID, true);
+            showModal(cardKey, true);
         });
         return card;
     }
@@ -7072,13 +7132,15 @@
     }
 
     function showModal(id, startEdit = false) {
-        currentTenderId = id;
-        const item = masterData.find(d => getTenderId(d) == id);
+        currentWorkLookupKey = String(id || '').trim();
+        const item = findMapDataWorkBySelectKey(currentWorkLookupKey);
 
         if (!item) {
             alert("Work details not found");
             return;
         }
+
+        currentTenderId = hasTenderId(item) ? getTenderId(item) : '';
 
         document.getElementById('modalWorkName').innerText = getWorkName(item);
         document.getElementById('modalHeaderTitle').innerText = "Work Details";
@@ -7128,6 +7190,10 @@
     }
 
     function enableEditMode() {
+        const item = findMapDataWorkBySelectKey(currentWorkLookupKey);
+        if (item && !hasTenderId(item)) {
+            showAppToast('Tender ID required to save. Fill E-Tender ID or use Map Data.', 3600);
+        }
         document.querySelectorAll('.field-view').forEach(el => el.classList.add('hidden'));
         document.querySelectorAll('.field-edit').forEach(el => el.classList.remove('hidden'));
         document.getElementById('editToggleBtn').classList.add('hidden');
@@ -8562,20 +8628,36 @@
     }
 
     async function saveDetails() {
-        const payload = collectEditableWorkPayload();
+        const item = findMapDataWorkBySelectKey(currentWorkLookupKey);
+        if (!item) {
+            alert('Work details not found');
+            return;
+        }
+
+        const rawPayload = collectEditableWorkPayload();
+        delete rawPayload.tenderId;
+        const tenderId = getPayloadTenderId(rawPayload);
+        if (!tenderId) {
+            alert('Tender ID is required. Enter E-Tender ID before saving, or use Map Data import.');
+            return;
+        }
+
         const saveBtn = document.getElementById('saveBtn');
         const originalHtml = saveBtn.innerHTML;
-        const existingIndex = masterData.findIndex(item => String(getTenderId(item) || '').trim() === String(currentTenderId || '').trim());
+        const existingIndex = getMapDataMatchedIndex(item);
         const previousItem = existingIndex >= 0 ? { ...masterData[existingIndex] } : null;
 
         saveBtn.disabled = true;
         saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
 
-        upsertLocalWork(payload, { fallbackTenderId: currentTenderId });
+        const localPayload = buildMapDataUpdatePayload(item, rawPayload);
+        upsertLocalWork(localPayload, { fallbackTenderId: tenderId });
+        currentTenderId = tenderId;
+        currentWorkLookupKey = tenderId;
         bootstrap.Modal.getInstance(document.getElementById('workModal'))?.hide();
         showAppToast('Saved locally. Syncing sheet...');
 
-        postJson({ action: 'updateWork', details: payload }).then(resp => {
+        submitMapDataUpdate(item, rawPayload).then(resp => {
             if (!isSuccessResponse(resp)) {
                 throw new Error(resp?.message || resp?.error || "Update failed.");
             }
@@ -8583,7 +8665,7 @@
             refreshDataInBackground();
         }).catch(e => {
             console.error("Update failed", e);
-            if (previousItem) restoreLocalWorkAt(existingIndex, previousItem);
+            if (previousItem && existingIndex >= 0) restoreLocalWorkAt(existingIndex, previousItem);
             showAppToast(e.message || 'Update failed.', 4200);
             alert(e.message || "Update failed.");
         }).finally(() => {
