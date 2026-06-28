@@ -4777,9 +4777,24 @@
             }
         }
         progressEl.textContent = `Done — ${updated} updated, ${added} added, ${skipped} skipped${failed ? `, ${failed} failed` : ''}.`;
-        showAppToast(`Import complete: ${updated} updated, ${added} added${failed ? `, ${failed} failed` : ''}.`, failed ? 4200 : 2600);
         btn.disabled = false;
         btn.innerHTML = originalHtml;
+
+        if (!failed) {
+            progressEl.textContent = 'Update successful.';
+            showAppToast('Update successful.', 2600);
+            setSyncStatus('success', 'Update successful.');
+            try {
+                await refreshDataInBackground();
+            } catch (e) {
+                console.error('Background refresh after Map Data import failed', e);
+            }
+            resetMapDataWizard();
+            openWorksDashboardFromMenu();
+            return;
+        }
+
+        showAppToast(`Import complete: ${updated} updated, ${added} added, ${failed} failed.`, 4200);
         refreshDataInBackground();
     }
 
