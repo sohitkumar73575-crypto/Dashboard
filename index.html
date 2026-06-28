@@ -131,6 +131,75 @@
         .report-dropdown-menu.hidden {
             display: none;
         }
+        .map-data-steps {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .map-data-step-pill {
+            flex: 1;
+            text-align: center;
+            padding: 0.45rem 0.5rem;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            background: #eef2f7;
+            color: var(--muted);
+        }
+        .map-data-step-pill.active {
+            background: rgba(37, 99, 235, 0.12);
+            color: var(--action);
+        }
+        .map-data-step-pill.done {
+            background: rgba(22, 163, 74, 0.12);
+            color: #15803d;
+        }
+        .map-data-match-key {
+            background: rgba(37, 99, 235, 0.08);
+            border: 1px solid rgba(37, 99, 235, 0.2);
+            border-radius: var(--radius);
+            padding: 0.85rem 1rem;
+            margin-bottom: 1rem;
+        }
+        .map-data-row {
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.65rem;
+            background: #fff;
+        }
+        .map-data-row.exact { border-left: 3px solid #16a34a; }
+        .map-data-row.alias { border-left: 3px solid #2563eb; }
+        .map-data-row.fuzzy { border-left: 3px solid #d97706; }
+        .map-data-row.unknown { border-left: 3px solid #94a3b8; }
+        .map-data-row.match-key-row { border-left: 3px solid var(--action); background: rgba(37, 99, 235, 0.04); }
+        .map-data-badge {
+            display: inline-block;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 0.15rem 0.45rem;
+            border-radius: 999px;
+            margin-left: 0.35rem;
+        }
+        .map-data-badge.exact { background: #dcfce7; color: #15803d; }
+        .map-data-badge.alias { background: #dbeafe; color: #1d4ed8; }
+        .map-data-badge.fuzzy { background: #ffedd5; color: #c2410c; }
+        .map-data-badge.unknown { background: #f1f5f9; color: #64748b; }
+        .map-data-preview-table { font-size: 0.82rem; }
+        .map-data-preview-table .score-low { background: #fef9c3; }
+        .map-data-upload-zone {
+            border: 2px dashed var(--line);
+            border-radius: var(--radius);
+            padding: 2rem 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.15s, background 0.15s;
+        }
+        .map-data-upload-zone:hover,
+        .map-data-upload-zone.dragover {
+            border-color: var(--action);
+            background: rgba(37, 99, 235, 0.04);
+        }
         .report-dropdown-heading {
             padding: 0.45rem 0.75rem 0.35rem;
             color: var(--muted);
@@ -1190,6 +1259,10 @@
                 <i class="fa-solid fa-table-cells-large bg-icon"></i>
                 <span>BG Portal</span>
             </button>
+            <button class="report-dropdown-item" type="button" onclick="openMapDataModalFromMenu()">
+                <i class="fa-solid fa-file-import excel-icon"></i>
+                <span>Map Data</span>
+            </button>
             <button class="report-dropdown-item" type="button" onclick="openGenerateLettersFromMenu()">
                 <i class="fa-solid fa-file-pdf pdf-icon"></i>
                 <span>Generate Letters</span>
@@ -1885,6 +1958,83 @@
     </div>
 </div>
 
+<!-- Map Data Modal -->
+<div class="modal fade" id="mapDataModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg overflow-hidden">
+            <div class="modal-header border-0 px-4 pt-4 pb-2">
+                <div class="d-flex align-items-center gap-3">
+                    <span class="add-work-title-icon"><i class="fa-solid fa-file-import"></i></span>
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark mb-0">Map Data</h5>
+                        <small class="text-secondary fw-semibold">Import Excel into works sheet</small>
+                    </div>
+                </div>
+                <button type="button" class="modal-close-red" data-bs-dismiss="modal" aria-label="Close">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="modal-body p-4">
+                <div class="map-data-steps">
+                    <div id="mapDataStepPill1" class="map-data-step-pill active">1. Upload</div>
+                    <div id="mapDataStepPill2" class="map-data-step-pill">2. Map Columns</div>
+                    <div id="mapDataStepPill3" class="map-data-step-pill">3. Preview &amp; Apply</div>
+                </div>
+
+                <div id="mapDataStep1">
+                    <div id="mapDataUploadZone" class="map-data-upload-zone" onclick="document.getElementById('mapDataFileInput').click()">
+                        <i class="fa-solid fa-cloud-arrow-up fa-2x text-secondary mb-2"></i>
+                        <div class="fw-bold text-dark">Upload Excel file</div>
+                        <div class="small text-secondary mt-1">.xlsx or .xls — first row must be headers</div>
+                    </div>
+                    <input id="mapDataFileInput" type="file" accept=".xlsx,.xls" class="d-none" onchange="handleMapDataFileSelect(event)">
+                    <div id="mapDataUploadSummary" class="small text-secondary mt-3 d-none"></div>
+                    <div id="mapDataUploadError" class="text-danger small mt-2 d-none"></div>
+                </div>
+
+                <div id="mapDataStep2" class="d-none">
+                    <div id="mapDataMatchKeyBanner" class="map-data-match-key"></div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="small text-secondary">Confirm each column mapping</div>
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="confirmAllHighConfidenceMapData()">Confirm all high-confidence</button>
+                    </div>
+                    <div id="mapDataMappingList"></div>
+                    <div id="mapDataMappingError" class="text-danger small mt-2 d-none"></div>
+                </div>
+
+                <div id="mapDataStep3" class="d-none">
+                    <div id="mapDataPreviewSummary" class="mb-3"></div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered map-data-preview-table mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Excel Work Name</th>
+                                    <th>Matched Work</th>
+                                    <th>Score</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mapDataPreviewBody"></tbody>
+                        </table>
+                    </div>
+                    <div id="mapDataApplyProgress" class="small text-secondary mt-3 d-none"></div>
+                </div>
+            </div>
+
+            <div class="modal-footer border-0 justify-content-between p-4 pt-0">
+                <button id="mapDataBackBtn" type="button" class="btn btn-outline-secondary px-4 d-none" onclick="mapDataGoBack()">Back</button>
+                <div class="ms-auto d-flex gap-2">
+                    <button id="mapDataNextBtn" type="button" class="btn btn-primary px-4 fw-bold d-none" onclick="mapDataGoNext()">Next</button>
+                    <button id="mapDataApplyBtn" type="button" class="btn btn-success px-4 fw-bold d-none" onclick="runMapDataImport()">
+                        <i class="fa-solid fa-check me-2"></i>Apply Import
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Report Modal -->
 <div class="modal fade" id="reportModal" tabindex="-1">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
@@ -2114,6 +2264,22 @@
         "E_TENDERID": ["E_TenderID", "Tender ID", "TenderID"],
         "Agency_Name": ["Agency Name", "AGENCY_NAME"]
     };
+    const MAP_DATA_FUZZY_THRESHOLD = 90;
+    const MAP_DATA_WORK_NAME_HEADERS = ['DNIT_Name', 'DNIT Name', 'Work_Name', 'Work Name', 'WORK NAME', 'Name of Work'];
+    const MAP_DATA_HEADER_ALIASES = {
+        Work_Name: ['DNIT_Name', 'DNIT Name', 'Work Name', 'WORK NAME', 'Name of Work'],
+        E_TENDERID: ['E_TenderID', 'Tender ID', 'TenderID', 'TENDER_ID'],
+        T_PUB_DATE: ['Tender Publish Date', 'Publish Date'],
+        T_BIDSUB_START_DATE: ['Tender Bid Submission Start Date'],
+        T_BIDSUB_END_DATE: ['Tender Bid Submission End Date'],
+        T_BID_OPEN_DATE: ['Tender Bid Open Date', 'Bid Open Date'],
+        Allotement_Date: ['Allotment Date', 'Allotted Date', 'Allotment_Date'],
+        DNIT_Cost: ['DNIT Cost', 'DNIT COST'],
+        Estimate_Cost: ['Estimate Cost', 'Estimated Cost'],
+        Agency_Name: ['Agency Name', 'AGENCY_NAME'],
+        Completion_Date: ['Completion Date', 'Completed Date']
+    };
+    let mapDataState = null;
     const MAX_UPLOAD_FILE_BYTES = 8 * 1024 * 1024;
     const MAX_UPLOAD_TOTAL_BYTES = 10 * 1024 * 1024;
     let modalHistoryDepth = 0;
@@ -3725,6 +3891,525 @@
     function openDevelopmentReportModalFromMenu() {
         closeReportMenu();
         openReportModal();
+    }
+
+    function openMapDataModalFromMenu() {
+        closeReportMenu();
+        resetMapDataWizard();
+        showSubPageModal(document.getElementById('mapDataModal'));
+    }
+
+    function resetMapDataWizard() {
+        mapDataState = {
+            step: 1,
+            fileName: '',
+            headers: [],
+            rows: [],
+            matchKeyHeader: '',
+            matchKeyIndex: -1,
+            mappings: []
+        };
+        document.getElementById('mapDataFileInput').value = '';
+        document.getElementById('mapDataUploadSummary')?.classList.add('d-none');
+        document.getElementById('mapDataUploadError')?.classList.add('d-none');
+        document.getElementById('mapDataMappingError')?.classList.add('d-none');
+        document.getElementById('mapDataApplyProgress')?.classList.add('d-none');
+        renderMapDataStep();
+    }
+
+    function columnIndexToLetter(index) {
+        let n = index + 1;
+        let s = '';
+        while (n > 0) {
+            const r = (n - 1) % 26;
+            s = String.fromCharCode(65 + r) + s;
+            n = Math.floor((n - 1) / 26);
+        }
+        return s;
+    }
+
+    function normalizeMapWorkName(value) {
+        return String(value || '')
+            .toLowerCase()
+            .replace(/[^\w\s]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    function levenshteinDistance(a, b) {
+        const m = a.length;
+        const n = b.length;
+        if (!m) return n;
+        if (!n) return m;
+        const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+        for (let i = 0; i <= m; i++) dp[i][0] = i;
+        for (let j = 0; j <= n; j++) dp[0][j] = j;
+        for (let i = 1; i <= m; i++) {
+            for (let j = 1; j <= n; j++) {
+                const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+                dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
+            }
+        }
+        return dp[m][n];
+    }
+
+    function workNameSimilarity(a, b) {
+        const left = normalizeMapWorkName(a);
+        const right = normalizeMapWorkName(b);
+        if (!left && !right) return 100;
+        if (!left || !right) return 0;
+        const maxLen = Math.max(left.length, right.length);
+        if (!maxLen) return 100;
+        const fullScore = Math.round((1 - levenshteinDistance(left, right) / maxLen) * 100);
+        const tokenLeft = left.split(' ').filter(Boolean).sort().join(' ');
+        const tokenRight = right.split(' ').filter(Boolean).sort().join(' ');
+        const tokenMax = Math.max(tokenLeft.length, tokenRight.length) || 1;
+        const tokenScore = Math.round((1 - levenshteinDistance(tokenLeft, tokenRight) / tokenMax) * 100);
+        return Math.max(fullScore, tokenScore);
+    }
+
+    function findWorkByFuzzyName(name, threshold = MAP_DATA_FUZZY_THRESHOLD) {
+        let best = null;
+        masterData.forEach(item => {
+            const score = workNameSimilarity(name, getWorkName(item));
+            if (score >= threshold && (!best || score > best.score)) {
+                best = { item, score };
+            }
+        });
+        return best;
+    }
+
+    function buildMapDataFieldOptions() {
+        const skip = ['rowindex', 'computedstatus'];
+        return getAddFieldKeys().filter(key => {
+            if (!key || skip.includes(String(key).toLowerCase())) return false;
+            const normalized = normalizeReportKey(key);
+            return normalized !== 'workname';
+        });
+    }
+
+    function resolveMapDataDashboardKey(excelHeader) {
+        const dashboardKeys = getAddFieldKeys();
+        const normalizedHeader = normalizeReportKey(excelHeader);
+        for (const key of dashboardKeys) {
+            if (normalizeReportKey(key) === normalizedHeader) return key;
+        }
+        for (const [canonical, aliases] of Object.entries(MAP_DATA_HEADER_ALIASES)) {
+            const aliasList = [canonical, ...(REPORT_KEY_ALIASES[canonical] || []), ...aliases];
+            if (aliasList.some(alias => normalizeReportKey(alias) === normalizedHeader)) {
+                return dashboardKeys.find(key => normalizeReportKey(key) === normalizeReportKey(canonical)) || canonical;
+            }
+        }
+        let bestKey = '';
+        let bestScore = 0;
+        dashboardKeys.forEach(key => {
+            const score = workNameSimilarity(excelHeader, key);
+            if (score > bestScore) {
+                bestScore = score;
+                bestKey = key;
+            }
+        });
+        if (bestScore >= 75) return bestKey;
+        return '';
+    }
+
+    function suggestMapDataField(excelHeader, isMatchKey = false) {
+        if (isMatchKey) {
+            const workKey = getAddFieldKeys().find(key => normalizeReportKey(key) === 'workname') || 'Work_Name';
+            return { field: workKey, confidence: 'exact', score: 100 };
+        }
+        const dashboardKeys = getAddFieldKeys();
+        const normalizedHeader = normalizeReportKey(excelHeader);
+        for (const key of dashboardKeys) {
+            if (normalizeReportKey(key) === normalizedHeader) {
+                return { field: key, confidence: 'exact', score: 100 };
+            }
+        }
+        for (const [canonical, aliases] of Object.entries(MAP_DATA_HEADER_ALIASES)) {
+            const aliasList = [canonical, ...(REPORT_KEY_ALIASES[canonical] || []), ...aliases];
+            if (aliasList.some(alias => normalizeReportKey(alias) === normalizedHeader)) {
+                const field = dashboardKeys.find(key => normalizeReportKey(key) === normalizeReportKey(canonical)) || canonical;
+                return { field, confidence: 'alias', score: 95 };
+            }
+        }
+        let bestKey = '';
+        let bestScore = 0;
+        dashboardKeys.forEach(key => {
+            const score = workNameSimilarity(excelHeader, REPORT_HEADER_LABELS[key] || key);
+            if (score > bestScore) {
+                bestScore = score;
+                bestKey = key;
+            }
+        });
+        if (bestScore >= 75) return { field: bestKey, confidence: 'fuzzy', score: bestScore };
+        return { field: '', confidence: 'unknown', score: 0 };
+    }
+
+    function autoDetectWorkNameColumn(headers) {
+        for (let i = 0; i < headers.length; i++) {
+            const header = headers[i];
+            if (MAP_DATA_WORK_NAME_HEADERS.some(alias => normalizeReportKey(alias) === normalizeReportKey(header))) {
+                return i;
+            }
+        }
+        return headers.findIndex(header => {
+            const normalized = normalizeReportKey(header);
+            return normalized.includes('work') && normalized.includes('name');
+        });
+    }
+
+    async function parseMapDataFile(file) {
+        await ensureXlsxLibrary();
+        const buffer = await file.arrayBuffer();
+        const workbook = XLSX.read(buffer, { type: 'array', cellDates: false });
+        const sheetName = workbook.SheetNames[0];
+        if (!sheetName) throw new Error('Excel file has no sheets.');
+        const sheet = workbook.Sheets[sheetName];
+        const raw = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: true });
+        if (!raw.length) throw new Error('Excel file is empty.');
+        const headerRow = raw[0].map(cell => String(cell ?? '').trim());
+        const headers = headerRow.map((header, index) => header || `Column ${columnIndexToLetter(index)}`);
+        const rows = raw.slice(1)
+            .filter(row => Array.isArray(row) && row.some(cell => String(cell ?? '').trim() !== ''))
+            .map(row => {
+                const record = {};
+                headers.forEach((header, index) => {
+                    record[header] = row[index] ?? '';
+                });
+                return record;
+            });
+        return { headers, rows, sheetName };
+    }
+
+    function getMapDataFieldLabel(fieldKey) {
+        return REPORT_HEADER_LABELS[fieldKey] || fieldKey;
+    }
+
+    function buildMapDataMappings(headers, matchKeyIndex) {
+        return headers.map((header, index) => {
+            const isMatchKey = index === matchKeyIndex;
+            const suggestion = suggestMapDataField(header, isMatchKey);
+            const autoConfirm = isMatchKey || suggestion.confidence === 'exact' || suggestion.confidence === 'alias';
+            return {
+                excelHeader: header,
+                columnLetter: columnIndexToLetter(index),
+                dashboardField: isMatchKey ? suggestion.field : (suggestion.field || '__skip__'),
+                confidence: isMatchKey ? 'exact' : suggestion.confidence,
+                score: suggestion.score,
+                confirmed: autoConfirm && Boolean(suggestion.field || isMatchKey),
+                isMatchKey
+            };
+        });
+    }
+
+    async function handleMapDataFileSelect(event) {
+        const file = event.target.files?.[0];
+        if (!file || !mapDataState) return;
+        const errorEl = document.getElementById('mapDataUploadError');
+        const summaryEl = document.getElementById('mapDataUploadSummary');
+        errorEl.classList.add('d-none');
+        summaryEl.classList.add('d-none');
+        try {
+            const parsed = await parseMapDataFile(file);
+            const matchKeyIndex = autoDetectWorkNameColumn(parsed.headers);
+            if (matchKeyIndex < 0) {
+                throw new Error('Work name column not found. Expected headers like DNIT_Name or Work Name in row 1.');
+            }
+            mapDataState.fileName = file.name;
+            mapDataState.headers = parsed.headers;
+            mapDataState.rows = parsed.rows;
+            mapDataState.matchKeyIndex = matchKeyIndex;
+            mapDataState.matchKeyHeader = parsed.headers[matchKeyIndex];
+            mapDataState.mappings = buildMapDataMappings(parsed.headers, matchKeyIndex);
+            summaryEl.innerHTML = `<strong>${escapeHtml(file.name)}</strong> — ${parsed.headers.length} columns, ${parsed.rows.length} rows detected.`;
+            summaryEl.classList.remove('d-none');
+            mapDataState.step = 2;
+            renderMapDataStep();
+        } catch (err) {
+            console.error('Map data parse failed', err);
+            errorEl.textContent = err.message || 'Could not read Excel file.';
+            errorEl.classList.remove('d-none');
+        }
+    }
+
+    function renderMapDataStep() {
+        if (!mapDataState) return;
+        const step = mapDataState.step;
+        ['mapDataStep1', 'mapDataStep2', 'mapDataStep3'].forEach((id, index) => {
+            document.getElementById(id)?.classList.toggle('d-none', step !== index + 1);
+        });
+        ['mapDataStepPill1', 'mapDataStepPill2', 'mapDataStepPill3'].forEach((id, index) => {
+            const pill = document.getElementById(id);
+            if (!pill) return;
+            pill.classList.toggle('active', step === index + 1);
+            pill.classList.toggle('done', step > index + 1);
+        });
+        document.getElementById('mapDataBackBtn')?.classList.toggle('d-none', step === 1);
+        document.getElementById('mapDataNextBtn')?.classList.toggle('d-none', step === 3 || step === 1);
+        document.getElementById('mapDataApplyBtn')?.classList.toggle('d-none', step !== 3);
+        if (step === 2) renderMapDataMappingUI();
+        if (step === 3) renderMapDataPreview();
+    }
+
+    function renderMapDataMappingUI() {
+        if (!mapDataState) return;
+        const banner = document.getElementById('mapDataMatchKeyBanner');
+        const list = document.getElementById('mapDataMappingList');
+        const matchMapping = mapDataState.mappings.find(item => item.isMatchKey);
+        banner.innerHTML = `
+            <div class="fw-bold text-dark">Match key: Column ${matchMapping?.columnLetter || ''} · ${escapeHtml(mapDataState.matchKeyHeader)} → ${escapeHtml(getMapDataFieldLabel(matchMapping?.dashboardField || 'Work_Name'))}</div>
+            <div class="small text-secondary mt-1">${escapeHtml(mapDataState.fileName || '')} · Rows will match by work name (90%+ similar). Empty sheet fields like E-Tender ID will be filled from Excel.</div>
+        `;
+        list.innerHTML = mapDataState.mappings.map((mapping, index) => {
+            const badgeClass = mapping.confidence;
+            const badgeText = mapping.isMatchKey ? 'Match key' : ({
+                exact: 'Exact',
+                alias: 'Suggested',
+                fuzzy: 'Maybe',
+                unknown: 'Unknown'
+            }[mapping.confidence] || 'Unknown');
+            const options = ['<option value="__skip__">(Skip — do not import)</option>']
+                .concat(buildMapDataFieldOptions().map(field => {
+                    const selected = mapping.dashboardField === field ? 'selected' : '';
+                    return `<option value="${escapeHtml(field)}" ${selected}>${escapeHtml(getMapDataFieldLabel(field))}</option>`;
+                }));
+            if (mapping.isMatchKey) {
+                return `
+                    <div class="map-data-row match-key-row">
+                        <div class="d-flex justify-content-between align-items-start gap-3">
+                            <div>
+                                <div class="fw-bold">Column ${escapeHtml(mapping.columnLetter)} · ${escapeHtml(mapping.excelHeader)}</div>
+                                <div class="small text-secondary">Maps to ${escapeHtml(getMapDataFieldLabel(mapping.dashboardField))}</div>
+                            </div>
+                            <span class="map-data-badge exact">Match key</span>
+                        </div>
+                    </div>
+                `;
+            }
+            return `
+                <div class="map-data-row ${badgeClass}">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                        <div class="fw-bold">Column ${escapeHtml(mapping.columnLetter)} · ${escapeHtml(mapping.excelHeader)}</div>
+                        <span class="map-data-badge ${badgeClass}">${badgeText}${mapping.score ? ` · ${mapping.score}%` : ''}</span>
+                    </div>
+                    <div class="row g-2 align-items-center">
+                        <div class="col-md-8">
+                            <select class="edit-input" onchange="updateMapDataMappingField(${index}, this.value)">
+                                ${options.join('')}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="d-flex align-items-center gap-2 small mb-0">
+                                <input type="checkbox" ${mapping.confirmed ? 'checked' : ''} onchange="updateMapDataMappingConfirmed(${index}, this.checked)">
+                                Confirm mapping
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function updateMapDataMappingField(index, value) {
+        if (!mapDataState?.mappings[index]) return;
+        mapDataState.mappings[index].dashboardField = value;
+        mapDataState.mappings[index].confirmed = value !== '__skip__';
+        if (value === '__skip__') mapDataState.mappings[index].confidence = 'unknown';
+    }
+
+    function updateMapDataMappingConfirmed(index, checked) {
+        if (!mapDataState?.mappings[index]) return;
+        mapDataState.mappings[index].confirmed = checked;
+    }
+
+    function confirmAllHighConfidenceMapData() {
+        if (!mapDataState) return;
+        mapDataState.mappings.forEach(mapping => {
+            if (mapping.isMatchKey) {
+                mapping.confirmed = true;
+                return;
+            }
+            if (mapping.confidence === 'exact' || mapping.confidence === 'alias') {
+                mapping.confirmed = true;
+            }
+        });
+        renderMapDataMappingUI();
+    }
+
+    function canProceedMapDataStep2() {
+        if (!mapDataState) return false;
+        const pending = mapDataState.mappings.filter(mapping => {
+            if (mapping.isMatchKey) return false;
+            if (mapping.dashboardField === '__skip__') return false;
+            return !mapping.confirmed;
+        });
+        return pending.length === 0;
+    }
+
+    function mapDataGoBack() {
+        if (!mapDataState || mapDataState.step <= 1) return;
+        mapDataState.step -= 1;
+        renderMapDataStep();
+    }
+
+    function mapDataGoNext() {
+        if (!mapDataState) return;
+        const errorEl = document.getElementById('mapDataMappingError');
+        errorEl.classList.add('d-none');
+        if (mapDataState.step === 2 && !canProceedMapDataStep2()) {
+            errorEl.textContent = 'Please confirm or skip all column mappings before continuing.';
+            errorEl.classList.remove('d-none');
+            return;
+        }
+        if (mapDataState.step < 3) {
+            mapDataState.step += 1;
+            renderMapDataStep();
+        }
+    }
+
+    function mapDataCellValue(value, dashboardField) {
+        if (value === undefined || value === null || value === '') return '';
+        if (isDateKey(dashboardField) || isReportDateKey(dashboardField)) {
+            return formatDateInputForSheet(value);
+        }
+        return String(value).trim();
+    }
+
+    function shouldFillMapField(item, key, newValue) {
+        if (!hasDisplayValue(newValue)) return false;
+        const existing = getReportValue(item, key);
+        return !hasDisplayValue(existing);
+    }
+
+    function buildMapDataIncoming(row) {
+        const incoming = {};
+        mapDataState.mappings.forEach(mapping => {
+            if (!mapping.confirmed || mapping.dashboardField === '__skip__') return;
+            const value = mapDataCellValue(row[mapping.excelHeader], mapping.dashboardField);
+            if (hasDisplayValue(value)) incoming[mapping.dashboardField] = value;
+        });
+        return incoming;
+    }
+
+    function buildMapDataPreviewResults() {
+        return mapDataState.rows.map(row => {
+            const excelWorkName = String(row[mapDataState.matchKeyHeader] ?? '').trim();
+            if (!excelWorkName) {
+                return { action: 'skip', reason: 'Empty work name', excelWorkName: '', score: 0 };
+            }
+            const incoming = buildMapDataIncoming(row);
+            const match = findWorkByFuzzyName(excelWorkName, MAP_DATA_FUZZY_THRESHOLD);
+            if (match) {
+                const fieldsToApply = {};
+                Object.keys(incoming).forEach(key => {
+                    if (shouldFillMapField(match.item, key, incoming[key])) {
+                        fieldsToApply[key] = incoming[key];
+                    }
+                });
+                return {
+                    action: Object.keys(fieldsToApply).length ? 'update' : 'noop',
+                    excelWorkName,
+                    matchedItem: match.item,
+                    matchedName: getWorkName(match.item),
+                    score: match.score,
+                    fieldsToApply,
+                    incoming
+                };
+            }
+            return {
+                action: 'add',
+                excelWorkName,
+                matchedName: '',
+                score: 0,
+                fullPayload: incoming,
+                incoming
+            };
+        });
+    }
+
+    function renderMapDataPreview() {
+        if (!mapDataState) return;
+        const results = buildMapDataPreviewResults();
+        mapDataState.previewResults = results;
+        const matched = results.filter(item => item.action === 'update' || item.action === 'noop').length;
+        const added = results.filter(item => item.action === 'add').length;
+        const skipped = results.filter(item => item.action === 'skip').length;
+        document.getElementById('mapDataPreviewSummary').innerHTML = `
+            <div class="row g-2">
+                <div class="col-md-3"><div class="report-option-card text-center"><div class="fw-bold text-success">${matched}</div><div class="small text-secondary">Matched</div></div></div>
+                <div class="col-md-3"><div class="report-option-card text-center"><div class="fw-bold text-primary">${added}</div><div class="small text-secondary">New works</div></div></div>
+                <div class="col-md-3"><div class="report-option-card text-center"><div class="fw-bold text-secondary">${skipped}</div><div class="small text-secondary">Skipped</div></div></div>
+                <div class="col-md-3"><div class="report-option-card text-center"><div class="fw-bold text-dark">${results.filter(item => item.action === 'update').length}</div><div class="small text-secondary">Will update fields</div></div></div>
+            </div>
+        `;
+        document.getElementById('mapDataPreviewBody').innerHTML = results.slice(0, 20).map(item => {
+            const actionLabel = item.action === 'update' ? 'Update' :
+                item.action === 'add' ? 'Add new' :
+                item.action === 'noop' ? 'No empty fields' : 'Skip';
+            const scoreClass = item.score && item.score <= 92 ? 'score-low' : '';
+            return `
+                <tr class="${scoreClass}">
+                    <td>${escapeHtml(item.excelWorkName.slice(0, 80))}${item.excelWorkName.length > 80 ? '…' : ''}</td>
+                    <td>${escapeHtml(item.matchedName || '—')}</td>
+                    <td>${item.score ? `${item.score}%` : '—'}</td>
+                    <td>${actionLabel}</td>
+                </tr>
+            `;
+        }).join('') + (results.length > 20 ? `<tr><td colspan="4" class="text-secondary small">…and ${results.length - 20} more rows</td></tr>` : '');
+    }
+
+    async function runMapDataImport() {
+        if (!mapDataState?.previewResults?.length) return;
+        const btn = document.getElementById('mapDataApplyBtn');
+        const progressEl = document.getElementById('mapDataApplyProgress');
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        progressEl.classList.remove('d-none');
+        let updated = 0;
+        let added = 0;
+        let failed = 0;
+        let skipped = 0;
+        const results = mapDataState.previewResults;
+        for (let i = 0; i < results.length; i++) {
+            const item = results[i];
+            progressEl.textContent = `Syncing ${i + 1} of ${results.length}...`;
+            try {
+                if (item.action === 'skip' || item.action === 'noop') {
+                    skipped++;
+                    continue;
+                }
+                if (item.action === 'update') {
+                    const tenderId = getTenderId(item.matchedItem);
+                    const payload = { tenderId, ...item.fieldsToApply };
+                    const existingIndex = masterData.findIndex(row => String(getTenderId(row) || '').trim() === String(tenderId || '').trim());
+                    const previousItem = existingIndex >= 0 ? { ...masterData[existingIndex] } : null;
+                    upsertLocalWork(payload, { fallbackTenderId: tenderId });
+                    const resp = await postJson({ action: 'updateWork', details: payload }, 25000);
+                    if (!isSuccessResponse(resp)) throw new Error(resp?.message || resp?.error || 'Update failed.');
+                    updated++;
+                } else if (item.action === 'add') {
+                    const payload = { ...item.fullPayload };
+                    const localTenderId = String(payload.E_TENDERID || payload.E_TenderID || '').trim();
+                    if (!payload.E_TENDERID && localTenderId) payload.E_TENDERID = localTenderId;
+                    const localInsert = upsertLocalWork(payload, { temporary: true });
+                    const resp = await postJson({ method: 'addWork', rowData: buildAddRowData(payload) }, 25000);
+                    if (!isSuccessResponse(resp)) {
+                        removeLocalWorkByTenderId(localTenderId || localInsert.tenderId, localInsert.item);
+                        throw new Error(resp?.message || resp?.error || 'Add failed.');
+                    }
+                    added++;
+                }
+            } catch (err) {
+                console.error('Map data row failed', err);
+                failed++;
+                item.error = err.message || 'Failed';
+            }
+        }
+        progressEl.textContent = `Done — ${updated} updated, ${added} added, ${skipped} skipped${failed ? `, ${failed} failed` : ''}.`;
+        showAppToast(`Import complete: ${updated} updated, ${added} added${failed ? `, ${failed} failed` : ''}.`, failed ? 4200 : 2600);
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+        refreshDataInBackground();
     }
 
     function openReportModalFromMenu() {
