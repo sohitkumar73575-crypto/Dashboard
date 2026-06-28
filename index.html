@@ -2012,6 +2012,7 @@
                                     <th>Excel Work Name</th>
                                     <th>Matched Work</th>
                                     <th>Score</th>
+                                    <th>Fields to fill</th>
                                     <th>Action</th>
                                 </tr>
                             </thead>
@@ -2264,7 +2265,10 @@
         "E_TENDERID": ["E_TenderID", "Tender ID", "TenderID"],
         "Agency_Name": ["Agency Name", "AGENCY_NAME"]
     };
-    const MAP_DATA_FUZZY_THRESHOLD = 90;
+    const MAP_DATA_FUZZY_THRESHOLD = 85;
+    const MAP_DATA_RULES_STORAGE_KEY = 'dadriworksMapDataRules';
+    const MAP_DATA_SUBSTRING_MIN_LEN = 20;
+    const MAP_DATA_STOP_WORDS = new Set(['of', 'in', 'ward', 'no', 'mc', 'const', 'from', 'the', 'and', 'to', 'via', 'adj', 'a', 'an']);
     const MAP_DATA_WORK_NAME_HEADERS = ['DNIT_Name', 'DNIT Name', 'Work_Name', 'Work Name', 'WORK NAME', 'Name of Work'];
     const MAP_DATA_HEADER_ALIASES = {
         Work_Name: ['DNIT_Name', 'DNIT Name', 'Work Name', 'WORK NAME', 'Name of Work'],
@@ -3907,7 +3911,8 @@
             rows: [],
             matchKeyHeader: '',
             matchKeyIndex: -1,
-            mappings: []
+            mappings: [],
+            manualMatches: {}
         };
         document.getElementById('mapDataFileInput').value = '';
         document.getElementById('mapDataUploadSummary')?.classList.add('d-none');
@@ -3953,30 +3958,95 @@
         return dp[m][n];
     }
 
-    function workNameSimilarity(a, b) {
+    function levenshteinSimilarity(a, b) {
         const left = normalizeMapWorkName(a);
         const right = normalizeMapWorkName(b);
         if (!left && !right) return 100;
         if (!left || !right) return 0;
         const maxLen = Math.max(left.length, right.length);
         if (!maxLen) return 100;
-        const fullScore = Math.round((1 - levenshteinDistance(left, right) / maxLen) * 100);
-        const tokenLeft = left.split(' ').filter(Boolean).sort().join(' ');
-        const tokenRight = right.split(' ').filter(Boolean).sort().join(' ');
-        const tokenMax = Math.max(tokenLeft.length, tokenRight.length) || 1;
-        const tokenScore = Math.round((1 - levenshteinDistance(tokenLeft, tokenRight) / tokenMax) * 100);
-        return Math.max(fullScore, tokenScore);
+        return Math.round((1 - levenshteinDistance(left, right) / maxLen) * 100);
     }
 
-    function findWorkByFuzzyName(name, threshold = MAP_DATA_FUZZY_THRESHOLD) {
+    function getMapDataSignificantWords(value) {
+        return normalizeMapWorkName(value)
+            .split(' ')
+            .filter(word => word.length > 1 && !MAP_DATA_STOP_WORDS.has(word));
+    }
+
+    function wordOverlapScore(a, b) {
+        const wordsA = new Set(getMapDataSignificantWords(a));
+        const wordsB = new Set(getMapDataSignificantWords(b));
+        if (!wordsA.size || !wordsB.size) return 0;
+        let intersection = 0;
+        wordsA.forEach(word => {
+            if (wordsB.has(word)) intersection++;
+        });
+        const union = new Set([...wordsA, ...wordsB]).size;
+        return Math.round((intersection / union) * 100);
+    }
+
+    function substringMatchScore(excelName, sheetName) {
+        const left = normalizeMapWorkName(excelName);
+        const right = normalizeMapWorkName(sheetName);
+        if (!left || !right) return 0;
+        if (left.length >= MAP_DATA_SUBSTRING_MIN_LEN && right.includes(left)) return 98;
+        if (right.length >= MAP_DATA_SUBSTRING_MIN_LEN && left.includes(right)) return 98;
+        if (left.length >= 15 && right.includes(left)) return 96;
+        if (right.length >= 15 && left.includes(right)) return 96;
+        return 0;
+    }
+
+    function scoreWorkNameMatch(excelName, sheetName) {
+        const left = normalizeMapWorkName(excelName);
+        const right = normalizeMapWorkName(sheetName);
+        if (left === right) return { score: 100, layer: 'exact' };
+        const subScore = substringMatchScore(excelName, sheetName);
+        if (subScore >= 96) return { score: subScore, layer: 'substring' };
+        const overlap = wordOverlapScore(excelName, sheetName);
+        if (overlap >= 80) return { score: overlap, layer: 'overlap' };
+        const levScore = levenshteinSimilarity(excelName, sheetName);
+        if (levScore >= MAP_DATA_FUZZY_THRESHOLD) return { score: levScore, layer: 'levenshtein' };
+        return { score: Math.max(subScore, overlap, levScore), layer: 'none' };
+    }
+
+    function isWorkMatchAccepted(result) {
+        if (result.layer === 'exact') return true;
+        if (result.layer === 'substring') return result.score >= 96;
+        if (result.layer === 'overlap') return result.score >= 80;
+        if (result.layer === 'levenshtein') return result.score >= MAP_DATA_FUZZY_THRESHOLD;
+        return false;
+    }
+
+    function findWorkForMapData(excelName) {
         let best = null;
         masterData.forEach(item => {
-            const score = workNameSimilarity(name, getWorkName(item));
-            if (score >= threshold && (!best || score > best.score)) {
-                best = { item, score };
+            const result = scoreWorkNameMatch(excelName, getWorkName(item));
+            if (!isWorkMatchAccepted(result)) return;
+            if (!best || result.score > best.score) {
+                best = { item, score: result.score, layer: result.layer };
             }
         });
         return best;
+    }
+
+    function findAllWorkMatchCandidates(excelName, limit = 5) {
+        return masterData
+            .map(item => {
+                const result = scoreWorkNameMatch(excelName, getWorkName(item));
+                return { item, score: result.score, layer: result.layer, name: getWorkName(item) };
+            })
+            .filter(candidate => candidate.score >= 50)
+            .sort((a, b) => b.score - a.score)
+            .slice(0, limit);
+    }
+
+    function workNameSimilarity(a, b) {
+        return scoreWorkNameMatch(a, b).score;
+    }
+
+    function findWorkByFuzzyName(name) {
+        return findWorkForMapData(name);
     }
 
     function buildMapDataFieldOptions() {
@@ -4085,18 +4155,83 @@
         return REPORT_HEADER_LABELS[fieldKey] || fieldKey;
     }
 
+    function loadMapDataSavedRules() {
+        try {
+            const raw = localStorage.getItem(MAP_DATA_RULES_STORAGE_KEY);
+            return raw ? JSON.parse(raw) : { headerToField: {}, fillRules: {} };
+        } catch (e) {
+            return { headerToField: {}, fillRules: {} };
+        }
+    }
+
+    function saveMapDataRulesToStorage() {
+        if (!mapDataState?.mappings) return;
+        const rules = { headerToField: {}, fillRules: {} };
+        mapDataState.mappings.forEach(mapping => {
+            if (mapping.isMatchKey) return;
+            if (mapping.dashboardField && mapping.dashboardField !== '__skip__') {
+                rules.headerToField[mapping.excelHeader] = mapping.dashboardField;
+                rules.fillRules[mapping.excelHeader] = mapping.fillRule || 'empty';
+            }
+        });
+        localStorage.setItem(MAP_DATA_RULES_STORAGE_KEY, JSON.stringify(rules));
+    }
+
+    function isDefaultRequiredMapField(fieldKey) {
+        const normalized = normalizeReportKey(fieldKey);
+        if (normalized === 'etenderid' || normalized === 'tenderid') return true;
+        return normalized.includes('date') || normalized.includes('tpub') || normalized.includes('tbid');
+    }
+
+    function canonicalMapDataKey(fieldKey, item) {
+        const sample = item || masterData[0] || {};
+        return resolveReportKey(sample, fieldKey) || fieldKey;
+    }
+
+    function mapPayloadToSheetKeys(payload) {
+        const sample = masterData[0] || {};
+        const output = {};
+        Object.keys(payload || {}).forEach(key => {
+            if (key === 'tenderId') return;
+            const sheetKey = resolveReportKey(sample, key) || key;
+            if (hasDisplayValue(payload[key])) output[sheetKey] = payload[key];
+        });
+        getAddFieldKeys().forEach(key => {
+            if (hasDisplayValue(output[key])) return;
+            Object.keys(payload || {}).forEach(pKey => {
+                if (normalizeReportKey(pKey) === normalizeReportKey(key) && hasDisplayValue(payload[pKey])) {
+                    output[key] = payload[pKey];
+                }
+            });
+        });
+        return output;
+    }
+
     function buildMapDataMappings(headers, matchKeyIndex) {
+        const saved = loadMapDataSavedRules();
         return headers.map((header, index) => {
             const isMatchKey = index === matchKeyIndex;
-            const suggestion = suggestMapDataField(header, isMatchKey);
-            const autoConfirm = isMatchKey || suggestion.confidence === 'exact' || suggestion.confidence === 'alias';
+            const savedField = saved.headerToField[header];
+            const suggestion = isMatchKey
+                ? suggestMapDataField(header, true)
+                : (savedField
+                    ? { field: savedField, confidence: 'alias', score: 100 }
+                    : suggestMapDataField(header, false));
+            const dashboardField = isMatchKey
+                ? suggestion.field
+                : (savedField || suggestion.field || '__skip__');
+            const fillRule = isMatchKey
+                ? 'empty'
+                : (saved.fillRules[header] || (dashboardField !== '__skip__' && isDefaultRequiredMapField(dashboardField) ? 'required' : 'empty'));
+            const autoConfirm = isMatchKey || suggestion.confidence !== 'unknown' || Boolean(savedField);
             return {
                 excelHeader: header,
                 columnLetter: columnIndexToLetter(index),
-                dashboardField: isMatchKey ? suggestion.field : (suggestion.field || '__skip__'),
+                dashboardField,
+                fillRule,
                 confidence: isMatchKey ? 'exact' : suggestion.confidence,
                 score: suggestion.score,
-                confirmed: autoConfirm && Boolean(suggestion.field || isMatchKey),
+                confirmed: autoConfirm && (isMatchKey || dashboardField !== '__skip__'),
                 isMatchKey
             };
         });
@@ -4158,7 +4293,7 @@
         const matchMapping = mapDataState.mappings.find(item => item.isMatchKey);
         banner.innerHTML = `
             <div class="fw-bold text-dark">Match key: Column ${matchMapping?.columnLetter || ''} · ${escapeHtml(mapDataState.matchKeyHeader)} → ${escapeHtml(getMapDataFieldLabel(matchMapping?.dashboardField || 'Work_Name'))}</div>
-            <div class="small text-secondary mt-1">${escapeHtml(mapDataState.fileName || '')} · Rows will match by work name (90%+ similar). Empty sheet fields like E-Tender ID will be filled from Excel.</div>
+            <div class="small text-secondary mt-1">${escapeHtml(mapDataState.fileName || '')} · Rows match by work name (exact, contains, or 80%+ similar). Empty sheet fields will be filled from Excel.</div>
         `;
         list.innerHTML = mapDataState.mappings.map((mapping, index) => {
             const badgeClass = mapping.confidence;
@@ -4168,7 +4303,8 @@
                 fuzzy: 'Maybe',
                 unknown: 'Unknown'
             }[mapping.confidence] || 'Unknown');
-            const options = ['<option value="__skip__">(Skip — do not import)</option>']
+            const skipDisabled = mapping.fillRule === 'required' ? 'disabled' : '';
+            const options = [`<option value="__skip__" ${skipDisabled}>${mapping.fillRule === 'required' ? '(Required — cannot skip)' : '(Skip — do not import)'}</option>`]
                 .concat(buildMapDataFieldOptions().map(field => {
                     const selected = mapping.dashboardField === field ? 'selected' : '';
                     return `<option value="${escapeHtml(field)}" ${selected}>${escapeHtml(getMapDataFieldLabel(field))}</option>`;
@@ -4190,18 +4326,26 @@
                 <div class="map-data-row ${badgeClass}">
                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
                         <div class="fw-bold">Column ${escapeHtml(mapping.columnLetter)} · ${escapeHtml(mapping.excelHeader)}</div>
-                        <span class="map-data-badge ${badgeClass}">${badgeText}${mapping.score ? ` · ${mapping.score}%` : ''}</span>
+                        <span class="map-data-badge ${badgeClass}">${badgeText}${mapping.score ? ` · ${mapping.score}%` : ''}${mapping.fillRule === 'required' ? ' · Required' : ''}</span>
                     </div>
                     <div class="row g-2 align-items-center">
-                        <div class="col-md-8">
+                        <div class="col-md-5">
+                            <label class="detail-label small mb-1">Map to field</label>
                             <select class="edit-input" onchange="updateMapDataMappingField(${index}, this.value)">
                                 ${options.join('')}
                             </select>
                         </div>
                         <div class="col-md-4">
-                            <label class="d-flex align-items-center gap-2 small mb-0">
+                            <label class="detail-label small mb-1">Fill rule</label>
+                            <select class="edit-input" onchange="updateMapDataFillRule(${index}, this.value)">
+                                <option value="empty" ${mapping.fillRule === 'empty' ? 'selected' : ''}>Fill if empty</option>
+                                <option value="required" ${mapping.fillRule === 'required' ? 'selected' : ''}>Required (must map)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="d-flex align-items-center gap-2 small mb-0 mt-4">
                                 <input type="checkbox" ${mapping.confirmed ? 'checked' : ''} onchange="updateMapDataMappingConfirmed(${index}, this.checked)">
-                                Confirm mapping
+                                Confirm
                             </label>
                         </div>
                     </div>
@@ -4212,9 +4356,27 @@
 
     function updateMapDataMappingField(index, value) {
         if (!mapDataState?.mappings[index]) return;
-        mapDataState.mappings[index].dashboardField = value;
-        mapDataState.mappings[index].confirmed = value !== '__skip__';
-        if (value === '__skip__') mapDataState.mappings[index].confidence = 'unknown';
+        const mapping = mapDataState.mappings[index];
+        if (mapping.fillRule === 'required' && value === '__skip__') {
+            showAppToast('Required columns cannot be skipped.', 2600);
+            renderMapDataMappingUI();
+            return;
+        }
+        mapping.dashboardField = value;
+        mapping.confirmed = value !== '__skip__';
+        if (value === '__skip__') mapping.confidence = 'unknown';
+    }
+
+    function updateMapDataFillRule(index, value) {
+        if (!mapDataState?.mappings[index]) return;
+        const mapping = mapDataState.mappings[index];
+        mapping.fillRule = value;
+        if (value === 'required' && mapping.dashboardField === '__skip__') {
+            const suggestion = suggestMapDataField(mapping.excelHeader, false);
+            mapping.dashboardField = suggestion.field || mapping.dashboardField;
+            mapping.confirmed = mapping.dashboardField !== '__skip__';
+        }
+        renderMapDataMappingUI();
     }
 
     function updateMapDataMappingConfirmed(index, checked) {
@@ -4229,7 +4391,7 @@
                 mapping.confirmed = true;
                 return;
             }
-            if (mapping.confidence === 'exact' || mapping.confidence === 'alias') {
+            if (mapping.dashboardField !== '__skip__') {
                 mapping.confirmed = true;
             }
         });
@@ -4238,6 +4400,12 @@
 
     function canProceedMapDataStep2() {
         if (!mapDataState) return false;
+        const requiredBlocked = mapDataState.mappings.some(mapping =>
+            !mapping.isMatchKey &&
+            mapping.fillRule === 'required' &&
+            (mapping.dashboardField === '__skip__' || !mapping.confirmed)
+        );
+        if (requiredBlocked) return false;
         const pending = mapDataState.mappings.filter(mapping => {
             if (mapping.isMatchKey) return false;
             if (mapping.dashboardField === '__skip__') return false;
@@ -4257,9 +4425,12 @@
         const errorEl = document.getElementById('mapDataMappingError');
         errorEl.classList.add('d-none');
         if (mapDataState.step === 2 && !canProceedMapDataStep2()) {
-            errorEl.textContent = 'Please confirm or skip all column mappings before continuing.';
+            errorEl.textContent = 'Please confirm all mappings. Required columns must be mapped and confirmed.';
             errorEl.classList.remove('d-none');
             return;
+        }
+        if (mapDataState.step === 2) {
+            saveMapDataRulesToStorage();
         }
         if (mapDataState.step < 3) {
             mapDataState.step += 1;
@@ -4291,75 +4462,184 @@
         return incoming;
     }
 
+    function buildCanonicalIncoming(incoming, item) {
+        const canonical = {};
+        Object.keys(incoming).forEach(key => {
+            const canonKey = canonicalMapDataKey(key, item);
+            canonical[canonKey] = incoming[key];
+        });
+        return canonical;
+    }
+
+    function buildFieldsToApply(matchedItem, incoming) {
+        const canonicalIncoming = buildCanonicalIncoming(incoming, matchedItem);
+        const fieldsToApply = {};
+        Object.keys(canonicalIncoming).forEach(key => {
+            if (shouldFillMapField(matchedItem, key, canonicalIncoming[key])) {
+                fieldsToApply[key] = canonicalIncoming[key];
+            }
+        });
+        return { fieldsToApply, canonicalIncoming };
+    }
+
+    function resolvePreviewMatch(rowIndex, excelWorkName, incoming) {
+        const manualTenderId = mapDataState.manualMatches?.[rowIndex];
+        if (manualTenderId) {
+            const item = masterData.find(row => String(getTenderId(row) || '').trim() === String(manualTenderId).trim());
+            if (item) {
+                const score = scoreWorkNameMatch(excelWorkName, getWorkName(item)).score;
+                return { item, score, layer: 'manual' };
+            }
+        }
+        return findWorkForMapData(excelWorkName);
+    }
+
     function buildMapDataPreviewResults() {
-        return mapDataState.rows.map(row => {
+        return mapDataState.rows.map((row, rowIndex) => {
             const excelWorkName = String(row[mapDataState.matchKeyHeader] ?? '').trim();
             if (!excelWorkName) {
-                return { action: 'skip', reason: 'Empty work name', excelWorkName: '', score: 0 };
+                return { rowIndex, action: 'skip', reason: 'Empty work name', excelWorkName: '', score: 0, fieldsToApply: {}, fieldLabels: [], incoming: {} };
             }
             const incoming = buildMapDataIncoming(row);
-            const match = findWorkByFuzzyName(excelWorkName, MAP_DATA_FUZZY_THRESHOLD);
+            const confirmedCount = mapDataState.mappings.filter(m => m.confirmed && m.dashboardField !== '__skip__' && !m.isMatchKey).length;
+            const match = resolvePreviewMatch(rowIndex, excelWorkName, incoming);
+            const candidates = findAllWorkMatchCandidates(excelWorkName, 5);
+
             if (match) {
-                const fieldsToApply = {};
-                Object.keys(incoming).forEach(key => {
-                    if (shouldFillMapField(match.item, key, incoming[key])) {
-                        fieldsToApply[key] = incoming[key];
-                    }
-                });
+                const { fieldsToApply, canonicalIncoming } = buildFieldsToApply(match.item, incoming);
+                const tenderId = String(getTenderId(match.item) || '').trim();
+                const fieldLabels = Object.keys(fieldsToApply).map(getMapDataFieldLabel);
+                if (!tenderId) {
+                    return {
+                        rowIndex,
+                        action: 'blocked',
+                        reason: 'Matched work has no Tender ID on sheet — link manually or add as new',
+                        excelWorkName,
+                        matchedItem: match.item,
+                        matchedName: getWorkName(match.item),
+                        score: match.score,
+                        layer: match.layer,
+                        fieldsToApply,
+                        fieldLabels,
+                        incoming: canonicalIncoming,
+                        candidates
+                    };
+                }
+                if (!Object.keys(fieldsToApply).length) {
+                    const reason = confirmedCount === 0
+                        ? 'No columns confirmed for import'
+                        : 'All mapped fields already filled in sheet';
+                    return {
+                        rowIndex,
+                        action: 'noop',
+                        reason,
+                        excelWorkName,
+                        matchedItem: match.item,
+                        matchedName: getWorkName(match.item),
+                        score: match.score,
+                        layer: match.layer,
+                        fieldsToApply,
+                        fieldLabels,
+                        incoming: canonicalIncoming,
+                        candidates
+                    };
+                }
                 return {
-                    action: Object.keys(fieldsToApply).length ? 'update' : 'noop',
+                    rowIndex,
+                    action: 'update',
                     excelWorkName,
                     matchedItem: match.item,
                     matchedName: getWorkName(match.item),
                     score: match.score,
+                    layer: match.layer,
                     fieldsToApply,
-                    incoming
+                    fieldLabels,
+                    incoming: canonicalIncoming,
+                    candidates
                 };
             }
             return {
+                rowIndex,
                 action: 'add',
                 excelWorkName,
                 matchedName: '',
                 score: 0,
-                fullPayload: incoming,
-                incoming
+                layer: 'none',
+                fullPayload: buildCanonicalIncoming(incoming, null),
+                incoming: buildCanonicalIncoming(incoming, null),
+                fieldLabels: Object.keys(buildCanonicalIncoming(incoming, null)).map(getMapDataFieldLabel),
+                candidates
             };
         });
+    }
+
+    function setManualMapDataMatch(rowIndex, tenderId) {
+        if (!mapDataState) return;
+        if (!mapDataState.manualMatches) mapDataState.manualMatches = {};
+        if (tenderId) {
+            mapDataState.manualMatches[rowIndex] = tenderId;
+        } else {
+            delete mapDataState.manualMatches[rowIndex];
+        }
+        renderMapDataPreview();
+    }
+
+    function renderMapDataWorkMatchOptions(rowIndex, candidates, selectedTenderId) {
+        const options = ['<option value="">— Auto / pick work —</option>']
+            .concat(candidates.map(candidate => {
+                const tid = getTenderId(candidate.item);
+                const selected = String(selectedTenderId || '') === String(tid || '') ? 'selected' : '';
+                const label = `${candidate.score}% · ${getWorkName(candidate.item).slice(0, 55)}${getWorkName(candidate.item).length > 55 ? '…' : ''}`;
+                return `<option value="${escapeHtml(tid)}" ${selected}>${escapeHtml(label)}</option>`;
+            }));
+        return `<select class="edit-input form-select form-select-sm" onchange="setManualMapDataMatch(${rowIndex}, this.value)">${options.join('')}</select>`;
     }
 
     function renderMapDataPreview() {
         if (!mapDataState) return;
         const results = buildMapDataPreviewResults();
         mapDataState.previewResults = results;
-        const matched = results.filter(item => item.action === 'update' || item.action === 'noop').length;
+        const matched = results.filter(item => ['update', 'noop', 'blocked'].includes(item.action)).length;
         const added = results.filter(item => item.action === 'add').length;
         const skipped = results.filter(item => item.action === 'skip').length;
+        const updating = results.filter(item => item.action === 'update').length;
         document.getElementById('mapDataPreviewSummary').innerHTML = `
             <div class="row g-2">
                 <div class="col-md-3"><div class="report-option-card text-center"><div class="fw-bold text-success">${matched}</div><div class="small text-secondary">Matched</div></div></div>
                 <div class="col-md-3"><div class="report-option-card text-center"><div class="fw-bold text-primary">${added}</div><div class="small text-secondary">New works</div></div></div>
                 <div class="col-md-3"><div class="report-option-card text-center"><div class="fw-bold text-secondary">${skipped}</div><div class="small text-secondary">Skipped</div></div></div>
-                <div class="col-md-3"><div class="report-option-card text-center"><div class="fw-bold text-dark">${results.filter(item => item.action === 'update').length}</div><div class="small text-secondary">Will update fields</div></div></div>
+                <div class="col-md-3"><div class="report-option-card text-center"><div class="fw-bold text-dark">${updating}</div><div class="small text-secondary">Will update fields</div></div></div>
             </div>
         `;
-        document.getElementById('mapDataPreviewBody').innerHTML = results.slice(0, 20).map(item => {
+        document.getElementById('mapDataPreviewBody').innerHTML = results.map(item => {
             const actionLabel = item.action === 'update' ? 'Update' :
                 item.action === 'add' ? 'Add new' :
-                item.action === 'noop' ? 'No empty fields' : 'Skip';
-            const scoreClass = item.score && item.score <= 92 ? 'score-low' : '';
+                item.action === 'noop' ? `No update (${item.reason || 'empty'})` :
+                item.action === 'blocked' ? `Blocked (${item.reason || ''})` : 'Skip';
+            const scoreClass = item.score && item.score <= 92 && item.action !== 'manual' ? 'score-low' : '';
+            const fieldsText = item.fieldLabels?.length
+                ? escapeHtml(item.fieldLabels.join(', '))
+                : (item.action === 'add' ? escapeHtml((item.fieldLabels || []).join(', ') || '—') : '—');
+            const manualTenderId = mapDataState.manualMatches?.[item.rowIndex] || (item.matchedItem ? getTenderId(item.matchedItem) : '');
+            const showManualPick = item.action === 'add' || item.action === 'blocked' || (item.score && item.score <= 92);
+            const matchedCell = showManualPick
+                ? renderMapDataWorkMatchOptions(item.rowIndex, item.candidates || [], manualTenderId)
+                : escapeHtml(item.matchedName || '—');
             return `
                 <tr class="${scoreClass}">
-                    <td>${escapeHtml(item.excelWorkName.slice(0, 80))}${item.excelWorkName.length > 80 ? '…' : ''}</td>
-                    <td>${escapeHtml(item.matchedName || '—')}</td>
-                    <td>${item.score ? `${item.score}%` : '—'}</td>
-                    <td>${actionLabel}</td>
+                    <td>${escapeHtml(item.excelWorkName.slice(0, 60))}${item.excelWorkName.length > 60 ? '…' : ''}</td>
+                    <td>${matchedCell}</td>
+                    <td>${item.score ? `${item.score}%` : '—'}${item.layer ? `<div class="text-secondary" style="font-size:0.7rem">${escapeHtml(item.layer)}</div>` : ''}</td>
+                    <td class="small">${fieldsText}</td>
+                    <td class="small">${escapeHtml(actionLabel)}</td>
                 </tr>
             `;
-        }).join('') + (results.length > 20 ? `<tr><td colspan="4" class="text-secondary small">…and ${results.length - 20} more rows</td></tr>` : '');
+        }).join('');
     }
 
     async function runMapDataImport() {
         if (!mapDataState?.previewResults?.length) return;
+        renderMapDataPreview();
         const btn = document.getElementById('mapDataApplyBtn');
         const progressEl = document.getElementById('mapDataApplyProgress');
         const originalHtml = btn.innerHTML;
@@ -4374,23 +4654,24 @@
             const item = results[i];
             progressEl.textContent = `Syncing ${i + 1} of ${results.length}...`;
             try {
-                if (item.action === 'skip' || item.action === 'noop') {
+                if (item.action === 'skip' || item.action === 'noop' || item.action === 'blocked') {
                     skipped++;
                     continue;
                 }
                 if (item.action === 'update') {
-                    const tenderId = getTenderId(item.matchedItem);
-                    const payload = { tenderId, ...item.fieldsToApply };
-                    const existingIndex = masterData.findIndex(row => String(getTenderId(row) || '').trim() === String(tenderId || '').trim());
+                    const tenderId = String(getTenderId(item.matchedItem) || '').trim();
+                    if (!tenderId) throw new Error('Matched work has no Tender ID.');
+                    const payload = normalizePayloadDates({ tenderId, ...item.fieldsToApply });
+                    const existingIndex = masterData.findIndex(row => String(getTenderId(row) || '').trim() === tenderId);
                     const previousItem = existingIndex >= 0 ? { ...masterData[existingIndex] } : null;
                     upsertLocalWork(payload, { fallbackTenderId: tenderId });
                     const resp = await postJson({ action: 'updateWork', details: payload }, 25000);
                     if (!isSuccessResponse(resp)) throw new Error(resp?.message || resp?.error || 'Update failed.');
                     updated++;
                 } else if (item.action === 'add') {
-                    const payload = { ...item.fullPayload };
-                    const localTenderId = String(payload.E_TENDERID || payload.E_TenderID || '').trim();
-                    if (!payload.E_TENDERID && localTenderId) payload.E_TENDERID = localTenderId;
+                    const payload = normalizePayloadDates(mapPayloadToSheetKeys(item.fullPayload));
+                    const canonTenderKey = canonicalMapDataKey('E_TENDERID', masterData[0]);
+                    const localTenderId = String(payload[canonTenderKey] || payload.E_TENDERID || payload.E_TenderID || '').trim();
                     const localInsert = upsertLocalWork(payload, { temporary: true });
                     const resp = await postJson({ method: 'addWork', rowData: buildAddRowData(payload) }, 25000);
                     if (!isSuccessResponse(resp)) {
