@@ -187,6 +187,41 @@
         .map-data-badge.unknown { background: #f1f5f9; color: #64748b; }
         .map-data-preview-table { font-size: 0.82rem; }
         .map-data-preview-table .score-low { background: #fef9c3; }
+        .map-data-preview-table .needs-choice { background: #fff7ed; }
+        .map-data-conflict-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
+            min-width: 260px;
+        }
+        .map-data-conflict-item {
+            border: 1px solid #fed7aa;
+            border-radius: 6px;
+            padding: 0.5rem;
+            background: #fff7ed;
+        }
+        .map-data-conflict-item.resolved {
+            border-color: #bfdbfe;
+            background: #f8fafc;
+        }
+        .map-data-conflict-values {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+            gap: 0.35rem;
+            align-items: start;
+            margin-top: 0.3rem;
+        }
+        .map-data-value-box {
+            min-height: 2rem;
+            border: 1px solid var(--line);
+            border-radius: 5px;
+            padding: 0.25rem 0.35rem;
+            background: #fff;
+            word-break: break-word;
+        }
+        .map-data-choice-select {
+            margin-top: 0.4rem;
+        }
         .map-data-upload-zone {
             border: 2px dashed var(--line);
             border-radius: var(--radius);
