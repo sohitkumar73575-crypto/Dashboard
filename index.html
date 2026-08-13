@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -3558,19 +3558,44 @@
     }
 
     function getTenderId(item) {
-        return item.E_TENDERID || item.E_TenderID || item.TenderID || item["Tender ID"] || "";
+        return item?.E_TENDERID || item?.E_TenderID || item?.TenderID || item?.["Tender ID"] || item?.["E-Tender ID"] || "";
     }
 
     function hasTenderId(item) {
         return Boolean(String(getTenderId(item) || '').trim());
     }
 
+    function isTenderIdKey(key) {
+        const normalized = normalizeReportKey(key);
+        return normalized === 'etenderid' || normalized === 'tenderid';
+    }
+
     function getPayloadTenderId(payload) {
-        return String(
+        const direct = String(
             payload?.tenderId ||
             payload?.E_TENDERID ||
             payload?.E_TenderID ||
             payload?.['Tender ID'] ||
+            payload?.['E-Tender ID'] ||
+            ''
+        ).trim();
+        if (direct) return direct;
+
+        const matchedKey = Object.keys(payload || {}).find(isTenderIdKey);
+        return matchedKey ? String(payload[matchedKey] || '').trim() : '';
+    }
+
+    function getCurrentLookupTenderId() {
+        const key = String(currentWorkLookupKey || '').trim();
+        return key && !key.startsWith('row:') ? key : '';
+    }
+
+    function resolveWorkSaveTenderId(payload, item) {
+        return String(
+            getPayloadTenderId(payload) ||
+            currentTenderId ||
+            getTenderId(item) ||
+            getCurrentLookupTenderId() ||
             ''
         ).trim();
     }
@@ -7326,8 +7351,10 @@
         const payload = { tenderId: currentTenderId };
         document.querySelectorAll('#editForm .field-edit').forEach(input => {
             if (!input.name) return;
-            if (input.readOnly) return;
-            payload[input.name] = typeof input.value === 'string' ? input.value.trim() : input.value;
+            const value = typeof input.value === 'string' ? input.value.trim() : input.value;
+            if (input.readOnly && !isTenderIdKey(input.name)) return;
+            if (input.readOnly && !hasDisplayValue(value)) return;
+            payload[input.name] = value;
         });
         return payload;
     }
@@ -8650,8 +8677,7 @@
         }
 
         const rawPayload = collectEditableWorkPayload();
-        delete rawPayload.tenderId;
-        const tenderId = getPayloadTenderId(rawPayload);
+        const tenderId = resolveWorkSaveTenderId(rawPayload, item);
         if (!tenderId) {
             alert('Tender ID is required. Enter E-Tender ID before saving, or use Map Data import.');
             return;
@@ -8661,14 +8687,24 @@
         const originalHtml = saveBtn.innerHTML;
         const existingIndex = getMapDataMatchedIndex(item);
         const previousItem = existingIndex >= 0 ? { ...masterData[existingIndex] } : null;
+        const stableLookupKey = getMapDataWorkSelectKey(item) || currentWorkLookupKey;
 
         saveBtn.disabled = true;
         saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
 
         const localPayload = buildMapDataUpdatePayload(item, rawPayload);
-        upsertLocalWork(localPayload, { fallbackTenderId: tenderId });
+        if (existingIndex >= 0) {
+            const hasTenderIdColumn = Object.keys(masterData[0] || {}).includes('tenderId');
+            const nextItem = applyComputedStatusRules({ ...masterData[existingIndex], ...localPayload });
+            if (!hasTenderIdColumn) delete nextItem.tenderId;
+            masterData[existingIndex] = nextItem;
+            writeStoredMasterData();
+            updateDashboard();
+        } else {
+            upsertLocalWork(localPayload, { fallbackTenderId: tenderId });
+        }
         currentTenderId = tenderId;
-        currentWorkLookupKey = tenderId;
+        currentWorkLookupKey = tenderId || stableLookupKey;
         bootstrap.Modal.getInstance(document.getElementById('workModal'))?.hide();
         showAppToast('Saved locally. Syncing sheet...');
 
