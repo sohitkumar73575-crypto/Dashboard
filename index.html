@@ -2047,7 +2047,7 @@
                                     <th>Excel Work Name</th>
                                     <th>Matched Work</th>
                                     <th>Score</th>
-                                    <th>Fields to fill</th>
+                                    <th>Fields and choices</th>
                                     <th>Action</th>
                                 </tr>
                             </thead>
@@ -4004,7 +4004,8 @@
             matchKeyHeader: '',
             matchKeyIndex: -1,
             mappings: [],
-            manualMatches: {}
+            manualMatches: {},
+            conflictChoices: {}
         };
         document.getElementById('mapDataFileInput').value = '';
         document.getElementById('mapDataUploadSummary')?.classList.add('d-none');
@@ -4385,7 +4386,7 @@
         const matchMapping = mapDataState.mappings.find(item => item.isMatchKey);
         banner.innerHTML = `
             <div class="fw-bold text-dark">Match key: Column ${matchMapping?.columnLetter || ''} · ${escapeHtml(mapDataState.matchKeyHeader)} → ${escapeHtml(getMapDataFieldLabel(matchMapping?.dashboardField || 'Work_Name'))}</div>
-            <div class="small text-secondary mt-1">${escapeHtml(mapDataState.fileName || '')} · Rows match by work name (exact, contains, or 80%+ similar). Empty sheet fields will be filled from Excel.</div>
+            <div class="small text-secondary mt-1">${escapeHtml(mapDataState.fileName || '')} · Rows match by work name (exact, contains, or 80%+ similar). Empty sheet fields are filled from Excel; different existing values need a choice.</div>
         `;
         list.innerHTML = mapDataState.mappings.map((mapping, index) => {
             const badgeClass = mapping.confidence;
@@ -4430,7 +4431,7 @@
                         <div class="col-md-4">
                             <label class="detail-label small mb-1">Fill rule</label>
                             <select class="edit-input" onchange="updateMapDataFillRule(${index}, this.value)">
-                                <option value="empty" ${mapping.fillRule === 'empty' ? 'selected' : ''}>Fill if empty</option>
+                                <option value="empty" ${mapping.fillRule === 'empty' ? 'selected' : ''}>Fill empty; ask before replacing</option>
                                 <option value="required" ${mapping.fillRule === 'required' ? 'selected' : ''}>Required (must map)</option>
                             </select>
                         </div>
@@ -4538,12 +4539,6 @@
         return String(value).trim();
     }
 
-    function shouldFillMapField(item, key, newValue) {
-        if (!hasDisplayValue(newValue)) return false;
-        const existing = getReportValue(item, key);
-        return !hasDisplayValue(existing);
-    }
-
     function buildMapDataIncoming(row) {
         const incoming = {};
         mapDataState.mappings.forEach(mapping => {
@@ -4552,6 +4547,23 @@
             if (hasDisplayValue(value)) incoming[mapping.dashboardField] = value;
         });
         return incoming;
+    }
+
+    function getMapDataConflictKey(rowIndex, key) {
+        return `${rowIndex}::${key}`;
+    }
+
+    function getMapDataComparableValue(key, value) {
+        if (!hasDisplayValue(value)) return '';
+        if (isDateKey(key) || isReportDateKey(key)) {
+            const date = parseReportDate(value);
+            if (date) return `date:${toDateInputValue(date)}`;
+        }
+        return String(value).trim().replace(/\s+/g, ' ').toLowerCase();
+    }
+
+    function mapDataValuesMatch(key, existingValue, incomingValue) {
+        return getMapDataComparableValue(key, existingValue) === getMapDataComparableValue(key, incomingValue);
     }
 
     function buildCanonicalIncoming(incoming, item) {
@@ -4617,15 +4629,35 @@
         return postJson({ action: 'updateWork', method: 'updateWork', details: payload }, 25000);
     }
 
-    function buildFieldsToApply(matchedItem, incoming) {
+    function buildFieldsToApply(matchedItem, incoming, rowIndex) {
         const canonicalIncoming = buildCanonicalIncoming(incoming, matchedItem);
         const fieldsToApply = {};
+        const conflicts = [];
+        const matchMapping = mapDataState.mappings.find(mapping => mapping.isMatchKey);
+        const matchKey = matchMapping ? canonicalMapDataKey(matchMapping.dashboardField, matchedItem) : '';
         Object.keys(canonicalIncoming).forEach(key => {
-            if (shouldFillMapField(matchedItem, key, canonicalIncoming[key])) {
+            const incomingValue = canonicalIncoming[key];
+            if (!hasDisplayValue(incomingValue) || key === matchKey) return;
+            const existingValue = getReportValue(matchedItem, key);
+            if (!hasDisplayValue(existingValue)) {
                 fieldsToApply[key] = canonicalIncoming[key];
+                return;
             }
+            if (mapDataValuesMatch(key, existingValue, incomingValue)) return;
+
+            const conflictKey = getMapDataConflictKey(rowIndex, key);
+            const choice = mapDataState.conflictChoices?.[conflictKey] || '';
+            conflicts.push({
+                key,
+                label: getMapDataFieldLabel(key),
+                existingValue: String(existingValue),
+                excelValue: String(incomingValue),
+                conflictKey,
+                choice
+            });
+            if (choice === 'excel') fieldsToApply[key] = incomingValue;
         });
-        return { fieldsToApply, canonicalIncoming };
+        return { fieldsToApply, canonicalIncoming, conflicts };
     }
 
     function resolvePreviewMatch(rowIndex, excelWorkName, incoming) {
@@ -4652,35 +4684,11 @@
             const candidates = findAllWorkMatchCandidates(excelWorkName, 5);
 
             if (match) {
-                const { fieldsToApply, canonicalIncoming } = buildFieldsToApply(match.item, incoming);
+                const { fieldsToApply, canonicalIncoming, conflicts } = buildFieldsToApply(match.item, incoming, rowIndex);
                 const fieldLabels = Object.keys(fieldsToApply).map(getMapDataFieldLabel);
-                if (!Object.keys(fieldsToApply).length) {
-                    const reason = confirmedCount === 0
-                        ? 'No columns confirmed for import'
-                        : 'All mapped fields already filled in sheet';
-                    return {
-                        rowIndex,
-                        action: 'noop',
-                        reason,
-                        excelWorkName,
-                        matchedItem: match.item,
-                        matchedName: getWorkName(match.item),
-                        score: match.score,
-                        layer: match.layer,
-                        fieldsToApply,
-                        fieldLabels,
-                        incoming: canonicalIncoming,
-                        candidates
-                    };
-                }
-                const existingTenderId = String(getTenderId(match.item) || '').trim();
-                const excelTenderId = getExcelTenderIdFromFields(fieldsToApply);
-                const note = !existingTenderId && excelTenderId
-                    ? 'Will fill Tender ID from Excel (update by row number)'
-                    : (!existingTenderId ? 'Update by row number' : '');
-                return {
+                const unresolvedConflicts = conflicts.filter(conflict => !conflict.choice).length;
+                const common = {
                     rowIndex,
-                    action: 'update',
                     excelWorkName,
                     matchedItem: match.item,
                     matchedName: getWorkName(match.item),
@@ -4689,9 +4697,29 @@
                     fieldsToApply,
                     fieldLabels,
                     incoming: canonicalIncoming,
-                    candidates,
-                    note
+                    conflicts,
+                    unresolvedConflicts,
+                    candidates
                 };
+                if (unresolvedConflicts) {
+                    return {
+                        ...common,
+                        action: 'conflict',
+                        reason: `${unresolvedConflicts} field${unresolvedConflicts === 1 ? '' : 's'} need a choice`
+                    };
+                }
+                if (!Object.keys(fieldsToApply).length) {
+                    const reason = confirmedCount === 0
+                        ? 'No columns confirmed for import'
+                        : (conflicts.length ? 'Existing sheet values kept' : 'All mapped fields already match');
+                    return { ...common, action: 'noop', reason };
+                }
+                const existingTenderId = String(getTenderId(match.item) || '').trim();
+                const excelTenderId = getExcelTenderIdFromFields(fieldsToApply);
+                const note = !existingTenderId && excelTenderId
+                    ? 'Will fill Tender ID from Excel (update by row number)'
+                    : (!existingTenderId ? 'Update by row number' : '');
+                return { ...common, action: 'update', note };
             }
             return {
                 rowIndex,
@@ -4711,10 +4739,25 @@
     function setManualMapDataMatch(rowIndex, selectKey) {
         if (!mapDataState) return;
         if (!mapDataState.manualMatches) mapDataState.manualMatches = {};
+        Object.keys(mapDataState.conflictChoices || {}).forEach(key => {
+            if (key.startsWith(`${rowIndex}::`)) delete mapDataState.conflictChoices[key];
+        });
         if (selectKey) {
             mapDataState.manualMatches[rowIndex] = selectKey;
         } else {
             delete mapDataState.manualMatches[rowIndex];
+        }
+        renderMapDataPreview();
+    }
+
+    function setMapDataConflictChoice(rowIndex, key, choice) {
+        if (!mapDataState) return;
+        if (!mapDataState.conflictChoices) mapDataState.conflictChoices = {};
+        const conflictKey = getMapDataConflictKey(rowIndex, key);
+        if (choice === 'existing' || choice === 'excel') {
+            mapDataState.conflictChoices[conflictKey] = choice;
+        } else {
+            delete mapDataState.conflictChoices[conflictKey];
         }
         renderMapDataPreview();
     }
@@ -4732,38 +4775,77 @@
         return `<select class="edit-input form-select form-select-sm" onchange="setManualMapDataMatch(${rowIndex}, this.value)">${options.join('')}</select>`;
     }
 
+    function renderMapDataConflictList(item) {
+        if (!item.conflicts?.length) return '';
+        return `<div class="map-data-conflict-list">${item.conflicts.map(conflict => {
+            const selected = conflict.choice || '';
+            const fieldArg = escapeHtml(JSON.stringify(conflict.key));
+            return `
+                <div class="map-data-conflict-item${selected ? ' resolved' : ''}">
+                    <div class="fw-semibold">${escapeHtml(conflict.label)}</div>
+                    <div class="map-data-conflict-values">
+                        <div>
+                            <div class="text-secondary" style="font-size:0.7rem">Sheet</div>
+                            <div class="map-data-value-box">${escapeHtml(conflict.existingValue)}</div>
+                        </div>
+                        <div class="text-secondary pt-3">vs</div>
+                        <div>
+                            <div class="text-secondary" style="font-size:0.7rem">Excel</div>
+                            <div class="map-data-value-box">${escapeHtml(conflict.excelValue)}</div>
+                        </div>
+                    </div>
+                    <select class="form-select form-select-sm map-data-choice-select" onchange="setMapDataConflictChoice(${item.rowIndex}, ${fieldArg}, this.value)">
+                        <option value="" ${!selected ? 'selected' : ''}>Choose value to keep</option>
+                        <option value="existing" ${selected === 'existing' ? 'selected' : ''}>Keep sheet value</option>
+                        <option value="excel" ${selected === 'excel' ? 'selected' : ''}>Use Excel value</option>
+                    </select>
+                </div>
+            `;
+        }).join('')}</div>`;
+    }
+
     function renderMapDataPreview() {
         if (!mapDataState) return;
         const results = buildMapDataPreviewResults();
         mapDataState.previewResults = results;
-        const matched = results.filter(item => ['update', 'noop'].includes(item.action)).length;
+        const matched = results.filter(item => ['update', 'noop', 'conflict'].includes(item.action)).length;
         const added = results.filter(item => item.action === 'add').length;
         const skipped = results.filter(item => item.action === 'skip').length;
         const updating = results.filter(item => item.action === 'update').length;
+        const unresolvedConflicts = results.reduce((count, item) => count + (item.unresolvedConflicts || 0), 0);
         document.getElementById('mapDataPreviewSummary').innerHTML = `
             <div class="row g-2">
                 <div class="col-md-3"><div class="report-option-card text-center"><div class="fw-bold text-success">${matched}</div><div class="small text-secondary">Matched</div></div></div>
                 <div class="col-md-3"><div class="report-option-card text-center"><div class="fw-bold text-primary">${added}</div><div class="small text-secondary">New works</div></div></div>
-                <div class="col-md-3"><div class="report-option-card text-center"><div class="fw-bold text-secondary">${skipped}</div><div class="small text-secondary">Skipped</div></div></div>
+                <div class="col-md-3"><div class="report-option-card text-center"><div class="fw-bold ${unresolvedConflicts ? 'text-warning' : 'text-secondary'}">${unresolvedConflicts}</div><div class="small text-secondary">Need a choice</div></div></div>
                 <div class="col-md-3"><div class="report-option-card text-center"><div class="fw-bold text-dark">${updating}</div><div class="small text-secondary">Will update fields</div></div></div>
             </div>
+            ${skipped ? `<div class="small text-secondary mt-2">${skipped} row${skipped === 1 ? '' : 's'} skipped because the work name is empty.</div>` : ''}
         `;
+        const applyBtn = document.getElementById('mapDataApplyBtn');
+        if (applyBtn) {
+            applyBtn.disabled = unresolvedConflicts > 0;
+            applyBtn.title = unresolvedConflicts ? 'Choose the sheet or Excel value for every highlighted field first.' : '';
+        }
         document.getElementById('mapDataPreviewBody').innerHTML = results.map(item => {
             const actionLabel = item.action === 'update'
                 ? (item.note ? `Update (${item.note})` : 'Update')
                 : item.action === 'add' ? 'Add new' :
+                item.action === 'conflict' ? `Choose value (${item.unresolvedConflicts})` :
                 item.action === 'noop' ? `No update (${item.reason || 'empty'})` : 'Skip';
             const scoreClass = item.score && item.score <= 92 && item.layer !== 'manual' ? 'score-low' : '';
-            const fieldsText = item.fieldLabels?.length
-                ? escapeHtml(item.fieldLabels.join(', '))
-                : (item.action === 'add' ? escapeHtml((item.fieldLabels || []).join(', ') || '—') : '—');
+            const fieldsText = item.conflicts?.length
+                ? `${renderMapDataConflictList(item)}${item.fieldLabels?.length ? `<div class="mt-2 text-secondary">Will update: ${escapeHtml(item.fieldLabels.join(', '))}</div>` : ''}`
+                : (item.fieldLabels?.length
+                    ? escapeHtml(item.fieldLabels.join(', '))
+                    : (item.action === 'add' ? escapeHtml((item.fieldLabels || []).join(', ') || '—') : '—'));
             const manualSelectKey = mapDataState.manualMatches?.[item.rowIndex] || (item.matchedItem ? getMapDataWorkSelectKey(item.matchedItem) : '');
             const showManualPick = item.action === 'add' || (item.score && item.score <= 92);
             const matchedCell = showManualPick
                 ? renderMapDataWorkMatchOptions(item.rowIndex, item.candidates || [], manualSelectKey)
                 : escapeHtml(item.matchedName || '—');
             return `
-                <tr class="${scoreClass}">
+                <tr class="${[scoreClass, item.unresolvedConflicts ? 'needs-choice' : ''].filter(Boolean).join(' ')}">
                     <td>${escapeHtml(item.excelWorkName.slice(0, 60))}${item.excelWorkName.length > 60 ? '…' : ''}</td>
                     <td>${matchedCell}</td>
                     <td>${item.score ? `${item.score}%` : '—'}${item.layer ? `<div class="text-secondary" style="font-size:0.7rem">${escapeHtml(item.layer)}</div>` : ''}</td>
@@ -4777,6 +4859,11 @@
     async function runMapDataImport() {
         if (!mapDataState?.previewResults?.length) return;
         renderMapDataPreview();
+        const unresolvedConflicts = mapDataState.previewResults.reduce((count, item) => count + (item.unresolvedConflicts || 0), 0);
+        if (unresolvedConflicts) {
+            showAppToast('Choose the sheet or Excel value for every highlighted field first.', 3600);
+            return;
+        }
         const btn = document.getElementById('mapDataApplyBtn');
         const progressEl = document.getElementById('mapDataApplyProgress');
         const originalHtml = btn.innerHTML;
@@ -4791,7 +4878,7 @@
             const item = results[i];
             progressEl.textContent = `Syncing ${i + 1} of ${results.length}...`;
             try {
-                if (item.action === 'skip' || item.action === 'noop') {
+                if (item.action === 'skip' || item.action === 'noop' || item.action === 'conflict') {
                     skipped++;
                     continue;
                 }
