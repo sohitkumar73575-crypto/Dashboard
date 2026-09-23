@@ -7978,21 +7978,7 @@
         }, 35000);
     }
 
-    async function requestLetterDocx(isAgreement, tenderId, details, item) {
-        const normalized = normalizeBgDetailsForAdditionalRequirement(details, item);
-        const expectedAdditionalAmount = getExpectedAdditionalBgAmount(item, normalized);
-
-        return postJson({
-            method: isAgreement ? 'generateAgreementDocx' : 'generateBgLetterDocx',
-            action: isAgreement ? 'generateAgreementDocx' : 'generateBgLetterDocx',
-            tenderId,
-            additionalRequired: isAdditionalBgRequired(item, normalized),
-            expectedAdditionalAmount,
-            forceRegenerate: true
-        }, 120000);
-    }
-
-    async function generateAndDownloadLetter(isAgreement, tenderId, details, item, statusEl = null) {
+        async function generateAndDownloadLetter(isAgreement, tenderId, details, item, statusEl = null) {
         const type = isAgreement ? 'agreement' : 'bg';
         const docTitle = isAgreement ? 'Agreement' : 'BG_Verification_Letter';
         const pdfFileName = `${docTitle}_${tenderId}.pdf`;
