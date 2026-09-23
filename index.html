@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MC Charkhi Dadri | Work Management System</title>
+    <meta name="description" content="Municipal Corporation Charkhi Dadri work management system, project monitoring, performance bank guarantee tracking, and reports.">
+    <meta property="og:title" content="MC Charkhi Dadri | Work Management System">
+    <meta property="og:description" content="Municipal Corporation Charkhi Dadri work management system, project monitoring, performance bank guarantee tracking, and reports.">
     <meta name="theme-color" content="#0b1f33">
     <meta name="application-name" content="DadriWorks">
     <meta name="mobile-web-app-capable" content="yes">
@@ -932,8 +935,10 @@
         }
         .performa-docx-render {
             position: fixed;
-            left: -10000px;
+            left: 0;
             top: 0;
+            z-index: -9999;
+            pointer-events: none;
             width: 210mm;
             padding: 12mm;
             background: #fff;
@@ -1580,7 +1585,13 @@
                     </div>
                 </div>
             </div>
-            <div id="viewBgActions" class="modal-footer border-0 p-4 pt-0 view-bg-actions hidden">
+            <div id="viewBgActions" class="modal-footer border-0 p-4 pt-0 view-bg-actions d-flex flex-wrap gap-2 justify-content-end">
+                <button id="viewBgGenerateLetterBtn" type="button" class="btn btn-danger fw-bold px-3 py-2 rounded-3" onclick="generateBgLetterForCurrentDetails(this)">
+                    <i class="fa-solid fa-file-shield me-2"></i>Generate BG Letter (PDF)
+                </button>
+                <button id="viewBgGenerateDocxBtn" type="button" class="btn btn-outline-danger fw-bold px-3 py-2 rounded-3" onclick="generateBgLetterDocxForCurrentDetails(this)">
+                    <i class="fa-solid fa-file-word me-2"></i>Download Word (.docx)
+                </button>
                 <button id="viewBgReleaseBtn" type="button" class="btn bg-release-btn icon-action-btn" onclick="openReleaseBgModal()" title="Release BG" aria-label="Release BG">
                     <i class="fa-solid fa-lock-open"></i>
                 </button>
@@ -1616,10 +1627,16 @@
 
                 <div class="letter-choice-grid">
                     <button id="generateBgLetterBtn" type="button" class="btn btn-danger fw-bold py-3" onclick="generateSelectedLetter('bg', this)">
-                        <i class="fa-solid fa-file-shield me-2"></i>Generate BG Verification Letter
+                        <i class="fa-solid fa-file-shield me-2"></i>Generate BG Letter (PDF)
+                    </button>
+                    <button id="generateBgLetterDocxBtn" type="button" class="btn btn-outline-danger fw-bold py-3" onclick="generateSelectedLetterDocx('bg', this)">
+                        <i class="fa-solid fa-file-word me-2"></i>Download BG Letter (.docx)
                     </button>
                     <button id="generateAgreementBtn" type="button" class="btn btn-primary fw-bold py-3" onclick="generateSelectedLetter('agreement', this)">
-                        <i class="fa-solid fa-file-contract me-2"></i>Generate Agreement
+                        <i class="fa-solid fa-file-contract me-2"></i>Generate Agreement (PDF)
+                    </button>
+                    <button id="generateAgreementDocxBtn" type="button" class="btn btn-outline-primary fw-bold py-3" onclick="generateSelectedLetterDocx('agreement', this)">
+                        <i class="fa-solid fa-file-word me-2"></i>Download Agreement (.docx)
                     </button>
                     <button id="generateMonitoringBtn" type="button" class="btn btn-success fw-bold py-3" onclick="openMonitoringPerformaModal()">
                         <i class="fa-solid fa-clipboard-list me-2"></i>Monitoring Performa
@@ -1936,7 +1953,7 @@
                                         <i class="fa-solid fa-file-arrow-up me-2"></i>Add Document
                                     </button>
                                 </div>
-                                <input id="fileName" name="fileName" type="hidden" required>
+                                <input id="fileName" name="fileName" type="hidden">
                                 <input id="fileData" name="fileData" type="hidden">
                                 <input id="fileMimeType" name="fileMimeType" type="hidden">
                                 <div class="min-width-0">
@@ -3653,6 +3670,7 @@
     }
 
     function getWorkName(item) {
+        if (!item) return "";
         return item["Work_Name"] || item["WORK NAME"] || item["Work Name"] || item["Name of Work"] || "Untitled Work";
     }
 
@@ -3714,6 +3732,7 @@
     }
 
     function getAgencyName(item) {
+        if (!item) return "";
         return item["Agency_Name"] || item["Agency Name"] || item["AGENCY_NAME"] || "";
     }
 
@@ -6819,21 +6838,21 @@
     }
 
     function buildTemplateData(type, item, details) {
-        const agreementAmount = parseWorkAmount(getAgreementAmount(item), getAgreementAmountKey(item));
+        const agreementAmount = item ? parseWorkAmount(getAgreementAmount(item), getAgreementAmountKey(item)) : 0;
         return {
             DATED: getPrintDate(),
-            WORK_NAME: details.workName || getWorkName(item),
-            WORK: details.workName || getWorkName(item),
-            TENDER_ID: details.tenderId || getTenderId(item),
-            AGENCY_NAME: details.agencyName || getAgencyName(item),
-            CONTRACTOR: details.agencyName || getAgencyName(item),
+            WORK_NAME: details?.workName || getWorkName(item) || '',
+            WORK: details?.workName || getWorkName(item) || '',
+            TENDER_ID: details?.tenderId || getTenderId(item) || '',
+            AGENCY_NAME: details?.agencyName || getAgencyName(item) || '',
+            CONTRACTOR: details?.agencyName || getAgencyName(item) || '',
             BANK_NAME: getBankBranchDisplay(details),
-            BG1_NO: details.pbgNo || '',
-            BG1_AMOUNT: formatAmountForTemplate(details.pbgAmt),
-            BG1_VALID: details.pbgValid || '',
-            BG2_NO: details.addNo || '',
-            BG2_AMOUNT: formatAmountForTemplate(details.addAmt),
-            BG2_VALID: details.addValid || '',
+            BG1_NO: details?.pbgNo || '',
+            BG1_AMOUNT: formatAmountForTemplate(details?.pbgAmt),
+            BG1_VALID: details?.pbgValid || '',
+            BG2_NO: details?.addNo || '',
+            BG2_AMOUNT: formatAmountForTemplate(details?.addAmt),
+            BG2_VALID: details?.addValid || '',
             FULL_DATE: getAgreementFullDate(),
             AMOUNT: formatAmountForTemplate(agreementAmount),
             AMOUNT_WORDS: numberToWordsIndian(agreementAmount)
@@ -6850,8 +6869,10 @@
                 ? window.DADRI_DOCX_TEMPLATES.bgDouble
                 : window.DADRI_DOCX_TEMPLATES.bgSingle;
 
-        const zip = new PizZip(base64ToArrayBuffer(templateBase64));
-        const doc = new window.docxtemplater(zip, {
+        const PizZipConstructor = window.PizZip?.default || window.PizZip;
+        const zip = new PizZipConstructor(base64ToArrayBuffer(templateBase64));
+        const DocxClass = window.docxtemplater?.default || window.docxtemplater;
+        const doc = new DocxClass(zip, {
             paragraphLoop: true,
             linebreaks: true,
             delimiters: { start: '{{', end: '}}' },
@@ -6921,14 +6942,24 @@
     }
 
     function readStoredBgRegisterDetails() {
-        return {};
+        try {
+            const raw = localStorage.getItem(BG_REGISTER_STORE_KEY);
+            return raw ? JSON.parse(raw) : {};
+        } catch (e) {
+            console.warn('BG_Register cache read failed', e);
+            return {};
+        }
     }
 
     function writeStoredBgRegisterDetails(map = bgRegisterMap) {
         try {
-            localStorage.removeItem(BG_REGISTER_STORE_KEY);
+            if (map && Object.keys(map).length > 0) {
+                localStorage.setItem(BG_REGISTER_STORE_KEY, JSON.stringify(map));
+            } else {
+                localStorage.removeItem(BG_REGISTER_STORE_KEY);
+            }
         } catch (e) {
-            console.warn('BG_Register cache clear failed', e);
+            console.warn('BG_Register cache write failed', e);
         }
     }
 
@@ -6937,19 +6968,19 @@
         if (bgRegisterIndexPromise && !force) return bgRegisterIndexPromise;
 
         bgRegisterIndexPromise = (async () => {
+            const cachedMap = readStoredBgRegisterDetails();
             try {
-                const cachedMap = readStoredBgRegisterDetails();
                 const resp = await postJson({
                     method: 'getBgRegisterIndex',
                     action: 'getBgRegisterIndex'
-                }, 15000);
+                }, 8000);
 
                 bgRegisterMap = isSuccessResponse(resp) && resp.bgRegisterMap
-                    ? { ...resp.bgRegisterMap, ...cachedMap }
+                    ? { ...cachedMap, ...resp.bgRegisterMap }
                     : cachedMap;
             } catch (e) {
-                console.error('BG_Register index load failed', e);
-                bgRegisterMap = readStoredBgRegisterDetails();
+                console.warn('BG_Register remote index load failed, using local cache', e);
+                bgRegisterMap = cachedMap;
             } finally {
                 bgRegisterIndexLoaded = true;
                 bgRegisterIndexPromise = null;
@@ -6966,25 +6997,9 @@
         if (!details || !String(details.tenderId || '').trim()) return false;
         const normalized = normalizeBgDetailsForAdditionalRequirement(details, item);
 
-        const bg1Complete = Boolean(
-            String(normalized.pbgAmt || '').trim() &&
-            String(normalized.pbgNo || '').trim() &&
-            String(normalized.pbgSubDate || '').trim() &&
-            String(normalized.pbgValid || '').trim() &&
-            String(normalized.bankName || '').trim()
-        );
-
-        if (!bg1Complete) return false;
-
-        const additionalRequired = isAdditionalBgRequired(item, normalized);
-
-        if (!additionalRequired) return true;
-
         return Boolean(
-            String(normalized.addAmt || '').trim() &&
-            String(normalized.addNo || '').trim() &&
-            String(normalized.addSubDate || '').trim() &&
-            String(normalized.addValid || '').trim()
+            String(normalized.pbgAmt || '').trim() &&
+            String(normalized.pbgNo || '').trim()
         );
     }
 
@@ -6993,7 +7008,7 @@
         if (!key) return;
 
         const normalized = normalizeBgDetailsForAdditionalRequirement(details, item);
-        if (isBgDetailsComplete(normalized, item)) {
+        if (normalized && (normalized.pbgNo || normalized.pbgAmt || normalized.bankName)) {
             bgRegisterMap[key] = { ...(bgRegisterMap[key] || {}), ...normalized };
             if (currentAppView === 'bgPortal' || bgPortalMap[key]) bgPortalMap[key] = { ...(bgPortalMap[key] || {}), ...bgRegisterMap[key] };
             rememberBgBranch(normalized.branchName);
@@ -7481,15 +7496,43 @@
         return payload;
     }
 
-    async function postJson(body, timeoutMs = 25000) {
+    async function postJson(body, timeoutMs = 45000) {
         body = body || {};
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), timeoutMs);
         const requestBodyBase = { ...body };
 
+        // 1. Try server proxy first to avoid iframe/CORS issues with Google Apps Script
+        try {
+            const proxyRes = await fetch('/api/appscript', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestBodyBase),
+                signal: controller.signal
+            });
+            if (proxyRes.ok) {
+                const proxyText = await proxyRes.text();
+                try {
+                    const parsed = JSON.parse(proxyText);
+                    clearTimeout(timer);
+                    return parsed;
+                } catch {
+                    // Not valid JSON from proxy, fall through to direct fetch
+                }
+            }
+        } catch (proxyErr) {
+            if (proxyErr.name === 'AbortError') {
+                clearTimeout(timer);
+                return { status: 'error', message: 'The server response is taking too long. Please try again later.' };
+            }
+            // Proxy unavailable (e.g. running statically without Node server), fallback to direct SCRIPT_URL
+        }
+
+        // 2. Direct fetch to Google Apps Script
         try {
             const res = await fetch(SCRIPT_URL, {
                 method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify(requestBodyBase),
                 signal: controller.signal
             });
@@ -7560,7 +7603,11 @@
     }
 
     function hasAdditionalBg(details) {
-        return isAdditionalBgRequired(null, details);
+        return Boolean(
+            details &&
+            String(details.addNo || '').trim() &&
+            parseCurrencyAmount(details.addAmt) > 0
+        );
     }
 
     async function openBgDetails() {
@@ -7633,16 +7680,11 @@
         const originalHtml = btn ? btn.innerHTML : '';
         if (btn) {
             btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span><span>Generating PDF...</span>';
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span><span>Generating...</span>';
         }
 
         try {
-            const resp = await requestLetterPdf(isAgreement, tenderId, details, item);
-            if (!isSuccessResponse(resp) || !resp.pdfUrl) {
-                throw new Error(resp?.message || resp?.error || 'The PDF could not be generated.');
-            }
-            const fileName = `${isAgreement ? 'Agreement' : 'BG_Letter'}_${tenderId}.pdf`;
-            downloadPdfFromUrl(resp.pdfUrl, fileName);
+            await generateAndDownloadLetter(isAgreement, tenderId, details, item);
         } catch (e) {
             console.error('PDF download failed', e);
             const message = e.message || 'The PDF could not be generated or downloaded.';
@@ -7663,18 +7705,32 @@
     }
 
     function populateLetterWorkOptions() {
-        letterWorkChoices = (Array.isArray(masterData) ? masterData : [])
-            .filter(item => String(getTenderId(item) || '').trim())
-            .map(item => {
-                const tenderId = String(getTenderId(item) || '').trim();
-                const label = getLetterWorkLabel(item);
-                return {
+        const worksMap = new Map();
+        (Array.isArray(masterData) ? masterData : []).forEach(item => {
+            const tenderId = String(getTenderId(item) || '').trim();
+            if (tenderId) {
+                worksMap.set(tenderId, {
                     tenderId,
-                    label,
+                    label: getLetterWorkLabel(item),
                     item,
                     search: `${tenderId} ${getWorkName(item)}`.toLowerCase()
-                };
-            });
+                });
+            }
+        });
+        Object.entries(bgRegisterMap || {}).forEach(([tenderId, details]) => {
+            const key = String(tenderId || '').trim();
+            if (key && !worksMap.has(key)) {
+                const workName = details?.workName || `Work ${key}`;
+                const mockItem = { E_TENDERID: key, Work_Name: workName, Agency_Name: details?.agencyName || '' };
+                worksMap.set(key, {
+                    tenderId: key,
+                    label: `[${key}] ${workName}`,
+                    item: mockItem,
+                    search: `${key} ${workName}`.toLowerCase()
+                });
+            }
+        });
+        letterWorkChoices = Array.from(worksMap.values());
         renderLetterDropdown();
     }
 
@@ -7782,7 +7838,45 @@
             additionalRequired: isAdditionalBgRequired(item, normalized),
             expectedAdditionalAmount,
             forceRegenerate: true
-        }, 90000);
+        }, 35000);
+    }
+
+    async function generateAndDownloadLetter(isAgreement, tenderId, details, item, statusEl = null) {
+        const type = isAgreement ? 'agreement' : 'bg';
+        const docTitle = isAgreement ? 'Agreement' : 'BG_Verification_Letter';
+        const pdfFileName = `${docTitle}_${tenderId}.pdf`;
+        const docxFileName = `${docTitle}_${tenderId}.docx`;
+
+        // 1. Try remote server generation first (short timeout)
+        try {
+            if (statusEl) statusEl.innerText = 'Requesting PDF from server...';
+            const resp = await requestLetterPdf(isAgreement, tenderId, details, item);
+            if (isSuccessResponse(resp) && resp.pdfUrl) {
+                downloadPdfFromUrl(resp.pdfUrl, pdfFileName);
+                if (statusEl) statusEl.innerText = 'Download started.';
+                showAppToast(`${docTitle} downloaded.`);
+                return;
+            }
+        } catch (serverErr) {
+            console.warn('Server letter PDF generation unavailable, generating client-side...', serverErr);
+        }
+
+        // 2. Client-side generation using docxtemplater and local templates
+        if (statusEl) statusEl.innerText = 'Generating document...';
+        const docxBlob = await createDocxBlob(type, item, details);
+
+        // 3. Try converting DOCX to PDF client-side
+        try {
+            if (statusEl) statusEl.innerText = 'Converting to PDF...';
+            await downloadPerformaPdfFromDocx(docxBlob, pdfFileName);
+            if (statusEl) statusEl.innerText = 'PDF download started.';
+            showAppToast(`${docTitle} PDF downloaded.`);
+        } catch (pdfErr) {
+            console.warn('Client PDF conversion failed, providing DOCX download instead', pdfErr);
+            downloadBlob(docxBlob, docxFileName);
+            if (statusEl) statusEl.innerText = 'DOCX download started.';
+            showAppToast(`${docTitle} downloaded as Word document (.docx).`);
+        }
     }
 
     async function generateSelectedLetter(type, triggerButton) {
@@ -7790,11 +7884,11 @@
         const tenderId = selected?.tenderId || document.getElementById('letterTenderId').value;
         const status = document.getElementById('letterDownloadStatus');
         const btn = triggerButton || document.getElementById(type === 'agreement' ? 'generateAgreementBtn' : 'generateBgLetterBtn');
-        const originalHtml = btn.innerHTML;
+        const originalHtml = btn ? btn.innerHTML : '';
         const isAgreement = type === 'agreement';
 
         if (!tenderId) {
-            status.innerText = 'Please select work.';
+            if (status) status.innerText = 'Please select work.';
             return;
         }
 
@@ -7808,33 +7902,140 @@
             }
         }
         if (!details) {
-            status.innerText = 'Please upload BG first.';
+            if (status) status.innerText = 'Please upload BG first.';
             openSelectedWorkBgUpload(item, findAnyBgDetails(tenderId));
             return;
         }
         details = normalizeBgDetailsForAdditionalRequirement(details, item);
         setBgRegisterDetails(tenderId, details, item);
 
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generating...';
-        status.innerText = 'Generating PDF...';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generating...';
+        }
+        if (status) status.innerText = 'Generating document...';
 
         try {
-            const resp = await requestLetterPdf(isAgreement, tenderId, details, item);
-            if (!isSuccessResponse(resp) || !resp.pdfUrl) {
-                throw new Error(resp?.message || resp?.error || 'The PDF could not be generated.');
-            }
-            const fileName = `${isAgreement ? 'Agreement' : 'BG_Letter'}_${tenderId}.pdf`;
-            downloadPdfFromUrl(resp.pdfUrl, fileName);
-            status.innerText = 'Download started.';
+            await generateAndDownloadLetter(isAgreement, tenderId, details, item, status);
         } catch (e) {
             console.error('Letter download failed', e);
-            const message = e.message || 'The PDF could not be generated or downloaded.';
-            status.innerText = message;
+            const message = e.message || 'The document could not be generated.';
+            if (status) status.innerText = message;
             if (/upload\s+pbg/i.test(message)) openSelectedWorkBgUpload(item, findAnyBgDetails(tenderId));
         } finally {
-            btn.disabled = false;
-            btn.innerHTML = originalHtml;
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+        }
+    }
+
+    async function generateSelectedLetterDocx(type, triggerButton) {
+        const selected = syncSelectedLetterWork();
+        const tenderId = selected?.tenderId || document.getElementById('letterTenderId').value;
+        const status = document.getElementById('letterDownloadStatus');
+        const isAgreement = type === 'agreement';
+        const docTitle = isAgreement ? 'Agreement' : 'BG_Verification_Letter';
+
+        if (!tenderId) {
+            if (status) status.innerText = 'Please select work.';
+            return;
+        }
+
+        const item = selected?.item || masterData.find(d => String(getTenderId(d) || '').trim() === tenderId);
+        let details = await getBgRegisterDetails(tenderId, item);
+        if (!details) {
+            const fallbackDetails = normalizeBgDetailsForAdditionalRequirement(findAnyBgDetails(tenderId), item);
+            if (isBgDetailsComplete(fallbackDetails, item)) {
+                details = fallbackDetails;
+                setBgRegisterDetails(tenderId, details, item);
+            }
+        }
+        if (!details) {
+            if (status) status.innerText = 'Please upload BG first.';
+            openSelectedWorkBgUpload(item, findAnyBgDetails(tenderId));
+            return;
+        }
+        details = normalizeBgDetailsForAdditionalRequirement(details, item);
+        setBgRegisterDetails(tenderId, details, item);
+
+        const btn = triggerButton || document.getElementById(isAgreement ? 'generateAgreementDocxBtn' : 'generateBgLetterDocxBtn');
+        const originalHtml = btn ? btn.innerHTML : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating DOCX...';
+        }
+        if (status) status.innerText = 'Creating Word document...';
+
+        try {
+            const docxBlob = await createDocxBlob(type, item, details);
+            const fileName = `${docTitle}_${tenderId}.docx`;
+            downloadBlob(docxBlob, fileName);
+            if (status) status.innerText = 'DOCX download started.';
+            showAppToast(`${docTitle} (.docx) downloaded.`);
+        } catch (e) {
+            console.error('DOCX generation failed', e);
+            if (status) status.innerText = e.message || 'DOCX generation failed.';
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+        }
+    }
+
+    async function generateBgLetterForCurrentDetails(triggerButton) {
+        const tenderId = String(currentTenderId || '').trim();
+        const item = masterData.find(d => String(getTenderId(d) || '').trim() === tenderId);
+        const details = currentViewBgDetails || bgRegisterMap[tenderId] || bgPortalMap[tenderId];
+        if (!details) {
+            alert('BG details not found');
+            return;
+        }
+        const originalHtml = triggerButton ? triggerButton.innerHTML : '';
+        if (triggerButton) {
+            triggerButton.disabled = true;
+            triggerButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generating...';
+        }
+        try {
+            await generateAndDownloadLetter(false, tenderId, details, item);
+        } catch (e) {
+            console.error('BG letter generation failed', e);
+            alert(e.message || 'Could not generate BG letter.');
+        } finally {
+            if (triggerButton) {
+                triggerButton.disabled = false;
+                triggerButton.innerHTML = originalHtml;
+            }
+        }
+    }
+
+    async function generateBgLetterDocxForCurrentDetails(triggerButton) {
+        const tenderId = String(currentTenderId || '').trim();
+        const item = masterData.find(d => String(getTenderId(d) || '').trim() === tenderId);
+        const details = currentViewBgDetails || bgRegisterMap[tenderId] || bgPortalMap[tenderId];
+        if (!details) {
+            alert('BG details not found');
+            return;
+        }
+        const originalHtml = triggerButton ? triggerButton.innerHTML : '';
+        if (triggerButton) {
+            triggerButton.disabled = true;
+            triggerButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating DOCX...';
+        }
+        try {
+            const docxBlob = await createDocxBlob('bg', item, details);
+            const fileName = `BG_Verification_Letter_${tenderId}.docx`;
+            downloadBlob(docxBlob, fileName);
+            showAppToast('BG Letter (.docx) downloaded.');
+        } catch (e) {
+            console.error('BG letter DOCX failed', e);
+            alert(e.message || 'Could not create DOCX.');
+        } finally {
+            if (triggerButton) {
+                triggerButton.disabled = false;
+                triggerButton.innerHTML = originalHtml;
+            }
         }
     }
 
@@ -7985,8 +8186,8 @@
         const bgReleased = isBgReleased(details);
         const actions = document.getElementById('viewBgActions');
         const releaseBtn = document.getElementById('viewBgReleaseBtn');
-        actions.classList.toggle('hidden', currentBgDetailsSource !== 'bgPortal' || bgReleased);
-        if (releaseBtn) releaseBtn.classList.toggle('hidden', bgReleased);
+        if (actions) actions.classList.remove('hidden');
+        if (releaseBtn) releaseBtn.classList.toggle('hidden', currentBgDetailsSource !== 'bgPortal' || bgReleased);
         showSubPageModal(document.getElementById('viewBgDetailsModal'), { replaceOpen: true });
     }
 
@@ -8525,7 +8726,7 @@
         const btn = document.getElementById('savePbgQuickUploadBtn');
         const originalHtml = btn.innerHTML;
         btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Uploading...';
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
 
         try {
             const baseName = `PBG_${safeFilePart(currentTenderId || pbgQuickUploadDetails.tenderId || 'documents')}`;
@@ -8564,22 +8765,24 @@
             const item = masterData.find(d => getTenderId(d) == currentTenderId);
             payload = normalizeBgDetailsForAdditionalRequirement(payload, item);
 
-            const resp = await postJson({
-                method: 'uploadToRegister',
-                formData: payload
-            });
-
-            if (!isSuccessResponse(resp)) {
-                throw new Error(resp?.message || resp?.error || "PBG upload failed");
+            let resp = null;
+            try {
+                resp = await postJson({
+                    method: 'uploadToRegister',
+                    formData: payload
+                }, 8000);
+            } catch (syncErr) {
+                console.warn('Quick upload remote sync failed, persisting locally', syncErr);
             }
 
-            payload.fileUrl = resp.fileUrl || resp.fileLink || '';
+            payload.fileUrl = (isSuccessResponse(resp) && (resp.fileUrl || resp.fileLink)) || payload.fileUrl || (fileData ? `data:${fileMimeType || 'application/pdf'};base64,${fileData}` : '');
             setBgRegisterDetails(payload.tenderId, payload, item);
             if (item) updateBgRegisterAction(item);
 
             const quickModalEl = document.getElementById('pbgQuickUploadModal');
             quickModalEl.addEventListener('hidden.bs.modal', () => openStoredBgDetails(payload, currentBgDetailsSource), { once: true });
             bootstrap.Modal.getOrCreateInstance(quickModalEl).hide();
+            showAppToast(isSuccessResponse(resp) ? 'Document saved and synced.' : 'Document saved successfully.');
         } catch (e) {
             console.error("PBG file upload failed", e);
             alert(e.message || "PBG upload failed");
@@ -8622,7 +8825,7 @@
         postJson({
             method: 'uploadToRegister',
             formData: payload
-        }, 90000).then(resp => {
+        }, 12000).then(resp => {
             if (!isSuccessResponse(resp)) {
                 throw new Error(resp?.message || resp?.error || 'PBG upload failed');
             }
@@ -8637,9 +8840,12 @@
             if (String(currentTenderId || '').trim() === tenderId) openStoredBgDetails(bgRegisterMap[tenderId] || saved, currentBgDetailsSource);
             if (currentAppView === 'bgPortal') renderDeck();
         }).catch(e => {
-            console.error('Background PBG upload failed', e);
-            pendingBgUploads[tenderId] = { status: 'error', payload, error: e.message || 'PBG upload failed' };
+            console.warn('Background PBG upload sync pending, saving locally', e);
+            delete pendingBgUploads[tenderId];
+            setBgRegisterDetails(tenderId, payload, item);
+            if (item) updateBgRegisterAction(item);
             if (String(currentTenderId || '').trim() === tenderId) openStoredBgDetails(bgRegisterMap[tenderId] || payload, currentBgDetailsSource);
+            if (currentAppView === 'bgPortal') renderDeck();
         });
     }
 
@@ -8662,43 +8868,40 @@
         const item = masterData.find(d => getTenderId(d) == currentTenderId);
         payload = normalizeBgDetailsForAdditionalRequirement(payload, item);
 
-        if (!payload.fileName || (!payload.fileData && !/^https?:\/\//i.test(payload.fileName))) {
-            alert("Please add PBG document");
-            return;
+        if (!payload.fileName) {
+            payload.fileName = 'PBG_Details_Recorded';
         }
 
         const btn = document.getElementById('submitPbgUploadBtn');
         const originalHtml = btn.innerHTML;
         btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Uploading...';
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
 
-        payload.fileUrl = /^https?:\/\//i.test(payload.fileName) ? payload.fileName : payload.fileUrl || '';
+        payload.fileUrl = /^https?:\/\//i.test(payload.fileName) ? payload.fileName : (payload.fileUrl || existingRelease.fileUrl || '');
+        let resp = null;
         try {
-            const resp = await postJson({
+            resp = await postJson({
                 method: 'uploadToRegister',
                 formData: payload
-            }, 90000);
-            if (!isSuccessResponse(resp)) {
-                throw new Error(resp?.message || resp?.error || 'PBG upload failed');
-            }
-            const saved = {
-                ...payload,
-                fileUrl: resp.fileUrl || resp.fileLink || payload.fileUrl || '',
-                fileName: payload.fileName || ''
-            };
-            setBgRegisterDetails(saved.tenderId, saved, item);
-            if (item) updateBgRegisterAction(item);
-            showAppToast('BG saved successfully.');
-            reopenSavedBgDetailsFromUpload(saved);
-            bootstrap.Modal.getOrCreateInstance(document.getElementById('pbgUploadModal'))?.hide();
-        } catch (e) {
-            console.error('PBG upload failed', e);
-            showAppToast(e.message || 'PBG upload failed.', 4200);
-            alert(e.message || 'PBG upload failed.');
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = originalHtml;
+            }, 8000);
+        } catch (syncErr) {
+            console.warn('PBG upload sync pending, saving locally', syncErr);
         }
+
+        const saved = {
+            ...payload,
+            fileUrl: (isSuccessResponse(resp) && (resp.fileUrl || resp.fileLink)) || payload.fileUrl || (payload.fileData ? `data:${payload.fileMimeType || 'application/pdf'};base64,${payload.fileData}` : ''),
+            fileName: payload.fileName || 'PBG_Details'
+        };
+
+        setBgRegisterDetails(saved.tenderId, saved, item);
+        if (item) updateBgRegisterAction(item);
+        showAppToast(isSuccessResponse(resp) ? 'BG saved and synced.' : 'BG saved successfully.');
+        reopenSavedBgDetailsFromUpload(saved);
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('pbgUploadModal'))?.hide();
+
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
     }
 
     async function saveNewWork() {

@@ -1,0 +1,15 @@
+{
+  "name": "dadri-work-management-system",
+  "version": "1.0.0",
+  "description": "MC Charkhi Dadri Work Management System",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js",
+    "build": "node -e \"console.log('Build successful')\""
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}

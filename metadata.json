@@ -1,0 +1,7 @@
+{
+  "name": "MC Charkhi Dadri | Work Management System",
+  "description": "Municipal Corporation Charkhi Dadri work management system, project monitoring, performance bank guarantee tracking, and reports.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

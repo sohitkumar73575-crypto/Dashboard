@@ -5,6 +5,7 @@ const CORE_ASSETS = [
   "./index.html",
   "./manifest.json",
   "./performa-templates.js",
+  "./templates.js",
   "./icons/dadri-work-192.png",
   "./icons/dadri-work-512.png",
   "./icons/dadri-work-icon.svg",
