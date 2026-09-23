@@ -1,9 +1,10 @@
-const CACHE_NAME = "dadriworks-v26";
+const CACHE_NAME = "dadriworks-v27";
 
 const CORE_ASSETS = [
   "./",
   "./index.html",
   "./manifest.json",
+  "./document-templates.js",
   "./performa-templates.js",
   "./templates.js",
   "./icons/dadri-work-192.png",
