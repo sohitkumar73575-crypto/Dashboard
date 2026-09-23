@@ -2461,11 +2461,15 @@
     }
 
     async function ensurePerformaDocxLibraries() {
-        if (!window.PizZip) await loadFeatureScript('pizzip');
-        if (!window.docxtemplater) await loadFeatureScript('docxtemplater');
-        if (!window.DADRI_PERFORMA_TEMPLATES) await loadFeatureScript('performaTemplates');
+        // Performa templates are now part of the single embedded document template bundle.
+        // Reuse the same loader used by BG/Agreement documents so there is no legacy
+        // performaTemplates dependency left to fail independently.
+        await ensureDocumentLibraries();
+        if (!window.DADRI_PERFORMA_TEMPLATES) {
+            window.DADRI_PERFORMA_TEMPLATES = window.DADRI_DOCX_TEMPLATES;
+        }
         if (!window.PizZip || !window.docxtemplater || !window.DADRI_PERFORMA_TEMPLATES) {
-            throw new Error('Performa DOCX libraries could not be loaded. Check your internet connection or open the app via http://localhost (not file://).');
+            throw new Error('Embedded DOCX libraries or templates could not be loaded. Please refresh the app and try again.');
         }
     }
 
@@ -3007,7 +3011,8 @@
 
     async function createPerformaDocxBlob(type, data) {
         await ensurePerformaDocxLibraries();
-        const templateBase64 = window.DADRI_PERFORMA_TEMPLATES[type];
+        const templateBundle = window.DADRI_DOCX_TEMPLATES || window.DADRI_PERFORMA_TEMPLATES;
+        const templateBase64 = templateBundle?.[type];
         if (!templateBase64) throw new Error(`Performa template not found (${type}).`);
 
         const PizZipCtor = window.PizZip;
@@ -3017,7 +3022,7 @@
 
         const zip = new PizZipCtor(base64ToArrayBuffer(templateBase64));
         if (!zip?.files || Object.keys(zip.files).length === 0) {
-            throw new Error(`Performa template file is invalid (${type}). Restore performa-templates.js from the repository.`);
+            throw new Error(`Performa template file is invalid (${type}). Restore document-templates.js from the repository.`);
         }
 
         const doc = new window.docxtemplater(zip, {
