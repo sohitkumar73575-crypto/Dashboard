@@ -1662,24 +1662,6 @@
                     </button>
                 </div>
 
-                <div class="mt-4 pt-3 border-top">
-                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 p-2 bg-light rounded border">
-                        <div class="d-flex align-items-center gap-2">
-                            <i class="fa-solid fa-file-lines text-danger"></i>
-                            <span id="activeBgTemplateLabel" class="small fw-semibold text-dark">Format: <span class="text-dark fw-bold">Updated Drive Format (Branch Manager / Lien)</span></span>
-                        </div>
-                        <div class="d-flex align-items-center gap-2">
-                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="document.getElementById('customBgTemplateInput').click()" title="Google Drive se download ki hui apni updated .docx yahan upload kar sakte hain">
-                                <i class="fa-solid fa-cloud-arrow-up me-1"></i>Upload Edited .docx
-                            </button>
-                            <button id="resetBgTemplateBtn" type="button" class="btn btn-sm btn-outline-secondary d-none" onclick="resetCustomBgTemplate()" title="Default updated template par reset karein">
-                                <i class="fa-solid fa-rotate-left me-1"></i>Reset
-                            </button>
-                        </div>
-                    </div>
-                    <input type="file" id="customBgTemplateInput" accept=".docx" style="display:none" onchange="handleCustomBgTemplateUpload(this)">
-                </div>
-
                 <div id="letterDownloadStatus" class="photo-hint mt-3"></div>
             </div>
         </div>
@@ -2474,7 +2456,7 @@
     async function ensureDocumentLibraries() {
         if (!window.PizZip) await loadFeatureScript('pizzip');
         if (!window.docxtemplater) await loadFeatureScript('docxtemplater');
-        if (!window.DADRI_DOCX_TEMPLATES || window.DADRI_DOCX_TEMPLATES.version !== '2026-09-23-v2') {
+        if (!window.DADRI_DOCX_TEMPLATES || window.DADRI_DOCX_TEMPLATES.version !== '2026-09-23-v3') {
             await reloadFeatureScript('templates');
         }
         if (!window.PizZip || !window.docxtemplater || !window.DADRI_DOCX_TEMPLATES) {
@@ -5126,7 +5108,6 @@
         results.classList.add('hidden');
         results.removeAttribute('style');
         document.getElementById('letterDownloadStatus').innerText = '';
-        updateActiveTemplateDisplay();
         document.getElementById('generateLettersModal').classList.remove('keyboard-lift');
         document.getElementById('generateLettersModal').addEventListener('hidden.bs.modal', () => {
             document.getElementById('generateLettersModal').classList.remove('keyboard-lift');
@@ -5149,15 +5130,21 @@
         }
         bgPortalLoadPromise = fetchBgReportMap()
             .then(map => {
-                bgPortalMap = { ...(bgPortalMap || {}), ...(map || {}) };
-                bgPortalLoaded = true;
-                refreshBgBranchOptions();
+                if (map && Object.keys(map).length > 0) {
+                    bgPortalMap = { ...(bgPortalMap || {}), ...map };
+                    bgPortalLoaded = true;
+                    refreshBgBranchOptions();
+                } else {
+                    seedBgPortalMapFromRegister();
+                }
                 if (currentAppView === 'bgPortal') setSyncStatus('success', 'BG Portal loaded.');
                 return bgPortalMap;
             })
             .catch(e => {
-                console.error('BG Portal background load failed', e);
-                throw e;
+                console.warn('BG Portal background load notice:', e);
+                seedBgPortalMapFromRegister();
+                if (currentAppView === 'bgPortal') setSyncStatus('idle', 'BG Portal ready');
+                return bgPortalMap;
             })
             .finally(() => {
                 bgPortalRefreshing = false;
@@ -5181,9 +5168,7 @@
         setActiveFilter();
         renderDeck();
         startBgPortalPreload(true).catch(e => {
-            if (!Object.keys(bgPortalMap || {}).length) {
-                alert(e.message || 'BG Portal could not be loaded.');
-            }
+            console.warn('BG Portal open notice:', e);
         });
     }
 
@@ -5465,17 +5450,33 @@
         refreshBgBranchOptions();
     }
 
-    async function fetchBgReportMap() {
-        const resp = await postJson({
-            method: 'getBgReportIndex',
-            action: 'getBgReportIndex'
-        }, 25000);
+    async function fetchBgReportMap(options = {}) {
+        const timeoutMs = options.timeoutMs || 50000;
+        try {
+            const resp = await postJson({
+                method: 'getBgReportIndex',
+                action: 'getBgReportIndex'
+            }, timeoutMs);
 
-        if (isSuccessResponse(resp) && resp.bgRegisterMap) {
-            return resp.bgRegisterMap;
+            if (isSuccessResponse(resp) && resp.bgRegisterMap) {
+                return resp.bgRegisterMap;
+            }
+        } catch (err) {
+            console.warn('getBgReportIndex remote request issue, falling back to local/cached data:', err);
         }
 
-        throw new Error(resp?.message || resp?.error || 'BG report data load failed.');
+        // Graceful fallback to cached or register data
+        if (bgPortalMap && Object.keys(bgPortalMap).length > 0) {
+            return bgPortalMap;
+        }
+        if (bgRegisterMap && Object.keys(bgRegisterMap).length > 0) {
+            return bgRegisterMap;
+        }
+        const stored = readStoredBgRegisterDetails();
+        if (stored && Object.keys(stored).length > 0) {
+            return stored;
+        }
+        return {};
     }
 
     async function buildBgReportContext() {
@@ -6962,20 +6963,9 @@
         await ensureDocumentLibraries();
 
         const hasSecondBg = hasAdditionalBg(details);
-        let templateBase64 = null;
-        if (type === 'agreement') {
-            const customAgreement = localStorage.getItem('dadri_custom_agreement_template_docx');
-            templateBase64 = customAgreement || window.DADRI_DOCX_TEMPLATES.agreement;
-        } else {
-            const customBg = localStorage.getItem('dadri_custom_bg_template_docx');
-            if (customBg) {
-                templateBase64 = customBg;
-            } else {
-                templateBase64 = hasSecondBg
-                    ? window.DADRI_DOCX_TEMPLATES.bgDouble
-                    : window.DADRI_DOCX_TEMPLATES.bgSingle;
-            }
-        }
+        const templateBase64 = type === 'agreement'
+            ? window.DADRI_DOCX_TEMPLATES.agreement
+            : (hasSecondBg ? window.DADRI_DOCX_TEMPLATES.bgDouble : window.DADRI_DOCX_TEMPLATES.bgSingle);
 
         const PizZipConstructor = window.PizZip?.default || window.PizZip;
         const zip = new PizZipConstructor(base64ToArrayBuffer(templateBase64));
@@ -7000,53 +6990,33 @@
         });
     }
 
-    function handleCustomBgTemplateUpload(input) {
-        const file = input.files?.[0];
-        if (!file) return;
-        if (!file.name.toLowerCase().endsWith('.docx')) {
-            alert('Please select a valid .docx file.');
-            return;
-        }
-        const reader = new FileReader();
-        reader.onload = async function(e) {
-            try {
-                const base64 = e.target.result.split(',')[1];
-                await ensureDocumentLibraries();
-                const PizZipConstructor = window.PizZip?.default || window.PizZip;
-                if (PizZipConstructor) {
-                    new PizZipConstructor(base64ToArrayBuffer(base64));
-                }
-                localStorage.setItem('dadri_custom_bg_template_docx', base64);
-                localStorage.setItem('dadri_custom_bg_template_filename', file.name);
-                updateActiveTemplateDisplay();
-                showAppToast(`Updated BG template saved: ${file.name}`);
-            } catch (err) {
-                console.error('Invalid docx', err);
-                alert('The selected file does not appear to be a valid .docx file.');
+    function downloadDocxFromDrive(resp, fileName) {
+        if (!resp) return false;
+        const docId = resp.docId || getDriveFileId(resp.docxUrl);
+        let exportUrl = resp.docxUrl || '';
+
+        if (!exportUrl && docId) {
+            exportUrl = `https://docs.google.com/document/d/${docId}/export?format=docx`;
+        } else if (exportUrl) {
+            if (exportUrl.includes('/edit') || exportUrl.includes('/view')) {
+                const id = getDriveFileId(exportUrl) || docId;
+                if (id) exportUrl = `https://docs.google.com/document/d/${id}/export?format=docx`;
+            } else {
+                exportUrl = getDriveDownloadUrl(exportUrl);
             }
-        };
-        reader.readAsDataURL(file);
-        input.value = '';
-    }
-
-    function resetCustomBgTemplate() {
-        localStorage.removeItem('dadri_custom_bg_template_docx');
-        localStorage.removeItem('dadri_custom_bg_template_filename');
-        updateActiveTemplateDisplay();
-        showAppToast('Reset to default updated BG template.');
-    }
-
-    function updateActiveTemplateDisplay() {
-        const nameEl = document.getElementById('activeBgTemplateLabel');
-        const resetBtn = document.getElementById('resetBgTemplateBtn');
-        const customName = localStorage.getItem('dadri_custom_bg_template_filename');
-        if (customName && nameEl) {
-            nameEl.innerHTML = `<span class="badge bg-success me-1">Custom File Active</span> <span class="text-truncate d-inline-block align-middle" style="max-width: 220px;">${escapeHtml(customName)}</span>`;
-            resetBtn?.classList.remove('d-none');
-        } else if (nameEl) {
-            nameEl.innerHTML = `Format: <span class="text-dark fw-bold">Updated Drive Format (Branch Manager / Lien)</span>`;
-            resetBtn?.classList.add('d-none');
         }
+
+        if (!exportUrl) return false;
+
+        const link = document.createElement('a');
+        link.href = exportUrl;
+        link.target = '_blank';
+        link.rel = 'noopener';
+        if (fileName) link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => link.remove(), 800);
+        return true;
     }
 
     function downloadBlob(blob, fileName) {
@@ -7120,7 +7090,7 @@
                 const resp = await postJson({
                     method: 'getBgRegisterIndex',
                     action: 'getBgRegisterIndex'
-                }, 8000);
+                }, 25000);
 
                 bgRegisterMap = isSuccessResponse(resp) && resp.bgRegisterMap
                     ? { ...cachedMap, ...resp.bgRegisterMap }
@@ -8010,6 +7980,20 @@
         }, 35000);
     }
 
+    async function requestLetterDocx(isAgreement, tenderId, details, item) {
+        const normalized = normalizeBgDetailsForAdditionalRequirement(details, item);
+        const expectedAdditionalAmount = getExpectedAdditionalBgAmount(item, normalized);
+
+        return postJson({
+            method: isAgreement ? 'generateAgreementDocx' : 'generateBgLetterDocx',
+            action: isAgreement ? 'generateAgreementDocx' : 'generateBgLetterDocx',
+            tenderId,
+            additionalRequired: isAdditionalBgRequired(item, normalized),
+            expectedAdditionalAmount,
+            forceRegenerate: true
+        }, 50000);
+    }
+
     async function generateAndDownloadLetter(isAgreement, tenderId, details, item, statusEl = null) {
         const type = isAgreement ? 'agreement' : 'bg';
         const docTitle = isAgreement ? 'Agreement' : 'BG_Verification_Letter';
@@ -8058,6 +8042,7 @@
         const status = document.getElementById('letterDownloadStatus');
         const isAgreement = type === 'agreement';
         const docTitle = isAgreement ? 'Agreement' : 'BG_Verification_Letter';
+        const fileName = `${docTitle}_${tenderId}.docx`;
 
         if (!tenderId) {
             if (status) status.innerText = 'Please select work.';
@@ -8073,13 +8058,15 @@
                 setBgRegisterDetails(tenderId, details, item);
             }
         }
-        if (!details) {
+        if (!details && !isAgreement) {
             if (status) status.innerText = 'Please upload BG first.';
             openSelectedWorkBgUpload(item, findAnyBgDetails(tenderId));
             return;
         }
-        details = normalizeBgDetailsForAdditionalRequirement(details, item);
-        setBgRegisterDetails(tenderId, details, item);
+        if (details) {
+            details = normalizeBgDetailsForAdditionalRequirement(details, item);
+            setBgRegisterDetails(tenderId, details, item);
+        }
 
         const btn = triggerButton || document.getElementById(isAgreement ? 'generateAgreementDocxBtn' : 'generateBgLetterDocxBtn') || document.getElementById(isAgreement ? 'generateAgreementBtn' : 'generateBgLetterBtn');
         const originalHtml = btn ? btn.innerHTML : '';
@@ -8091,7 +8078,6 @@
 
         try {
             const docxBlob = await createDocxBlob(type, item, details);
-            const fileName = `${docTitle}_${tenderId}.docx`;
             downloadBlob(docxBlob, fileName);
             if (status) status.innerText = 'Word document (.docx) download started.';
             showAppToast(`${docTitle.replace(/_/g, ' ')} (.docx) downloaded.`);
@@ -8123,9 +8109,10 @@
             triggerButton.disabled = true;
             triggerButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating DOCX...';
         }
+        const fileName = `BG_Verification_Letter_${tenderId}.docx`;
+
         try {
             const docxBlob = await createDocxBlob('bg', item, details);
-            const fileName = `BG_Verification_Letter_${tenderId}.docx`;
             downloadBlob(docxBlob, fileName);
             showAppToast('BG Letter (.docx) downloaded.');
         } catch (e) {
