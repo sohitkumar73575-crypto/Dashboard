@@ -66,10 +66,6 @@ function doPost(e) {
       return withScriptLock(() => releaseBgFromWeb(params));
     }
 
-        if (action === 'generateBgLetterPdf' || action === 'generateBgLetterDocx' || action === 'generateBgLetter') {
-      return withScriptLock(() => generateBgLetterPdfFromWeb(params));
-    }
-
     if (action === 'generateAgreementPdf' || action === 'generateAgreementDocx' || action === 'generateAgreement') {
       return withScriptLock(() => generateAgreementPdfFromWeb(params));
     }
