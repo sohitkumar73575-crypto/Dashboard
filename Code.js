@@ -8,19 +8,10 @@ const BG_SS_ID = '1zCVQWrU_rJaGjobv_Ht5HdwmlhKqJCRdIW6x9s-r7_Y';
 const MASTER_SHEET_NAME = 'Sheet1';
 
 const PBG_PHOTO_FOLDER_ID = '1J6b6mzkQtYVTs7XRyBPGaWZmDNugodUS';
-const BG_LETTER_FOLDER_ID = '1wuIrGsDVWpKct0ZoeTkMvkfCqbCA-DlE';
-const AGREEMENT_FOLDER_ID = '1i0SQ7CXfsYktG9c1riEMnjlQdaE9-U30';
-
-const BG_LETTER_TEMPLATE_SINGLE_ID = '1SW-FEAwDn33JJ3ObZDL9G-s6Y2seQKNvdyhG6s-oqr8';
-const BG_LETTER_TEMPLATE_DOUBLE_ID = '1lCg8JNnPEmTD0TV8EnGAyOWXoOPtTr13zNEa_xtxTjQ';
-const AGREEMENT_TEMPLATE_ID = '1Sqw2xMrHX1otwsjvlO0kYGlwo7N9u9BjjGDFqYsHVZk';
 // Paste your Drive file ID after uploading the blank Monitoring DOCX with placeholders (see MONITORING_TEMPLATE_README.md).
 const MONITORING_TEMPLATE_ID = '1Hg-XJCXByjGwxzKkRSxN24OEMUgATMYr91HESAFTfDA';
 const COMPLETION_CERTIFICATE_TEMPLATE_ID = '1yBJS18CANaE6YN5P5x6ILlVIlEmxeELC9pFNLqwKjOQ';
 const SAMPLING_TEMPLATE_ID = '1D5DlT4Bc-nc_3ahpIo_H-gCWPW0DYj8oabColMn5Jxc';
-const MONITORING_OUTPUT_FOLDER_ID = BG_LETTER_FOLDER_ID;
-const COMPLETION_CERTIFICATE_OUTPUT_FOLDER_ID = BG_LETTER_FOLDER_ID;
-const SAMPLING_OUTPUT_FOLDER_ID = BG_LETTER_FOLDER_ID;
 const ADMIN_KEY_HASH_PROPERTY = 'ADMIN_KEY_SHA256';
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
 const ALLOWED_UPLOAD_MIME_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
@@ -66,22 +57,6 @@ function doPost(e) {
       return withScriptLock(() => releaseBgFromWeb(params));
     }
 
-    if (action === 'generateAgreementPdf' || action === 'generateAgreementDocx' || action === 'generateAgreement') {
-      return withScriptLock(() => generateAgreementPdfFromWeb(params));
-    }
-
-    if (action === 'generateMonitoringPdf') {
-      return withScriptLock(() => generateMonitoringPdfFromWeb(params));
-    }
-
-    if (action === 'generateCompletionCertificatePdf') {
-      return withScriptLock(() => generateCompletionCertificatePdfFromWeb(params));
-    }
-
-    if (action === 'generatePerformaPdf') {
-      return withScriptLock(() => generatePerformaPdfFromWeb(params));
-    }
-
     if (action === 'addWork') {
       const auth = requireAdmin(params);
       if (auth) return auth;
@@ -119,11 +94,7 @@ function jsonOutput(obj) {
 function testAuthorization() {
   SpreadsheetApp.openById(MAIN_SS_ID).getName();
   SpreadsheetApp.openById(BG_SS_ID).getName();
-  DriveApp.getFolderById(BG_LETTER_FOLDER_ID).getName();
-  DriveApp.getFolderById(AGREEMENT_FOLDER_ID).getName();
   DriveApp.getFolderById(PBG_PHOTO_FOLDER_ID).getName();
-  DriveApp.getFileById(COMPLETION_CERTIFICATE_TEMPLATE_ID).getName();
-  DriveApp.getFileById(SAMPLING_TEMPLATE_ID).getName();
   return 'Authorization OK';
 }
 
