@@ -2223,6 +2223,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<!-- Embedded DOCX templates: load statically so document generation never depends on a legacy performa loader. -->
+<script src="./document-templates.js?v=20260924_v3"></script>
 <script>
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxOKN15Szd7A3OGEM1-Xg_Jnwhg4QUibhQ4zAaFHuQBmJiUhtoyeAHFzUtEwdDrUtEFeg/exec';
     const FEATURE_SCRIPTS = {
@@ -2233,8 +2235,7 @@
         pizzip: 'https://cdn.jsdelivr.net/npm/pizzip@3.1.7/dist/pizzip.min.js',
         jszip: 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js',
         docxtemplater: 'https://cdn.jsdelivr.net/npm/docxtemplater@3.47.4/build/docxtemplater.js',
-        templates: './document-templates.js?v=20260924_v2',
-        performaTemplates: './document-templates.js?v=20260924_v2',
+        templates: './document-templates.js?v=20260924_v3',
         docxPreview: 'https://cdn.jsdelivr.net/npm/docx-preview@0.3.5/dist/docx-preview.min.js'
     };
     const FEATURE_SCRIPT_INTEGRITY = {
@@ -2452,12 +2453,28 @@
     }
 
     async function ensureDocumentLibraries() {
-        if (!window.PizZip) await loadFeatureScript('pizzip');
-        if (!window.docxtemplater) await loadFeatureScript('docxtemplater');
-        if (!window.DADRI_DOCX_TEMPLATES) await loadFeatureScript('templates');
-        if (!window.PizZip || !window.docxtemplater || !window.DADRI_DOCX_TEMPLATES) {
-            throw new Error('Document template libraries could not be loaded. Please check your internet connection and try again.');
+        try {
+            if (!window.PizZip) await loadFeatureScript('pizzip');
+            if (!window.PizZip) throw new Error('PizZip global was not created after loading.');
+        } catch (e) {
+            throw new Error('PizZip could not be loaded: ' + (e?.message || e));
         }
+
+        try {
+            if (!window.docxtemplater) await loadFeatureScript('docxtemplater');
+            if (!window.docxtemplater) throw new Error('Docxtemplater global was not created after loading.');
+        } catch (e) {
+            throw new Error('Docxtemplater could not be loaded: ' + (e?.message || e));
+        }
+
+        try {
+            if (!window.DADRI_DOCX_TEMPLATES) await loadFeatureScript('templates');
+            if (!window.DADRI_DOCX_TEMPLATES) throw new Error('Embedded document template bundle was not loaded.');
+        } catch (e) {
+            throw new Error('Embedded document-templates.js could not be loaded: ' + (e?.message || e));
+        }
+
+        return true;
     }
 
     async function ensurePerformaDocxLibraries() {
