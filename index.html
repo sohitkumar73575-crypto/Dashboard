@@ -8051,39 +8051,108 @@
 
         const item = selected?.item || masterData.find(d => String(getTenderId(d) || '').trim() === tenderId);
         let details = await getBgRegisterDetails(tenderId, item);
+
         if (!details) {
-            const fallbackDetails = normalizeBgDetailsForAdditionalRequirement(findAnyBgDetails(tenderId), item);
+            const fallbackDetails = normalizeBgDetailsForAdditionalRequirement(
+                findAnyBgDetails(tenderId),
+                item
+            );
+
             if (isBgDetailsComplete(fallbackDetails, item)) {
                 details = fallbackDetails;
                 setBgRegisterDetails(tenderId, details, item);
             }
         }
+
         if (!details && !isAgreement) {
             if (status) status.innerText = 'Please upload BG first.';
             openSelectedWorkBgUpload(item, findAnyBgDetails(tenderId));
             return;
         }
+
         if (details) {
             details = normalizeBgDetailsForAdditionalRequirement(details, item);
             setBgRegisterDetails(tenderId, details, item);
         }
 
-        const btn = triggerButton || document.getElementById(isAgreement ? 'generateAgreementDocxBtn' : 'generateBgLetterDocxBtn') || document.getElementById(isAgreement ? 'generateAgreementBtn' : 'generateBgLetterBtn');
+        const btn = triggerButton ||
+            document.getElementById(
+                isAgreement ? 'generateAgreementDocxBtn' : 'generateBgLetterDocxBtn'
+            ) ||
+            document.getElementById(
+                isAgreement ? 'generateAgreementBtn' : 'generateBgLetterBtn'
+            );
+
         const originalHtml = btn ? btn.innerHTML : '';
+
         if (btn) {
             btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating DOCX...';
+            btn.innerHTML =
+                '<span class="spinner-border spinner-border-sm me-2"></span>Creating DOCX...';
         }
-        if (status) status.innerText = 'Creating Word document (.docx)...';
+
+        if (status) status.innerText = 'Generating document...';
 
         try {
-            const docxBlob = await createDocxBlob(type, item, details);
-            downloadBlob(docxBlob, fileName);
-            if (status) status.innerText = 'Word document (.docx) download started.';
-            showAppToast(`${docTitle.replace(/_/g, ' ')} (.docx) downloaded.`);
+            // Use the same server-side generation flow as Generate Agreement.
+            // This keeps BG generation tied to Code.js and its configured BG templates.
+            const resp = await requestLetterDocx(
+                isAgreement,
+                tenderId,
+                details,
+                item
+            );
+
+            if (isSuccessResponse(resp) && resp.docxUrl) {
+                if (downloadDocxFromDrive(resp, fileName)) {
+                    if (status) {
+                        status.innerText = 'Word document (.docx) download started.';
+                    }
+
+                    showAppToast(
+                        `${docTitle.replace(/_/g, ' ')} (.docx) downloaded.`
+                    );
+                    return;
+                }
+            }
+
+            throw new Error(
+                resp?.message || 'Server-side document generation failed.'
+            );
+
         } catch (e) {
-            console.error('DOCX generation failed', e);
-            if (status) status.innerText = e.message || 'DOCX generation failed.';
+            console.warn(
+                'Server DOCX generation failed, falling back to local template generation.',
+                e
+            );
+
+            try {
+                const docxBlob = await createDocxBlob(
+                    type,
+                    item,
+                    details
+                );
+
+                downloadBlob(docxBlob, fileName);
+
+                if (status) {
+                    status.innerText = 'Word document (.docx) download started.';
+                }
+
+                showAppToast(
+                    `${docTitle.replace(/_/g, ' ')} (.docx) downloaded.`
+                );
+
+            } catch (fallbackError) {
+                console.error('DOCX generation failed', fallbackError);
+
+                if (status) {
+                    status.innerText =
+                        fallbackError.message ||
+                        e.message ||
+                        'DOCX generation failed.';
+                }
+            }
         } finally {
             if (btn) {
                 btn.disabled = false;
