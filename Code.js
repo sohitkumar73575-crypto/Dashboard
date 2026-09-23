@@ -66,11 +66,11 @@ function doPost(e) {
       return withScriptLock(() => releaseBgFromWeb(params));
     }
 
-    if (action === 'generateBgLetterPdf') {
+    if (action === 'generateBgLetterPdf' || action === 'generateBgLetterDocx' || action === 'generateBgLetter') {
       return withScriptLock(() => generateBgLetterPdfFromWeb(params));
     }
 
-    if (action === 'generateAgreementPdf') {
+    if (action === 'generateAgreementPdf' || action === 'generateAgreementDocx' || action === 'generateAgreement') {
       return withScriptLock(() => generateAgreementPdfFromWeb(params));
     }
 
@@ -930,8 +930,11 @@ function generateBgLetterPdfFromWeb(body) {
     return jsonOutput({ status: 'error', message: 'Please complete Additional PBG details first' });
   }
 
-  const pdfUrl = generateLetterAuto(row, body);
-  return jsonOutput({ status: 'success', pdfUrl: pdfUrl, tenderId: tenderId });
+  const result = generateLetterAuto(row, body);
+  const pdfUrl = typeof result === 'object' ? (result.pdfUrl || '') : result;
+  const docxUrl = typeof result === 'object' ? (result.docxUrl || '') : '';
+  const docId = typeof result === 'object' ? (result.docId || '') : '';
+  return jsonOutput({ status: 'success', docxUrl: docxUrl, pdfUrl: pdfUrl, docId: docId, tenderId: tenderId });
 }
 
 function generateAgreementPdfFromWeb(body) {
@@ -950,8 +953,11 @@ function generateAgreementPdfFromWeb(body) {
     return jsonOutput({ status: 'error', message: 'Please complete Additional PBG details first' });
   }
 
-  const pdfUrl = generateAgreementAuto(row, body);
-  return jsonOutput({ status: 'success', pdfUrl: pdfUrl, tenderId: tenderId });
+  const result = generateAgreementAuto(row, body);
+  const pdfUrl = typeof result === 'object' ? (result.pdfUrl || '') : result;
+  const docxUrl = typeof result === 'object' ? (result.docxUrl || '') : '';
+  const docId = typeof result === 'object' ? (result.docId || '') : '';
+  return jsonOutput({ status: 'success', docxUrl: docxUrl, pdfUrl: pdfUrl, docId: docId, tenderId: tenderId });
 }
 
 function generateMonitoringPdfFromWeb(body) {
@@ -1350,11 +1356,32 @@ function generateLetterAuto(row, options) {
 
   doc.saveAndClose();
 
+  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  let docxDownloadUrl = 'https://docs.google.com/document/d/' + file.getId() + '/export?format=docx';
+  try {
+    const exportUrl = 'https://docs.google.com/feeds/download/documents/export/Export?id=' + file.getId() + '&exportFormat=docx';
+    const docxResp = UrlFetchApp.fetch(exportUrl, {
+      headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
+      muteHttpExceptions: true
+    });
+    if (docxResp.getResponseCode() === 200) {
+      const docxFile = folder.createFile(docxResp.getBlob().setName('BG_Letter_' + tenderId + '.docx'));
+      docxFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      docxDownloadUrl = getDriveDownloadUrl(docxFile);
+    }
+  } catch (err) {
+    console.warn('DOCX file creation in Drive folder failed, using direct export link: ' + err);
+  }
+
   const pdfFile = folder.createFile(file.getAs(MimeType.PDF)).setName('BG_Letter_' + tenderId + '.pdf');
   pdfFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
   sheet.getRange(row, 15).setValue(pdfFile.getUrl());
 
-  return getDriveDownloadUrl(pdfFile);
+  return {
+    docxUrl: docxDownloadUrl,
+    docId: file.getId(),
+    pdfUrl: getDriveDownloadUrl(pdfFile)
+  };
 }
 
 function generateAgreementAuto(row, options) {
@@ -1391,11 +1418,32 @@ function generateAgreementAuto(row, options) {
 
   doc.saveAndClose();
 
+  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  let docxDownloadUrl = 'https://docs.google.com/document/d/' + file.getId() + '/export?format=docx';
+  try {
+    const exportUrl = 'https://docs.google.com/feeds/download/documents/export/Export?id=' + file.getId() + '&exportFormat=docx';
+    const docxResp = UrlFetchApp.fetch(exportUrl, {
+      headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
+      muteHttpExceptions: true
+    });
+    if (docxResp.getResponseCode() === 200) {
+      const docxFile = folder.createFile(docxResp.getBlob().setName('Agreement_' + tenderId + '.docx'));
+      docxFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      docxDownloadUrl = getDriveDownloadUrl(docxFile);
+    }
+  } catch (err) {
+    console.warn('Agreement DOCX file creation failed, using direct export link: ' + err);
+  }
+
   const pdfFile = folder.createFile(file.getAs(MimeType.PDF)).setName('Agreement_' + tenderId + '.pdf');
   pdfFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
   sheet.getRange(row, 18).setValue(pdfFile.getUrl());
 
-  return getDriveDownloadUrl(pdfFile);
+  return {
+    docxUrl: docxDownloadUrl,
+    docId: file.getId(),
+    pdfUrl: getDriveDownloadUrl(pdfFile)
+  };
 }
 
 function getAmountFromCalculator(tenderId) {

@@ -17,6 +17,7 @@
     <link rel="apple-touch-icon" href="./icons/dadri-work-192.png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <style>
         :root {
             --primary: #0b1f33;
@@ -1269,6 +1270,27 @@
             .scanner-tool-btn span { display: none; }
             .btn-capture { width: 68px; height: 68px; }
         }
+        .flatpickr-calendar {
+            font-family: inherit;
+            border-radius: 12px;
+            box-shadow: 0 16px 36px rgba(11, 31, 51, 0.18);
+            border: 1px solid var(--line);
+            background: #fff;
+            z-index: 10600 !important;
+        }
+        .flatpickr-calendar .flatpickr-day.selected,
+        .flatpickr-calendar .flatpickr-day.startRange,
+        .flatpickr-calendar .flatpickr-day.endRange {
+            background: var(--action);
+            border-color: var(--action);
+        }
+        .flatpickr-calendar .flatpickr-day.today {
+            border-color: var(--accent);
+        }
+        .date-picker {
+            cursor: pointer;
+            background-color: #fff;
+        }
     </style>
 </head>
 <body>
@@ -1586,11 +1608,8 @@
                 </div>
             </div>
             <div id="viewBgActions" class="modal-footer border-0 p-4 pt-0 view-bg-actions d-flex flex-wrap gap-2 justify-content-end">
-                <button id="viewBgGenerateLetterBtn" type="button" class="btn btn-danger fw-bold px-3 py-2 rounded-3" onclick="generateBgLetterForCurrentDetails(this)">
-                    <i class="fa-solid fa-file-shield me-2"></i>Generate BG Letter (PDF)
-                </button>
-                <button id="viewBgGenerateDocxBtn" type="button" class="btn btn-outline-danger fw-bold px-3 py-2 rounded-3" onclick="generateBgLetterDocxForCurrentDetails(this)">
-                    <i class="fa-solid fa-file-word me-2"></i>Download Word (.docx)
+                <button id="viewBgGenerateDocxBtn" type="button" class="btn btn-danger fw-bold px-3 py-2 rounded-3" onclick="generateBgLetterDocxForCurrentDetails(this)">
+                    <i class="fa-solid fa-file-word me-2"></i>Generate BG Letter (.docx)
                 </button>
                 <button id="viewBgReleaseBtn" type="button" class="btn bg-release-btn icon-action-btn" onclick="openReleaseBgModal()" title="Release BG" aria-label="Release BG">
                     <i class="fa-solid fa-lock-open"></i>
@@ -1606,10 +1625,10 @@
         <div class="modal-content border-0 shadow-lg overflow-hidden">
             <div class="modal-header border-0 px-4 pt-4 pb-2">
                 <div class="d-flex align-items-center gap-3">
-                    <span class="add-work-title-icon"><i class="fa-solid fa-file-pdf"></i></span>
+                    <span class="add-work-title-icon"><i class="fa-solid fa-file-word text-primary"></i></span>
                     <div>
-                        <h5 class="modal-title fw-bold text-dark mb-0">Generate Letters</h5>
-                        <small class="text-secondary fw-semibold">Agreement, BG, Monitoring, Completion &amp; Sampling</small>
+                        <h5 class="modal-title fw-bold text-dark mb-0">Generate Letters (.docx)</h5>
+                        <small class="text-secondary fw-semibold">Download Word documents (.docx) &bull; Agreement, BG, Monitoring, Completion &amp; Sampling</small>
                     </div>
                 </div>
                 <button type="button" class="modal-close-red" data-bs-dismiss="modal" aria-label="Close">
@@ -1626,26 +1645,20 @@
                 <div id="letterSelectedWork" class="photo-hint mt-2 mb-3">No work selected</div>
 
                 <div class="letter-choice-grid">
-                    <button id="generateBgLetterBtn" type="button" class="btn btn-danger fw-bold py-3" onclick="generateSelectedLetter('bg', this)">
-                        <i class="fa-solid fa-file-shield me-2"></i>Generate BG Letter (PDF)
+                    <button id="generateBgLetterDocxBtn" type="button" class="btn btn-danger fw-bold py-3" onclick="generateSelectedLetterDocx('bg', this)">
+                        <i class="fa-solid fa-file-word me-2"></i>BG Verification Letter (.docx)
                     </button>
-                    <button id="generateBgLetterDocxBtn" type="button" class="btn btn-outline-danger fw-bold py-3" onclick="generateSelectedLetterDocx('bg', this)">
-                        <i class="fa-solid fa-file-word me-2"></i>Download BG Letter (.docx)
-                    </button>
-                    <button id="generateAgreementBtn" type="button" class="btn btn-primary fw-bold py-3" onclick="generateSelectedLetter('agreement', this)">
-                        <i class="fa-solid fa-file-contract me-2"></i>Generate Agreement (PDF)
-                    </button>
-                    <button id="generateAgreementDocxBtn" type="button" class="btn btn-outline-primary fw-bold py-3" onclick="generateSelectedLetterDocx('agreement', this)">
-                        <i class="fa-solid fa-file-word me-2"></i>Download Agreement (.docx)
+                    <button id="generateAgreementDocxBtn" type="button" class="btn btn-primary fw-bold py-3" onclick="generateSelectedLetterDocx('agreement', this)">
+                        <i class="fa-solid fa-file-word me-2"></i>Contract Agreement (.docx)
                     </button>
                     <button id="generateMonitoringBtn" type="button" class="btn btn-success fw-bold py-3" onclick="openMonitoringPerformaModal()">
-                        <i class="fa-solid fa-clipboard-list me-2"></i>Monitoring Performa
+                        <i class="fa-solid fa-file-word me-2"></i>Monitoring Performa (.docx)
                     </button>
                     <button id="generateCompletionBtn" type="button" class="btn btn-warning fw-bold py-3 text-dark" onclick="generatePerforma('completionCertificate', this)">
-                        <i class="fa-solid fa-certificate me-2"></i>Completion Certificate
+                        <i class="fa-solid fa-file-word me-2"></i>Completion Certificate (.docx)
                     </button>
                     <button id="generateSamplingBtn" type="button" class="btn btn-info fw-bold py-3 text-dark" onclick="generatePerforma('sampling', this)">
-                        <i class="fa-solid fa-vial me-2"></i>Sampling Performa
+                        <i class="fa-solid fa-file-word me-2"></i>Sampling Performa (.docx)
                     </button>
                 </div>
                 <div id="letterDownloadStatus" class="photo-hint mt-3"></div>
@@ -1660,10 +1673,10 @@
         <div class="modal-content border-0 shadow-lg overflow-hidden">
             <div class="modal-header border-0 px-4 pt-4 pb-2">
                 <div class="d-flex align-items-center gap-3">
-                    <span class="add-work-title-icon"><i class="fa-solid fa-clipboard-list"></i></span>
+                    <span class="add-work-title-icon"><i class="fa-solid fa-file-word text-success"></i></span>
                     <div>
-                        <h5 class="modal-title fw-bold text-dark mb-0">Monitoring Performa</h5>
-                        <small class="text-secondary fw-semibold">Fill details and download PDF</small>
+                        <h5 class="modal-title fw-bold text-dark mb-0">Monitoring Performa (.docx)</h5>
+                        <small class="text-secondary fw-semibold">Fill details and download Word document (.docx)</small>
                     </div>
                 </div>
                 <button type="button" class="modal-close-red" data-bs-dismiss="modal" aria-label="Close">
@@ -1715,8 +1728,8 @@
             </div>
             <div class="modal-footer border-0 px-4 pb-4 pt-0 justify-content-end">
                 <button type="button" class="btn btn-light fw-bold px-4" data-bs-dismiss="modal">Cancel</button>
-                <button id="generateMonitoringPdfBtn" type="button" class="btn btn-danger fw-bold px-4" onclick="generateMonitoringPdfFromModal()">
-                    <i class="fa-solid fa-file-pdf me-2"></i>Generate PDF
+                <button id="generateMonitoringDocxBtn" type="button" class="btn btn-success fw-bold px-4" onclick="generateMonitoringDocxFromModal()">
+                    <i class="fa-solid fa-file-word me-2"></i>Download Word (.docx)
                 </button>
             </div>
         </div>
@@ -1729,10 +1742,10 @@
         <div class="modal-content border-0 shadow-lg overflow-hidden">
             <div class="modal-header border-0 px-4 pt-4 pb-2">
                 <div class="d-flex align-items-center gap-3">
-                    <span class="add-work-title-icon"><i class="fa-solid fa-pen-to-square"></i></span>
+                    <span class="add-work-title-icon"><i class="fa-solid fa-file-word text-primary"></i></span>
                     <div>
                         <h5 class="modal-title fw-bold text-dark mb-0" id="performaFieldsTitle">Fill missing details</h5>
-                        <small class="text-secondary fw-semibold" id="performaFieldsSubtitle">Fields not found in your sheet</small>
+                        <small class="text-secondary fw-semibold" id="performaFieldsSubtitle">Review or complete fields before Word document (.docx) download</small>
                     </div>
                 </div>
                 <button type="button" class="modal-close-red" data-bs-dismiss="modal" aria-label="Close">
@@ -1744,8 +1757,8 @@
             </div>
             <div class="modal-footer border-0 px-4 pb-4 pt-0 justify-content-end">
                 <button type="button" class="btn btn-light fw-bold px-4" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger fw-bold px-4" onclick="submitPerformaFieldsForm()">
-                    <i class="fa-solid fa-file-pdf me-2"></i>Generate PDF
+                <button type="button" class="btn btn-primary fw-bold px-4" onclick="submitPerformaFieldsForm()">
+                    <i class="fa-solid fa-file-word me-2"></i>Download Word (.docx)
                 </button>
             </div>
         </div>
@@ -1773,7 +1786,7 @@
                     <label class="detail-label" for="releaseBgType">Release BG</label>
                     <select id="releaseBgType" name="releaseBgType" class="edit-input" required onchange="updateReleaseWarning()"></select>
                     <label class="detail-label" for="releaseBgDate">Release Date</label>
-                    <input id="releaseBgDate" name="releaseDate" type="date" class="edit-input" required onchange="updateReleaseWarning()">
+                    <input id="releaseBgDate" name="releaseDate" type="text" class="edit-input date-picker" placeholder="dd/mm/yyyy" pattern="\d{2}/\d{2}/\d{4}" inputmode="numeric" autocomplete="off" required onchange="updateReleaseWarning()">
                     <div id="releaseBgWarning" class="photo-hint mb-2"></div>
                     <label class="detail-label" for="releaseBgRemarks">Release Remarks</label>
                     <textarea id="releaseBgRemarks" name="releaseRemarks" class="edit-input" rows="4" required></textarea>
@@ -1877,11 +1890,11 @@
                         </div>
                         <div class="col-md-3">
                             <label class="detail-label" for="pbgSubDate">Date of Submission (PBG)</label>
-                            <input id="pbgSubDate" name="pbgSubDate" type="date" class="edit-input" required>
+                            <input id="pbgSubDate" name="pbgSubDate" type="text" class="edit-input date-picker" placeholder="dd/mm/yyyy" pattern="\d{2}/\d{2}/\d{4}" inputmode="numeric" autocomplete="off" required>
                         </div>
                         <div class="col-md-3">
                             <label class="detail-label" for="pbgValid">Valid Up To Date (PBG)</label>
-                            <input id="pbgValid" name="pbgValid" type="date" class="edit-input" required>
+                            <input id="pbgValid" name="pbgValid" type="text" class="edit-input date-picker" placeholder="dd/mm/yyyy" pattern="\d{2}/\d{2}/\d{4}" inputmode="numeric" autocomplete="off" required>
                         </div>
 
                         <div class="col-12 additional-bg-field">
@@ -1897,11 +1910,11 @@
                         </div>
                         <div class="col-md-3 additional-bg-field">
                             <label class="detail-label" for="addSubDate">Date of Submission (Additional PBG)</label>
-                            <input id="addSubDate" name="addSubDate" type="date" class="edit-input">
+                            <input id="addSubDate" name="addSubDate" type="text" class="edit-input date-picker" placeholder="dd/mm/yyyy" pattern="\d{2}/\d{2}/\d{4}" inputmode="numeric" autocomplete="off">
                         </div>
                         <div class="col-md-3 additional-bg-field">
                             <label class="detail-label" for="addValid">Valid Up To Date (Additional PBG)</label>
-                            <input id="addValid" name="addValid" type="date" class="edit-input">
+                            <input id="addValid" name="addValid" type="text" class="edit-input date-picker" placeholder="dd/mm/yyyy" pattern="\d{2}/\d{2}/\d{4}" inputmode="numeric" autocomplete="off">
                         </div>
 
                         <div class="col-12">
@@ -2132,13 +2145,13 @@
                     <div class="col-md-4 d-none" id="reportFromWrap">
                         <div class="report-option-card">
                             <label class="detail-label" for="reportFromDate">From Date</label>
-                            <input id="reportFromDate" type="date" class="edit-input" onchange="updateReportPreview()">
+                            <input id="reportFromDate" type="text" class="edit-input date-picker" placeholder="dd/mm/yyyy" pattern="\d{2}/\d{2}/\d{4}" inputmode="numeric" autocomplete="off" onchange="updateReportPreview()">
                         </div>
                     </div>
                     <div class="col-md-4 d-none" id="reportToWrap">
                         <div class="report-option-card">
                             <label class="detail-label" for="reportToDate">To Date</label>
-                            <input id="reportToDate" type="date" class="edit-input" onchange="updateReportPreview()">
+                            <input id="reportToDate" type="text" class="edit-input date-picker" placeholder="dd/mm/yyyy" pattern="\d{2}/\d{2}/\d{4}" inputmode="numeric" autocomplete="off" onchange="updateReportPreview()">
                         </div>
                     </div>
                 </div>
@@ -2208,6 +2221,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxOKN15Szd7A3OGEM1-Xg_Jnwhg4QUibhQ4zAaFHuQBmJiUhtoyeAHFzUtEwdDrUtEFeg/exec';
     const FEATURE_SCRIPTS = {
@@ -2349,6 +2363,7 @@
         try {
             initModalGestureLock();
             initSwipeBackGesture();
+            applyDatePicker();
             const hasCachedData = hydrateMasterDataFromCache();
             document.getElementById('loadingOverlay')?.classList.toggle('hidden', hasCachedData);
             const refreshPromise = fetchData({
@@ -2517,20 +2532,18 @@
     function formatPerformaDotDate(value) {
         const d = parseReportDate(value);
         if (!d) return String(value || '').trim();
-        const day = pad2(d.getDate());
-        const month = pad2(d.getMonth() + 1);
-        return `${day}.${month}.${d.getFullYear()}`;
+        return formatReportDateDisplay(d);
     }
 
     function formatPerformaDisplayDate(value) {
         const d = parseReportDate(value);
         if (!d) return String(value || '').trim();
-        return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        return formatReportDateDisplay(d);
     }
 
     function formatPerformaDateInput(value) {
         const d = parseReportDate(value);
-        return d ? toDateInputValue(d) : '';
+        return d ? formatReportDateDisplay(d) : '';
     }
 
     function formatDateInputForSheet(value) {
@@ -2713,10 +2726,10 @@
         return combined || 'PDF could not be generated.';
     }
 
-    async function generateMonitoringPdfFromModal() {
+    async function generateMonitoringDocxFromModal() {
         const payload = getMonitoringFormPayload();
         const statusEl = document.getElementById('monitoringFormStatus');
-        const btn = document.getElementById('generateMonitoringPdfBtn');
+        const btn = document.getElementById('generateMonitoringDocxBtn') || document.getElementById('generateMonitoringPdfBtn');
         const originalHtml = btn?.innerHTML;
 
         if (!payload.tenderId) {
@@ -2735,37 +2748,25 @@
 
         if (btn) {
             btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generating...';
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating DOCX...';
         }
-        if (statusEl) statusEl.innerText = 'Generating PDF...';
+        if (statusEl) statusEl.innerText = 'Creating Word document (.docx)...';
 
-        const fileName = `Monitoring_${payload.tenderId}.pdf`;
+        const fileName = `Monitoring_${payload.tenderId}.docx`;
 
         try {
-            const resp = await requestMonitoringPdf(payload);
-            if (isSuccessResponse(resp) && resp.pdfUrl) {
-                downloadPdfFromUrl(resp.pdfUrl, fileName);
-                if (statusEl) statusEl.innerText = 'PDF download started.';
-                const modalEl = document.getElementById('monitoringPerformaModal');
-                modalEl.dataset.skipHistoryBack = '1';
-                bootstrap.Modal.getInstance(modalEl)?.hide();
-                return;
-            }
-            throw new Error(resp?.message || resp?.error || 'Server PDF generation failed.');
-        } catch (serverError) {
-            console.warn('Monitoring server PDF failed, trying client fallback.', serverError);
-            if (statusEl) statusEl.innerText = 'Server unavailable. Preparing PDF locally...';
-            try {
-                await finalizePerformaDownload('monitoring', payload.tenderId, payload.templateData, statusEl);
-                const modalEl = document.getElementById('monitoringPerformaModal');
-                modalEl.dataset.skipHistoryBack = '1';
-                bootstrap.Modal.getInstance(modalEl)?.hide();
-            } catch (fallbackError) {
-                console.error('Monitoring PDF fallback failed', fallbackError);
-                const message = formatMonitoringPdfError(serverError, fallbackError);
-                if (statusEl) statusEl.innerText = message;
-                alert(message);
-            }
+            const docxBlob = await createPerformaDocxBlob('monitoring', payload.templateData);
+            downloadBlob(docxBlob, fileName);
+            if (statusEl) statusEl.innerText = 'Word document (.docx) download started.';
+            showAppToast('Monitoring Performa (.docx) downloaded.');
+            const modalEl = document.getElementById('monitoringPerformaModal');
+            modalEl.dataset.skipHistoryBack = '1';
+            bootstrap.Modal.getInstance(modalEl)?.hide();
+        } catch (err) {
+            console.error('Monitoring DOCX generation failed', err);
+            const message = err.message || 'Word document (.docx) could not be generated.';
+            if (statusEl) statusEl.innerText = message;
+            alert(message);
         } finally {
             if (btn) {
                 btn.disabled = false;
@@ -2773,6 +2774,7 @@
             }
         }
     }
+    const generateMonitoringPdfFromModal = generateMonitoringDocxFromModal;
 
     function formatPerformaRs(value) {
         const amount = parseCurrencyAmount(value);
@@ -2821,11 +2823,11 @@
     function openPerformaFieldsModal(type, data, onSubmit) {
         performaPendingContext = { type, data: { ...data }, onSubmit };
         const titles = {
-            completionCertificate: 'Completion Certificate',
-            sampling: 'Sampling Performa'
+            completionCertificate: 'Completion Certificate (.docx)',
+            sampling: 'Sampling Performa (.docx)'
         };
         document.getElementById('performaFieldsTitle').innerText = titles[type] || 'Fill missing details';
-        document.getElementById('performaFieldsSubtitle').innerText = 'Review or complete fields before PDF download';
+        document.getElementById('performaFieldsSubtitle').innerText = 'Review or complete fields before Word document (.docx) download';
 
         const form = document.getElementById('performaFieldsForm');
         const missingKeys = new Set(getPerformaMissingFields(type, data).map(f => f.key));
@@ -2833,19 +2835,29 @@
             if (type === 'sampling' && field.key === 'SAMPLE_TYPE') {
                 return renderSamplingSampleField(field, data[field.key], missingKeys.has(field.key));
             }
-            const value = escapeHtml(String(data[field.key] ?? ''));
+            const isDate = isPerformaDateField(field.key);
+            let rawVal = String(data[field.key] ?? '');
+            if (isDate && rawVal) {
+                const parsed = parseReportDate(rawVal);
+                if (parsed) rawVal = formatReportDateDisplay(parsed);
+            }
+            const value = escapeHtml(rawVal);
             const required = field.required ? 'required' : '';
             const highlight = missingKeys.has(field.key) ? 'border border-warning' : '';
-            const inputType = isPerformaDateField(field.key) ? 'date' : isPerformaAmountEntryField(field.key) ? 'number' : 'text';
+            const inputType = isPerformaAmountEntryField(field.key) ? 'number' : 'text';
             const locked = value && !isPerformaAmountEntryField(field.key) ? 'readonly' : '';
-            const extraAttrs = isPerformaAmountEntryField(field.key) ? 'inputmode="decimal" step="0.01" min="0.01"' : '';
+            const extraAttrs = isPerformaAmountEntryField(field.key) 
+                ? 'inputmode="decimal" step="0.01" min="0.01"' 
+                : (isDate ? 'placeholder="dd/mm/yyyy" pattern="\\d{2}/\\d{2}/\\d{4}" inputmode="numeric" autocomplete="off"' : '');
+            const inputClass = isDate ? `edit-input mb-3 date-picker ${highlight}` : `edit-input mb-3 ${highlight}`;
             return `
                 <label class="detail-label" for="performaField_${field.key}">${escapeHtml(field.label)}${field.required ? ' *' : ''}</label>
-                <input id="performaField_${field.key}" type="${inputType}" class="edit-input mb-3 ${highlight}" name="${field.key}" value="${value}" ${required} ${locked} ${extraAttrs}>
+                <input id="performaField_${field.key}" type="${inputType}" class="${inputClass}" name="${field.key}" value="${value}" ${required} ${locked} ${extraAttrs}>
             `;
         }).join('');
 
         showSubPageModal(document.getElementById('performaFieldsModal'), { keepIds: ['generateLettersModal'] });
+        applyDatePicker('#performaFieldsModal .date-picker');
     }
 
     function getSamplingSelectedSet(value) {
@@ -3113,42 +3125,14 @@
             completionCertificate: 'Completion_Certificate',
             sampling: 'Sampling'
         };
-        const fileName = `${labels[type] || 'Performa'}_${tenderId || 'work'}.pdf`;
+        const title = labels[type] || 'Performa';
+        const fileName = `${title}_${tenderId || 'work'}.docx`;
 
-        if (type === 'completionCertificate') {
-            validateCompletionCertificateData(data);
-            const resp = await requestCompletionCertificatePdf(tenderId, data);
-            if (isSuccessResponse(resp) && resp.pdfUrl) {
-                downloadPdfFromUrl(resp.pdfUrl, fileName);
-                if (statusEl) statusEl.innerText = 'PDF download started.';
-                return;
-            }
-            throw new Error(resp?.message || resp?.error || 'Completion Certificate PDF could not be generated.');
-        }
-
+        if (statusEl) statusEl.innerText = 'Creating Word document (.docx)...';
         const docxBlob = await createPerformaDocxBlob(type, data);
-
-        try {
-            const resp = await requestPerformaPdf(type, tenderId, docxBlob, data);
-            if (isSuccessResponse(resp) && resp.pdfUrl) {
-                downloadPdfFromUrl(resp.pdfUrl, fileName);
-                if (statusEl) statusEl.innerText = 'PDF download started.';
-                return;
-            }
-        } catch (e) {
-            console.warn('Server performa PDF unavailable, using client conversion.', e);
-        }
-
-        if (statusEl) statusEl.innerText = 'Preparing PDF...';
-        try {
-            await downloadPerformaPdfFromDocx(docxBlob, fileName);
-        } catch (e) {
-            if (/loadAsync/i.test(String(e?.message || e))) {
-                throw new Error('PDF conversion could not read the DOCX. Please refresh the app so the latest conversion library loads, then try again.');
-            }
-            throw e;
-        }
-        if (statusEl) statusEl.innerText = 'PDF download started.';
+        downloadBlob(docxBlob, fileName);
+        if (statusEl) statusEl.innerText = 'Word document (.docx) download started.';
+        showAppToast(`${title.replace(/_/g, ' ')} (.docx) downloaded.`);
     }
 
     async function generatePerforma(type, triggerButton) {
@@ -3175,16 +3159,16 @@
         const runDownload = async (data) => {
             if (btn) {
                 btn.disabled = true;
-                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generating...';
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating DOCX...';
             }
-            if (status) status.innerText = 'Generating PDF...';
+            if (status) status.innerText = 'Creating Word document (.docx)...';
             try {
                 await syncCompletionDateFromPerforma(type, tenderId, item, data, status);
                 await finalizePerformaDownload(type, tenderId, data, status);
             } catch (e) {
-                console.error('Performa PDF failed', e);
-                if (status) status.innerText = e.message || 'PDF could not be generated.';
-                alert(e.message || 'PDF could not be generated.');
+                console.error('Performa DOCX failed', e);
+                if (status) status.innerText = e.message || 'Word document could not be generated.';
+                alert(e.message || 'Word document could not be generated.');
             } finally {
                 if (btn) {
                     btn.disabled = false;
@@ -3771,11 +3755,97 @@
 
     function formatReportDateDisplay(date) {
         if (!date) return '';
-        return `${pad2(date.getDate())}/${pad2(date.getMonth() + 1)}/${date.getFullYear()}`;
+        const d = (date instanceof Date) ? date : parseReportDate(date);
+        if (!d) return '';
+        return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()}`;
     }
 
     function toDateInputValue(date) {
-        return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+        if (!date) return '';
+        const d = (date instanceof Date) ? date : parseReportDate(date);
+        if (!d) return '';
+        return formatReportDateDisplay(d);
+    }
+
+    function toIsoDate(date) {
+        if (!date) return '';
+        const d = (date instanceof Date) ? date : parseReportDate(date);
+        if (!d) return '';
+        return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+    }
+
+    function toReportFileDate(date) {
+        if (!date) return '';
+        const d = (date instanceof Date) ? date : parseReportDate(date);
+        if (!d) return '';
+        return `${pad2(d.getDate())}_${pad2(d.getMonth() + 1)}_${d.getFullYear()}`;
+    }
+
+    function applyDatePicker(target) {
+        let elements = [];
+        if (!target) {
+            elements = Array.from(document.querySelectorAll('.date-picker, input[data-datepicker="true"]'));
+        } else if (typeof target === 'string') {
+            elements = Array.from(document.querySelectorAll(target));
+        } else if (target instanceof NodeList || Array.isArray(target)) {
+            elements = Array.from(target);
+        } else if (target instanceof HTMLElement) {
+            elements = [target];
+        }
+
+        elements.forEach(input => {
+            if (!input || input.type === 'hidden') return;
+
+            input.placeholder = "dd/mm/yyyy";
+            input.setAttribute("autocomplete", "off");
+            input.setAttribute("inputmode", "numeric");
+
+            if (!input.dataset.maskAttached) {
+                input.dataset.maskAttached = "1";
+
+                input.addEventListener('input', function(e) {
+                    if (e.inputType === 'deleteContentBackward') return;
+                    let v = this.value.replace(/[^\d/]/g, '').replace(/[-.]/g, '/');
+                    const digits = v.replace(/\D/g, '');
+                    if (digits.length <= 2) {
+                        this.value = digits;
+                    } else if (digits.length <= 4) {
+                        this.value = digits.slice(0, 2) + '/' + digits.slice(2);
+                    } else {
+                        this.value = digits.slice(0, 2) + '/' + digits.slice(2, 4) + '/' + digits.slice(4, 8);
+                    }
+                });
+
+                input.addEventListener('blur', function() {
+                    if (!this.value) return;
+                    const d = parseReportDate(this.value);
+                    if (d) {
+                        this.value = formatReportDateDisplay(d);
+                        if (this._flatpickr) {
+                            this._flatpickr.setDate(d, false);
+                        }
+                    }
+                });
+            }
+
+            if (typeof flatpickr !== 'undefined' && !input._flatpickr) {
+                flatpickr(input, {
+                    dateFormat: "d/m/Y",
+                    allowInput: true,
+                    disableMobile: true,
+                    parseDate: function(dateStr) {
+                        return parseReportDate(dateStr);
+                    },
+                    formatDate: function(date) {
+                        return formatReportDateDisplay(date);
+                    },
+                    onClose: function() {
+                        if (typeof input.onchange === 'function') input.onchange();
+                        input.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                });
+            }
+        });
     }
 
     function isReportDateKey(key) {
@@ -3947,6 +4017,9 @@
         document.getElementById('reportYearWrap').classList.toggle('d-none', mode !== 'year');
         document.getElementById('reportFromWrap').classList.toggle('d-none', mode !== 'custom');
         document.getElementById('reportToWrap').classList.toggle('d-none', mode !== 'custom');
+        if (mode === 'custom') {
+            applyDatePicker('#reportFromDate, #reportToDate');
+        }
         updateReportPreview();
     }
 
@@ -5471,7 +5544,7 @@
         return {
             generatedDate,
             reportTitle: `MC Dadri BG Details Report As On ${formatReportDateDisplay(generatedDate)}`,
-            fileBase: `MC_Dadri_BG_Details_Report_${toDateInputValue(generatedDate)}`,
+            fileBase: `MC_Dadri_BG_Details_Report_${toReportFileDate(generatedDate)}`,
             works,
             detailBlocks,
             totals: {
@@ -5776,24 +5849,9 @@
 
     function formatDateInputValue(value) {
         if (!value || value === "-") return "";
-
-        const text = String(value).trim();
-        if (/^\d{4}-\d{2}-\d{2}/.test(text)) return text.slice(0, 10);
-
-        let d = new Date(text);
-        if (isNaN(d.getTime()) && text.includes('/')) {
-            const parts = text.split('/');
-            if (parts.length === 3) {
-                d = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
-            }
-        }
-
-        if (isNaN(d.getTime())) return "";
-
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
+        const d = parseReportDate(value);
+        if (!d) return "";
+        return formatReportDateDisplay(d);
     }
 
     function getInputConfig(key, value) {
@@ -5802,7 +5860,8 @@
         let inputValue = value ?? "";
 
         if (isDateKey(key)) {
-            inputType = "date";
+            inputType = "text";
+            extraAttrs = 'placeholder="dd/mm/yyyy" pattern="\\d{2}/\\d{2}/\\d{4}" inputmode="numeric" autocomplete="off"';
             inputValue = formatDateInputValue(inputValue);
         } else if (isCostKey(key)) {
             inputType = "number";
@@ -6155,7 +6214,7 @@
             reportRows,
             reportTitle,
             definitions: getReportDefinitions(reportRows),
-            fileBase: `MC_Dadri_Development_Works_Report_${toDateInputValue(range.startDate)}_to_${toDateInputValue(range.endDate)}`
+            fileBase: `MC_Dadri_Development_Works_Report_${toReportFileDate(range.startDate)}_to_${toReportFileDate(range.endDate)}`
         };
     }
 
@@ -6461,7 +6520,7 @@
         const asOfDate = getTodayDateOnly();
         const entries = getOverdueWorks(asOfDate);
         const reportTitle = `MC Dadri Overdue Works Report As On ${formatReportDateDisplay(asOfDate)}`;
-        const fileBase = `MC_Dadri_Overdue_Works_Report_${toDateInputValue(asOfDate)}`;
+        const fileBase = `MC_Dadri_Overdue_Works_Report_${toReportFileDate(asOfDate)}`;
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
@@ -6837,6 +6896,14 @@
         return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
     }
 
+    function formatDocxValidRange(start, end) {
+        if (!start && !end) return '';
+        const from = formatBgReportDate(start);
+        const to = formatBgReportDate(end);
+        if (from && to && from !== '-' && to !== '-') return `${from} to ${to}`;
+        return to || from || '';
+    }
+
     function buildTemplateData(type, item, details) {
         const agreementAmount = item ? parseWorkAmount(getAgreementAmount(item), getAgreementAmountKey(item)) : 0;
         return {
@@ -6849,10 +6916,10 @@
             BANK_NAME: getBankBranchDisplay(details),
             BG1_NO: details?.pbgNo || '',
             BG1_AMOUNT: formatAmountForTemplate(details?.pbgAmt),
-            BG1_VALID: details?.pbgValid || '',
+            BG1_VALID: formatDocxValidRange(details?.pbgSubDate, details?.pbgValid),
             BG2_NO: details?.addNo || '',
             BG2_AMOUNT: formatAmountForTemplate(details?.addAmt),
-            BG2_VALID: details?.addValid || '',
+            BG2_VALID: formatDocxValidRange(details?.addSubDate, details?.addValid),
             FULL_DATE: getAgreementFullDate(),
             AMOUNT: formatAmountForTemplate(agreementAmount),
             AMOUNT_WORDS: numberToWordsIndian(agreementAmount)
@@ -6916,24 +6983,14 @@
 
     function downloadPdfFromUrl(url, fileName) {
         const downloadUrl = getDriveDownloadUrl(url);
-        const isDriveUrl = Boolean(getDriveFileId(url));
-
-        if (isDriveUrl) {
-            const frame = document.createElement('iframe');
-            frame.style.display = 'none';
-            frame.src = downloadUrl;
-            document.body.appendChild(frame);
-            setTimeout(() => frame.remove(), 30000);
-            return;
-        }
-
         const link = document.createElement('a');
         link.href = downloadUrl;
-        link.download = fileName;
-        link.target = '_self';
+        link.target = '_blank';
+        link.rel = 'noopener';
+        if (fileName) link.download = fileName;
         document.body.appendChild(link);
         link.click();
-        link.remove();
+        setTimeout(() => link.remove(), 500);
     }
 
     function openPdfFromUrl(url) {
@@ -7104,7 +7161,12 @@
             return `<span class="text-danger fw-bold">AWAITING ALLOTMENT</span>`;
         }
 
-        return `${escapeHtml(startDate || '-')} to ${escapeHtml(endDate || '-')}`;
+        const startD = parseReportDate(startDate);
+        const endD = parseReportDate(endDate);
+        const startDisplay = startD ? formatReportDateDisplay(startD) : (startDate || '-');
+        const endDisplay = endD ? formatReportDateDisplay(endD) : (endDate || '-');
+
+        return `${escapeHtml(startDisplay)} to ${escapeHtml(endDisplay)}`;
     }
 
     function getVisibleData() {
@@ -7332,8 +7394,17 @@
 
             const rawValue = item[key] !== undefined && item[key] !== null ? item[key] : "";
             const isLocked = (rawValue !== "" && rawValue !== "-") ? "readonly" : "";
+            const isDate = isDateKey(key);
             const { inputType, extraAttrs, inputValue } = getInputConfig(key, rawValue);
-            const viewValue = isCostKey(key) ? formatWorkAmount(key, item[key]) : escapeHtml(rawValue === "" ? '-' : rawValue);
+            let viewValue = '-';
+            if (isCostKey(key)) {
+                viewValue = formatWorkAmount(key, item[key]);
+            } else if (isDate) {
+                const dateObj = parseReportDate(rawValue);
+                viewValue = dateObj ? formatReportDateDisplay(dateObj) : escapeHtml(rawValue === "" ? '-' : rawValue);
+            } else {
+                viewValue = escapeHtml(rawValue === "" ? '-' : rawValue);
+            }
 
             container.innerHTML += `
                 <div class="col-md-4 col-sm-6">
@@ -7344,7 +7415,7 @@
                             type="${inputType}"
                             name="${escapeHtml(key)}"
                             ${extraAttrs}
-                            class="edit-input hidden field-edit"
+                            class="edit-input hidden field-edit ${isDate ? 'date-picker' : ''}"
                             value="${escapeHtml(inputValue)}"
                             ${isLocked}
                         >
@@ -7364,6 +7435,7 @@
         if (startEdit) enableEditMode();
 
         showSubPageModal(document.getElementById('workModal'));
+        applyDatePicker('#modalContent .date-picker');
     }
 
     function enableEditMode() {
@@ -7378,6 +7450,7 @@
         document.getElementById('shareHeaderBtn').classList.add('hidden');
         document.getElementById('bgDetailsBtn').classList.add('hidden');
         document.getElementById('saveBtn').classList.remove('hidden');
+        applyDatePicker('#modalContent .date-picker');
     }
 
     function filterData(f) {
@@ -7444,7 +7517,7 @@
                             name="${escapeHtml(key)}"
                             ${extraAttrs}
                             ${required}
-                            class="edit-input"
+                            class="edit-input ${isDateKey(key) ? 'date-picker' : ''}"
                             value=""
                         >
                     </div>
@@ -7454,6 +7527,7 @@
 
         document.getElementById('addWorkForm').reset();
         showSubPageModal(document.getElementById('addWorkModal'));
+        applyDatePicker('#addWorkFields .date-picker');
     }
 
     function collectFormPayload(formId) {
@@ -7470,9 +7544,14 @@
 
         Object.keys(normalized).forEach(key => {
             const value = normalized[key];
-            if (isDateKey(key) && typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
-                const [year, month, day] = value.split("-");
-                normalized[key] = `${day}/${month}/${year}`;
+            if (isDateKey(key) && value) {
+                const d = parseReportDate(value);
+                if (d) {
+                    normalized[key] = formatReportDateDisplay(d);
+                } else if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                    const [year, month, day] = value.split("-");
+                    normalized[key] = `${day}/${month}/${year}`;
+                }
             }
         });
 
@@ -7880,54 +7959,7 @@
     }
 
     async function generateSelectedLetter(type, triggerButton) {
-        const selected = syncSelectedLetterWork();
-        const tenderId = selected?.tenderId || document.getElementById('letterTenderId').value;
-        const status = document.getElementById('letterDownloadStatus');
-        const btn = triggerButton || document.getElementById(type === 'agreement' ? 'generateAgreementBtn' : 'generateBgLetterBtn');
-        const originalHtml = btn ? btn.innerHTML : '';
-        const isAgreement = type === 'agreement';
-
-        if (!tenderId) {
-            if (status) status.innerText = 'Please select work.';
-            return;
-        }
-
-        const item = selected?.item || masterData.find(d => String(getTenderId(d) || '').trim() === tenderId);
-        let details = await getBgRegisterDetails(tenderId, item);
-        if (!details) {
-            const fallbackDetails = normalizeBgDetailsForAdditionalRequirement(findAnyBgDetails(tenderId), item);
-            if (isBgDetailsComplete(fallbackDetails, item)) {
-                details = fallbackDetails;
-                setBgRegisterDetails(tenderId, details, item);
-            }
-        }
-        if (!details) {
-            if (status) status.innerText = 'Please upload BG first.';
-            openSelectedWorkBgUpload(item, findAnyBgDetails(tenderId));
-            return;
-        }
-        details = normalizeBgDetailsForAdditionalRequirement(details, item);
-        setBgRegisterDetails(tenderId, details, item);
-
-        if (btn) {
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generating...';
-        }
-        if (status) status.innerText = 'Generating document...';
-
-        try {
-            await generateAndDownloadLetter(isAgreement, tenderId, details, item, status);
-        } catch (e) {
-            console.error('Letter download failed', e);
-            const message = e.message || 'The document could not be generated.';
-            if (status) status.innerText = message;
-            if (/upload\s+pbg/i.test(message)) openSelectedWorkBgUpload(item, findAnyBgDetails(tenderId));
-        } finally {
-            if (btn) {
-                btn.disabled = false;
-                btn.innerHTML = originalHtml;
-            }
-        }
+        return generateSelectedLetterDocx(type, triggerButton);
     }
 
     async function generateSelectedLetterDocx(type, triggerButton) {
@@ -7959,20 +7991,20 @@
         details = normalizeBgDetailsForAdditionalRequirement(details, item);
         setBgRegisterDetails(tenderId, details, item);
 
-        const btn = triggerButton || document.getElementById(isAgreement ? 'generateAgreementDocxBtn' : 'generateBgLetterDocxBtn');
+        const btn = triggerButton || document.getElementById(isAgreement ? 'generateAgreementDocxBtn' : 'generateBgLetterDocxBtn') || document.getElementById(isAgreement ? 'generateAgreementBtn' : 'generateBgLetterBtn');
         const originalHtml = btn ? btn.innerHTML : '';
         if (btn) {
             btn.disabled = true;
             btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating DOCX...';
         }
-        if (status) status.innerText = 'Creating Word document...';
+        if (status) status.innerText = 'Creating Word document (.docx)...';
 
         try {
             const docxBlob = await createDocxBlob(type, item, details);
             const fileName = `${docTitle}_${tenderId}.docx`;
             downloadBlob(docxBlob, fileName);
-            if (status) status.innerText = 'DOCX download started.';
-            showAppToast(`${docTitle} (.docx) downloaded.`);
+            if (status) status.innerText = 'Word document (.docx) download started.';
+            showAppToast(`${docTitle.replace(/_/g, ' ')} (.docx) downloaded.`);
         } catch (e) {
             console.error('DOCX generation failed', e);
             if (status) status.innerText = e.message || 'DOCX generation failed.';
@@ -7985,29 +8017,7 @@
     }
 
     async function generateBgLetterForCurrentDetails(triggerButton) {
-        const tenderId = String(currentTenderId || '').trim();
-        const item = masterData.find(d => String(getTenderId(d) || '').trim() === tenderId);
-        const details = currentViewBgDetails || bgRegisterMap[tenderId] || bgPortalMap[tenderId];
-        if (!details) {
-            alert('BG details not found');
-            return;
-        }
-        const originalHtml = triggerButton ? triggerButton.innerHTML : '';
-        if (triggerButton) {
-            triggerButton.disabled = true;
-            triggerButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generating...';
-        }
-        try {
-            await generateAndDownloadLetter(false, tenderId, details, item);
-        } catch (e) {
-            console.error('BG letter generation failed', e);
-            alert(e.message || 'Could not generate BG letter.');
-        } finally {
-            if (triggerButton) {
-                triggerButton.disabled = false;
-                triggerButton.innerHTML = originalHtml;
-            }
-        }
+        return generateBgLetterDocxForCurrentDetails(triggerButton);
     }
 
     async function generateBgLetterDocxForCurrentDetails(triggerButton) {
@@ -8113,13 +8123,18 @@
         const additionalRequired = hasAdditionalBg(details);
         document.getElementById('viewBgTenderLabel').innerText = `Tender ID: ${details.tenderId || '-'}`;
         const content = document.getElementById('viewBgContent');
+        const formatBgDate = val => {
+            if (!val || val === '-' || val === 'null' || val === 'undefined') return '-';
+            const d = parseReportDate(val);
+            return d ? formatReportDateDisplay(d) : String(val).trim();
+        };
         const releaseRows = [
             ['PBG Release Status', pbgRelease.status],
-            ['PBG Release Date', pbgRelease.date],
+            ['PBG Release Date', formatBgDate(pbgRelease.date)],
             ['PBG Release Remarks', pbgRelease.remarks],
             ...(additionalRequired ? [
                 ['Additional PBG Release Status', addRelease.status],
-                ['Additional PBG Release Date', addRelease.date],
+                ['Additional PBG Release Date', formatBgDate(addRelease.date)],
                 ['Additional PBG Release Remarks', addRelease.remarks]
             ] : [])
         ].filter(([, value]) => hasDisplayValue(value));
@@ -8128,13 +8143,13 @@
             ['Agency Name', details.agencyName],
             ['PBG Amount', formatCurrency(details.pbgAmt)],
             ['PBG No.', details.pbgNo],
-            ['PBG Submission Date', details.pbgSubDate],
-            ['PBG Valid Up To', details.pbgValid],
+            ['PBG Submission Date', formatBgDate(details.pbgSubDate)],
+            ['PBG Valid Up To', formatBgDate(details.pbgValid)],
             ...(additionalRequired ? [
                 ['Additional PBG Amount', formatCurrency(details.addAmt)],
                 ['Additional PBG No.', details.addNo || '-'],
-                ['Additional PBG Submission Date', details.addSubDate || '-'],
-                ['Additional PBG Valid Up To', details.addValid || '-']
+                ['Additional PBG Submission Date', formatBgDate(details.addSubDate)],
+                ['Additional PBG Valid Up To', formatBgDate(details.addValid)]
             ] : []),
             ['Bank Name', getBankBranchDisplay(details)],
             ...releaseRows,
@@ -8216,6 +8231,7 @@
         document.getElementById('releaseBgRemarks').value = '';
         updateReleaseWarning();
         showSubPageModal(document.getElementById('releaseBgModal'), { replaceOpen: true });
+        applyDatePicker('#releaseBgModal .date-picker');
     }
 
     function updateReleaseWarning() {
@@ -8291,14 +8307,14 @@
     }
 
     function toRegisterDate(value) {
-        if (!value || typeof value !== "string") return value || "";
-
-        if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        if (!value) return "";
+        const d = parseReportDate(value);
+        if (d) return formatReportDateDisplay(d);
+        if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
             const [year, month, day] = value.split("-");
             return `${day}/${month}/${year}`;
         }
-
-        return value;
+        return String(value || '').trim();
     }
 
     function setAdditionalPbgVisibility(show) {
@@ -8605,6 +8621,7 @@
         setPbgUploadFieldLocks(Boolean(normalizedPrefill), normalizedPrefill);
 
         showSubPageModal(document.getElementById('pbgUploadModal'), { replaceOpen: true });
+        applyDatePicker('#pbgUploadModal .date-picker');
     }
 
     async function openPbgFileUploadOnly() {

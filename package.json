@@ -10,6 +10,7 @@
     "build": "node -e \"console.log('Build successful')\""
   },
   "dependencies": {
-    "express": "^4.21.2"
+    "express": "^4.21.2",
+    "flatpickr": "^4.6.13"
   }
 }
