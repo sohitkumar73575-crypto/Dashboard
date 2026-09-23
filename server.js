@@ -9,7 +9,7 @@ const app = express();
 const PORT = 3000;
 const HOST = '0.0.0.0';
 
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxOKN15Szd7A3OGEM1-Xg_Jnwhg4QUibhQ4zAaFHuQBmJiUhtoyeAHFzUtEwdDrUtEFeg/exec';
+const APPS_SCRIPT_URL = process.env.APPS_SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbxOKN15Szd7A3OGEM1-Xg_Jnwhg4QUibhQ4zAaFHuQBmJiUhtoyeAHFzUtEwdDrUtEFeg/exec';
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
