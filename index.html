@@ -2456,9 +2456,7 @@
     async function ensureDocumentLibraries() {
         if (!window.PizZip) await loadFeatureScript('pizzip');
         if (!window.docxtemplater) await loadFeatureScript('docxtemplater');
-        if (!window.DADRI_DOCX_TEMPLATES || window.DADRI_DOCX_TEMPLATES.version !== '2026-09-23-v3') {
-            await reloadFeatureScript('templates');
-        }
+        if (!window.DADRI_DOCX_TEMPLATES) await loadFeatureScript('templates');
         if (!window.PizZip || !window.docxtemplater || !window.DADRI_DOCX_TEMPLATES) {
             throw new Error('Document template libraries could not be loaded. Please check your internet connection and try again.');
         }
@@ -8042,7 +8040,6 @@
         const status = document.getElementById('letterDownloadStatus');
         const isAgreement = type === 'agreement';
         const docTitle = isAgreement ? 'Agreement' : 'BG_Verification_Letter';
-        const fileName = `${docTitle}_${tenderId}.docx`;
 
         if (!tenderId) {
             if (status) status.innerText = 'Please select work.';
@@ -8051,118 +8048,44 @@
 
         const item = selected?.item || masterData.find(d => String(getTenderId(d) || '').trim() === tenderId);
         let details = await getBgRegisterDetails(tenderId, item);
-
         if (!details) {
-            const fallbackDetails = normalizeBgDetailsForAdditionalRequirement(
-                findAnyBgDetails(tenderId),
-                item
-            );
-
+            const fallbackDetails = normalizeBgDetailsForAdditionalRequirement(findAnyBgDetails(tenderId), item);
             if (isBgDetailsComplete(fallbackDetails, item)) {
                 details = fallbackDetails;
                 setBgRegisterDetails(tenderId, details, item);
             }
         }
-
-        if (!details && !isAgreement) {
+        if (!details) {
             if (status) status.innerText = 'Please upload BG first.';
             openSelectedWorkBgUpload(item, findAnyBgDetails(tenderId));
             return;
         }
+        details = normalizeBgDetailsForAdditionalRequirement(details, item);
+        setBgRegisterDetails(tenderId, details, item);
 
-        if (details) {
-            details = normalizeBgDetailsForAdditionalRequirement(details, item);
-            setBgRegisterDetails(tenderId, details, item);
-        }
-
-        const btn = triggerButton ||
-            document.getElementById(
-                isAgreement ? 'generateAgreementDocxBtn' : 'generateBgLetterDocxBtn'
-            ) ||
-            document.getElementById(
-                isAgreement ? 'generateAgreementBtn' : 'generateBgLetterBtn'
-            );
-
+        const btn = triggerButton || document.getElementById(isAgreement ? 'generateAgreementDocxBtn' : 'generateBgLetterDocxBtn') || document.getElementById(isAgreement ? 'generateAgreementBtn' : 'generateBgLetterBtn');
         const originalHtml = btn ? btn.innerHTML : '';
-
         if (btn) {
             btn.disabled = true;
-            btn.innerHTML =
-                '<span class="spinner-border spinner-border-sm me-2"></span>Creating DOCX...';
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating DOCX...';
         }
-
-        if (status) status.innerText = 'Generating document...';
+        if (status) status.innerText = 'Creating Word document (.docx)...';
 
         try {
-            // Use the same server-side generation flow as Generate Agreement.
-            // This keeps BG generation tied to Code.js and its configured BG templates.
-            const resp = await requestLetterDocx(
-                isAgreement,
-                tenderId,
-                details,
-                item
-            );
-
-            if (isSuccessResponse(resp) && resp.docxUrl) {
-                if (downloadDocxFromDrive(resp, fileName)) {
-                    if (status) {
-                        status.innerText = 'Word document (.docx) download started.';
-                    }
-
-                    showAppToast(
-                        `${docTitle.replace(/_/g, ' ')} (.docx) downloaded.`
-                    );
-                    return;
-                }
-            }
-
-            throw new Error(
-                resp?.message || 'Server-side document generation failed.'
-            );
-
+            const docxBlob = await createDocxBlob(type, item, details);
+            const fileName = `${docTitle}_${tenderId}.docx`;
+            downloadBlob(docxBlob, fileName);
+            if (status) status.innerText = 'Word document (.docx) download started.';
+            showAppToast(`${docTitle.replace(/_/g, ' ')} (.docx) downloaded.`);
         } catch (e) {
-            console.warn('Server DOCX request timed out or failed.', e);
-
-            try {
-                if (status) status.innerText = 'Checking generated Drive file...';
-
-                const lookupResp = await postJson({
-                    method: 'getGeneratedBgLetter',
-                    action: 'getGeneratedBgLetter',
-                    tenderId
-                }, 120000);
-
-                if (isSuccessResponse(lookupResp) && lookupResp.docxUrl) {
-                    if (downloadDocxFromDrive(lookupResp, fileName)) {
-                        if (status) status.innerText = 'Word document (.docx) download started.';
-                        showAppToast(docTitle.replace(/_/g, ' ') + ' (.docx) downloaded.');
-                        return;
-                    }
-                }
-
-                throw new Error(
-                    lookupResp?.message ||
-                    'Generated Drive document is not ready yet.'
-                );
-            } catch (lookupError) {
-                console.error('Generated Drive DOCX lookup failed', lookupError);
-                if (status) {
-                    status.innerText =
-                        lookupError.message ||
-                        e.message ||
-                        'DOCX generation failed.';
-                }
-            }
+            console.error('DOCX generation failed', e);
+            if (status) status.innerText = e.message || 'DOCX generation failed.';
         } finally {
             if (btn) {
                 btn.disabled = false;
                 btn.innerHTML = originalHtml;
             }
         }
-    }
-
-    async function generateBgLetterForCurrentDetails(triggerButton) {
-        return generateBgLetterDocxForCurrentDetails(triggerButton);
     }
 
     async function generateBgLetterDocxForCurrentDetails(triggerButton) {
@@ -8178,10 +8101,9 @@
             triggerButton.disabled = true;
             triggerButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating DOCX...';
         }
-        const fileName = `BG_Verification_Letter_${tenderId}.docx`;
-
         try {
             const docxBlob = await createDocxBlob('bg', item, details);
+            const fileName = `BG_Verification_Letter_${tenderId}.docx`;
             downloadBlob(docxBlob, fileName);
             showAppToast('BG Letter (.docx) downloaded.');
         } catch (e) {
