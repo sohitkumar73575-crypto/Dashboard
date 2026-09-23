@@ -3541,7 +3541,7 @@ window.DADRI_PERFORMA_TEMPLATES = window.DADRI_DOCX_TEMPLATES;
 
     if ("serviceWorker" in navigator && window.location.protocol !== "file:") {
         window.addEventListener("load", () => {
-            navigator.serviceWorker.register("./service-worker.js").catch(err => {
+            navigator.serviceWorker.register("./service-worker.js?v=20260924_v28").catch(err => {
                 console.warn("Service worker registration failed", err);
             });
         });
