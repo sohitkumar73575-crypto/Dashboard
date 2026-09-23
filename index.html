@@ -2394,35 +2394,63 @@
         }
     }
 
+    const FEATURE_SCRIPT_FALLBACKS = {
+        pizzip: 'https://unpkg.com/pizzip@3.1.7/dist/pizzip.min.js',
+        docxtemplater: 'https://unpkg.com/docxtemplater@3.47.4/build/docxtemplater.js'
+    };
+
     function loadFeatureScript(key) {
         if (!FEATURE_SCRIPTS[key]) return Promise.reject(new Error(`Unknown feature script: ${key}`));
         if (featureScriptPromises[key]) return featureScriptPromises[key];
+
         featureScriptPromises[key] = new Promise((resolve, reject) => {
             const existing = document.querySelector(`script[data-feature-script="${key}"]`);
             if (existing) {
+                if (existing.dataset.loaded === 'true') {
+                    resolve();
+                    return;
+                }
                 existing.addEventListener('load', resolve, { once: true });
                 existing.addEventListener('error', () => reject(new Error(`Could not load ${key}.`)), { once: true });
-                if (existing.dataset.loaded === 'true') resolve();
                 return;
             }
-            const script = document.createElement('script');
-            script.src = FEATURE_SCRIPTS[key];
-            script.async = true;
-            script.dataset.featureScript = key;
-            if (FEATURE_SCRIPT_INTEGRITY[key]) {
-                script.integrity = FEATURE_SCRIPT_INTEGRITY[key];
-                script.crossOrigin = 'anonymous';
-            }
-            script.onload = () => {
-                script.dataset.loaded = 'true';
-                resolve();
+
+            const sources = [FEATURE_SCRIPTS[key], FEATURE_SCRIPT_FALLBACKS[key]].filter(Boolean);
+            let sourceIndex = 0;
+
+            const tryNext = () => {
+                if (sourceIndex >= sources.length) {
+                    delete featureScriptPromises[key];
+                    reject(new Error(`Could not load ${key} from the available CDNs.`));
+                    return;
+                }
+
+                const script = document.createElement('script');
+                script.src = sources[sourceIndex++];
+                script.async = true;
+                script.dataset.featureScript = key;
+
+                // SRI is intentionally not used for DOCX libraries because the package
+                // builds are loaded from multiple CDNs with different published bytes.
+                if (FEATURE_SCRIPT_INTEGRITY[key]) {
+                    script.integrity = FEATURE_SCRIPT_INTEGRITY[key];
+                    script.crossOrigin = 'anonymous';
+                }
+
+                script.onload = () => {
+                    script.dataset.loaded = 'true';
+                    resolve();
+                };
+                script.onerror = () => {
+                    script.remove();
+                    tryNext();
+                };
+                document.head.appendChild(script);
             };
-            script.onerror = () => {
-                delete featureScriptPromises[key];
-                reject(new Error(`Could not load ${key}. Please check your internet connection and try again.`));
-            };
-            document.head.appendChild(script);
+
+            tryNext();
         });
+
         return featureScriptPromises[key];
     }
 
