@@ -1661,6 +1661,25 @@
                         <i class="fa-solid fa-file-word me-2"></i>Sampling Performa (.docx)
                     </button>
                 </div>
+
+                <div class="mt-4 pt-3 border-top">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 p-2 bg-light rounded border">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fa-solid fa-file-lines text-danger"></i>
+                            <span id="activeBgTemplateLabel" class="small fw-semibold text-dark">Format: <span class="text-dark fw-bold">Updated Drive Format (Branch Manager / Lien)</span></span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="document.getElementById('customBgTemplateInput').click()" title="Google Drive se download ki hui apni updated .docx yahan upload kar sakte hain">
+                                <i class="fa-solid fa-cloud-arrow-up me-1"></i>Upload Edited .docx
+                            </button>
+                            <button id="resetBgTemplateBtn" type="button" class="btn btn-sm btn-outline-secondary d-none" onclick="resetCustomBgTemplate()" title="Default updated template par reset karein">
+                                <i class="fa-solid fa-rotate-left me-1"></i>Reset
+                            </button>
+                        </div>
+                    </div>
+                    <input type="file" id="customBgTemplateInput" accept=".docx" style="display:none" onchange="handleCustomBgTemplateUpload(this)">
+                </div>
+
                 <div id="letterDownloadStatus" class="photo-hint mt-3"></div>
             </div>
         </div>
@@ -2232,7 +2251,7 @@
         pizzip: 'https://cdn.jsdelivr.net/npm/pizzip@3.1.7/dist/pizzip.min.js',
         jszip: 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js',
         docxtemplater: 'https://cdn.jsdelivr.net/npm/docxtemplater@3.47.4/build/docxtemplater.js',
-        templates: './templates.js',
+        templates: './templates.js?v=20260923_v2',
         performaTemplates: './performa-templates.js',
         docxPreview: 'https://cdn.jsdelivr.net/npm/docx-preview@0.3.5/dist/docx-preview.min.js'
     };
@@ -2426,6 +2445,16 @@
         return featureScriptPromises[key];
     }
 
+    function reloadFeatureScript(key) {
+        const old = document.querySelector(`script[data-feature-script="${key}"]`);
+        if (old) old.remove();
+        delete featureScriptPromises[key];
+        if (key === 'templates') {
+            FEATURE_SCRIPTS[key] = `./templates.js?v=${Date.now()}`;
+        }
+        return loadFeatureScript(key);
+    }
+
     async function ensureXlsxLibrary() {
         if (!window.XLSX) await loadFeatureScript('xlsx');
         if (!window.XLSX) throw new Error('Excel export library could not be loaded. Please check your internet connection and try again.');
@@ -2445,7 +2474,9 @@
     async function ensureDocumentLibraries() {
         if (!window.PizZip) await loadFeatureScript('pizzip');
         if (!window.docxtemplater) await loadFeatureScript('docxtemplater');
-        if (!window.DADRI_DOCX_TEMPLATES) await loadFeatureScript('templates');
+        if (!window.DADRI_DOCX_TEMPLATES || window.DADRI_DOCX_TEMPLATES.version !== '2026-09-23-v2') {
+            await reloadFeatureScript('templates');
+        }
         if (!window.PizZip || !window.docxtemplater || !window.DADRI_DOCX_TEMPLATES) {
             throw new Error('Document template libraries could not be loaded. Please check your internet connection and try again.');
         }
@@ -5095,6 +5126,7 @@
         results.classList.add('hidden');
         results.removeAttribute('style');
         document.getElementById('letterDownloadStatus').innerText = '';
+        updateActiveTemplateDisplay();
         document.getElementById('generateLettersModal').classList.remove('keyboard-lift');
         document.getElementById('generateLettersModal').addEventListener('hidden.bs.modal', () => {
             document.getElementById('generateLettersModal').classList.remove('keyboard-lift');
@@ -6930,11 +6962,20 @@
         await ensureDocumentLibraries();
 
         const hasSecondBg = hasAdditionalBg(details);
-        const templateBase64 = type === 'agreement'
-            ? window.DADRI_DOCX_TEMPLATES.agreement
-            : hasSecondBg
-                ? window.DADRI_DOCX_TEMPLATES.bgDouble
-                : window.DADRI_DOCX_TEMPLATES.bgSingle;
+        let templateBase64 = null;
+        if (type === 'agreement') {
+            const customAgreement = localStorage.getItem('dadri_custom_agreement_template_docx');
+            templateBase64 = customAgreement || window.DADRI_DOCX_TEMPLATES.agreement;
+        } else {
+            const customBg = localStorage.getItem('dadri_custom_bg_template_docx');
+            if (customBg) {
+                templateBase64 = customBg;
+            } else {
+                templateBase64 = hasSecondBg
+                    ? window.DADRI_DOCX_TEMPLATES.bgDouble
+                    : window.DADRI_DOCX_TEMPLATES.bgSingle;
+            }
+        }
 
         const PizZipConstructor = window.PizZip?.default || window.PizZip;
         const zip = new PizZipConstructor(base64ToArrayBuffer(templateBase64));
@@ -6957,6 +6998,55 @@
             type: 'blob',
             mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
         });
+    }
+
+    function handleCustomBgTemplateUpload(input) {
+        const file = input.files?.[0];
+        if (!file) return;
+        if (!file.name.toLowerCase().endsWith('.docx')) {
+            alert('Please select a valid .docx file.');
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            try {
+                const base64 = e.target.result.split(',')[1];
+                await ensureDocumentLibraries();
+                const PizZipConstructor = window.PizZip?.default || window.PizZip;
+                if (PizZipConstructor) {
+                    new PizZipConstructor(base64ToArrayBuffer(base64));
+                }
+                localStorage.setItem('dadri_custom_bg_template_docx', base64);
+                localStorage.setItem('dadri_custom_bg_template_filename', file.name);
+                updateActiveTemplateDisplay();
+                showAppToast(`Updated BG template saved: ${file.name}`);
+            } catch (err) {
+                console.error('Invalid docx', err);
+                alert('The selected file does not appear to be a valid .docx file.');
+            }
+        };
+        reader.readAsDataURL(file);
+        input.value = '';
+    }
+
+    function resetCustomBgTemplate() {
+        localStorage.removeItem('dadri_custom_bg_template_docx');
+        localStorage.removeItem('dadri_custom_bg_template_filename');
+        updateActiveTemplateDisplay();
+        showAppToast('Reset to default updated BG template.');
+    }
+
+    function updateActiveTemplateDisplay() {
+        const nameEl = document.getElementById('activeBgTemplateLabel');
+        const resetBtn = document.getElementById('resetBgTemplateBtn');
+        const customName = localStorage.getItem('dadri_custom_bg_template_filename');
+        if (customName && nameEl) {
+            nameEl.innerHTML = `<span class="badge bg-success me-1">Custom File Active</span> <span class="text-truncate d-inline-block align-middle" style="max-width: 220px;">${escapeHtml(customName)}</span>`;
+            resetBtn?.classList.remove('d-none');
+        } else if (nameEl) {
+            nameEl.innerHTML = `Format: <span class="text-dark fw-bold">Updated Drive Format (Branch Manager / Lien)</span>`;
+            resetBtn?.classList.add('d-none');
+        }
     }
 
     function downloadBlob(blob, fileName) {
