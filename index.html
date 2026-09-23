@@ -7991,7 +7991,7 @@
             additionalRequired: isAdditionalBgRequired(item, normalized),
             expectedAdditionalAmount,
             forceRegenerate: true
-        }, 50000);
+        }, 120000);
     }
 
     async function generateAndDownloadLetter(isAgreement, tenderId, details, item, statusEl = null) {
@@ -8121,34 +8121,34 @@
             );
 
         } catch (e) {
-            console.warn(
-                'Server DOCX generation failed, falling back to local template generation.',
-                e
-            );
+            console.warn('Server DOCX request timed out or failed.', e);
 
             try {
-                const docxBlob = await createDocxBlob(
-                    type,
-                    item,
-                    details
-                );
+                if (status) status.innerText = 'Checking generated Drive file...';
 
-                downloadBlob(docxBlob, fileName);
+                const lookupResp = await postJson({
+                    method: 'getGeneratedBgLetter',
+                    action: 'getGeneratedBgLetter',
+                    tenderId
+                }, 120000);
 
-                if (status) {
-                    status.innerText = 'Word document (.docx) download started.';
+                if (isSuccessResponse(lookupResp) && lookupResp.docxUrl) {
+                    if (downloadDocxFromDrive(lookupResp, fileName)) {
+                        if (status) status.innerText = 'Word document (.docx) download started.';
+                        showAppToast(docTitle.replace(/_/g, ' ') + ' (.docx) downloaded.');
+                        return;
+                    }
                 }
 
-                showAppToast(
-                    `${docTitle.replace(/_/g, ' ')} (.docx) downloaded.`
+                throw new Error(
+                    lookupResp?.message ||
+                    'Generated Drive document is not ready yet.'
                 );
-
-            } catch (fallbackError) {
-                console.error('DOCX generation failed', fallbackError);
-
+            } catch (lookupError) {
+                console.error('Generated Drive DOCX lookup failed', lookupError);
                 if (status) {
                     status.innerText =
-                        fallbackError.message ||
+                        lookupError.message ||
                         e.message ||
                         'DOCX generation failed.';
                 }
