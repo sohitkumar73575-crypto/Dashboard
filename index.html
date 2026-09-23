@@ -2432,7 +2432,7 @@
         if (old) old.remove();
         delete featureScriptPromises[key];
         if (key === 'templates') {
-            FEATURE_SCRIPTS[key] = `./templates.js?v=${Date.now()}`;
+            FEATURE_SCRIPTS[key] = `./document-templates.js?v=${Date.now()}`;
         }
         return loadFeatureScript(key);
     }
