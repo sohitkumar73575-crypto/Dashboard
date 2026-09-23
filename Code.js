@@ -926,10 +926,8 @@ function generateBgLetterPdfFromWeb(body) {
     return jsonOutput({ status: 'error', message: 'Please upload PBG details first' });
   }
 
-  if (!hasBgRegisterData(details, tenderId, body)) {
-    return jsonOutput({ status: 'error', message: 'Please complete Additional PBG details first' });
-  }
-
+  // A BG letter is generated for the BGs actually entered in BG_Register.
+  // One BG -> single format; two BGs -> double format.
   const result = generateLetterAuto(row, body);
   const pdfUrl = typeof result === 'object' ? (result.pdfUrl || '') : result;
   const docxUrl = typeof result === 'object' ? (result.docxUrl || '') : '';
@@ -1330,7 +1328,10 @@ function generateLetterAuto(row, options) {
   const bg1Valid = formatDateForLetter(bg1Start) + ' to ' + formatDateForLetter(bg1End);
   const bg2Valid = formatDateForLetter(bg2Start) + ' to ' + formatDateForLetter(bg2End);
   const today = Utilities.formatDate(new Date(), 'Asia/Kolkata', 'dd MMM yyyy');
-  const hasBG2 = isAdditionalBgRequiredForTender(tenderId, options);
+  const hasBG2 = Boolean(
+    String(bg2No || '').trim() &&
+    String(data[8] || '').trim()
+  );
 
   const templateId = hasBG2 ? BG_LETTER_TEMPLATE_DOUBLE_ID : BG_LETTER_TEMPLATE_SINGLE_ID;
   const folder = getRequiredFolder(BG_LETTER_FOLDER_ID, 'BG letter output');
