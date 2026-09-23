@@ -8058,8 +8058,30 @@
         if (status) status.innerText = 'Creating Word document (.docx)...';
 
         try {
-            const docxBlob = await createDocxBlob(type, item, details);
             const fileName = `${docTitle}_${tenderId}.docx`;
+
+            if (!isAgreement) {
+                const resp = await postJson({
+                    method: 'generateBgLetterDocx',
+                    action: 'generateBgLetterDocx',
+                    tenderId: tenderId,
+                    forceRegenerate: true
+                }, 25000);
+
+                if (!isSuccessResponse(resp)) {
+                    throw new Error(resp?.message || resp?.error || 'BG letter could not be generated.');
+                }
+
+                if (!downloadDocxFromDrive(resp, fileName)) {
+                    throw new Error('BG letter was generated but the DOCX download link was not returned.');
+                }
+
+                if (status) status.innerText = 'BG letter saved to Drive and DOCX download started.';
+                showAppToast('BG Verification Letter saved to Drive and downloaded.');
+                return;
+            }
+
+            const docxBlob = await createDocxBlob(type, item, details);
             downloadBlob(docxBlob, fileName);
             if (status) status.innerText = 'Word document (.docx) download started.';
             showAppToast(`${docTitle.replace(/_/g, ' ')} (.docx) downloaded.`);
@@ -8076,22 +8098,36 @@
 
     async function generateBgLetterDocxForCurrentDetails(triggerButton) {
         const tenderId = String(currentTenderId || '').trim();
-        const item = masterData.find(d => String(getTenderId(d) || '').trim() === tenderId);
         const details = currentViewBgDetails || bgRegisterMap[tenderId] || bgPortalMap[tenderId];
         if (!details) {
             alert('BG details not found');
             return;
         }
+
         const originalHtml = triggerButton ? triggerButton.innerHTML : '';
         if (triggerButton) {
             triggerButton.disabled = true;
             triggerButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating DOCX...';
         }
+
         try {
-            const docxBlob = await createDocxBlob('bg', item, details);
+            const resp = await postJson({
+                method: 'generateBgLetterDocx',
+                action: 'generateBgLetterDocx',
+                tenderId: tenderId,
+                forceRegenerate: true
+            }, 25000);
+
+            if (!isSuccessResponse(resp)) {
+                throw new Error(resp?.message || resp?.error || 'BG letter could not be generated.');
+            }
+
             const fileName = `BG_Verification_Letter_${tenderId}.docx`;
-            downloadBlob(docxBlob, fileName);
-            showAppToast('BG Letter (.docx) downloaded.');
+            if (!downloadDocxFromDrive(resp, fileName)) {
+                throw new Error('BG letter was generated but the DOCX download link was not returned.');
+            }
+
+            showAppToast('BG Letter saved to Drive and downloaded.');
         } catch (e) {
             console.error('BG letter DOCX failed', e);
             alert(e.message || 'Could not create DOCX.');
