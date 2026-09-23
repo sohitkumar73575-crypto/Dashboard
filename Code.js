@@ -66,11 +66,7 @@ function doPost(e) {
       return withScriptLock(() => releaseBgFromWeb(params));
     }
 
-    if (action === 'getGeneratedBgLetter') {
-      return withScriptLock(() => getGeneratedBgLetterForWeb(params));
-    }
-
-    if (action === 'generateBgLetterPdf' || action === 'generateBgLetterDocx' || action === 'generateBgLetter') {
+        if (action === 'generateBgLetterPdf' || action === 'generateBgLetterDocx' || action === 'generateBgLetter') {
       return withScriptLock(() => generateBgLetterPdfFromWeb(params));
     }
 
@@ -916,36 +912,6 @@ function parseServerWorkAmount(value, key) {
   return isLacsKey && Math.abs(amount) > 0 && Math.abs(amount) < 100
     ? amount * 100000
     : amount;
-}
-
-function getGeneratedBgLetterForWeb(body) {
-  body = body || {};
-  const tenderId = assertTenderId(body.tenderId);
-  const folder = getRequiredFolder(BG_LETTER_FOLDER_ID, 'BG letter output');
-  const files = folder.getFilesByName('BG_Letter_' + tenderId + '.docx');
-  let latest = null;
-  let latestTime = 0;
-
-  while (files.hasNext()) {
-    const f = files.next();
-    const t = f.getLastUpdated().getTime();
-    if (t >= latestTime) {
-      latest = f;
-      latestTime = t;
-    }
-  }
-
-  if (!latest) {
-    return jsonOutput({ status: 'pending', tenderId: tenderId });
-  }
-
-  latest.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-  return jsonOutput({
-    status: 'success',
-    docxUrl: getDriveDownloadUrl(latest),
-    docId: latest.getId(),
-    tenderId: tenderId
-  });
 }
 
 function generateBgLetterPdfFromWeb(body) {
