@@ -11,8 +11,8 @@ const HOST = '0.0.0.0';
 
 const APPS_SCRIPT_URL = process.env.APPS_SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbxOKN15Szd7A3OGEM1-Xg_Jnwhg4QUibhQ4zAaFHuQBmJiUhtoyeAHFzUtEwdDrUtEFeg/exec';
 
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Proxy endpoint to seamlessly bridge requests to Google Apps Script backend
 app.post('/api/appscript', async (req, res) => {
@@ -43,8 +43,9 @@ app.post('/api/appscript', async (req, res) => {
 });
 
 app.get('/api/appscript', async (req, res) => {
+  const query = new URL(req.url, 'http://localhost').search;
   try {
-    const upstreamRes = await fetch(APPS_SCRIPT_URL, {
+    const upstreamRes = await fetch(APPS_SCRIPT_URL + query, {
       method: 'GET',
       redirect: 'follow'
     });
@@ -62,6 +63,14 @@ app.get('/api/appscript', async (req, res) => {
       message: 'Proxy error connecting to Google Apps Script: ' + err.message
     });
   }
+});
+
+// Block direct access to configuration and server files
+app.use((req, res, next) => {
+  if (/^\/(\.env|server\.js|package\.json|appsscript\.json)/i.test(req.path)) {
+    return res.status(404).send('Not found');
+  }
+  next();
 });
 
 // Serve static assets from project root
