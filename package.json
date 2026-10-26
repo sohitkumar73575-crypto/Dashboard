@@ -8,7 +8,7 @@
     "dev": "node server.js",
     "start": "node server.js",
     "build": "node -e \"console.log('Build successful')\"",
-    "lint": "node -c server.js document-templates.js service-worker.js",
+    "lint": "node -c server.js document-templates.js service-worker.js config.js",
     "test": "node --test test/calculations.test.js"
   },
   "dependencies": {
