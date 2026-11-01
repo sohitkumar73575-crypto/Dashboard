@@ -2286,9 +2286,6 @@
         const refresh = (async () => {
             try {
                 const result = await postJson({ method: 'getMasterData' }, timeoutMs);
-                if (result.status === 'auth_error') {
-                    return [];
-                }
                 masterData = Array.isArray(result.data) ? result.data.map(applyComputedStatusRules) : masterData;
                 writeStoredMasterData();
                 updateDashboard();
@@ -6543,8 +6540,6 @@
 
     async function postJson(body, timeoutMs = 45000) {
         body = body || {};
-        const storedAdminKey = sessionStorage.getItem('dadriAdminKey') || '';
-        if (storedAdminKey && !body.adminKey) body.adminKey = storedAdminKey;
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), timeoutMs);
         const requestBodyBase = { ...body };
@@ -6585,15 +6580,7 @@
             });
             const text = await res.text();
             try {
-                const parsed = JSON.parse(text);
-                if (parsed && parsed.status === 'auth_error' && !body._authRetried) {
-                    const key = prompt('Admin key required for this action:');
-                    if (key) {
-                        sessionStorage.setItem('dadriAdminKey', key.trim());
-                        return postJson({ ...body, adminKey: key.trim(), _authRetried: true }, timeoutMs);
-                    }
-                }
-                return parsed;
+                return JSON.parse(text);
             } catch (e) {
                 console.error("Invalid server response", text);
                 return {
