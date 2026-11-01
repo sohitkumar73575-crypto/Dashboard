@@ -1063,7 +1063,7 @@
     const MAP_DATA_RULES_STORAGE_KEY = 'dadriworksMapDataRules';
     const MAP_DATA_SUBSTRING_MIN_LEN = 20;
     const MAP_DATA_STOP_WORDS = new Set(['of', 'in', 'ward', 'no', 'mc', 'const', 'from', 'the', 'and', 'to', 'via', 'adj', 'a', 'an']);
-    const MAP_DATA_WORK_NAME_HEADERS = ['DNIT_Name', 'DNIT Name', 'Work_Name', 'Work Name', 'WORK NAME', 'Name of Work'];
+    const MAP_DATA_WORK_NAME_HEADERS = ['DNIT_Name', 'DNIT Name', 'Work_Name', 'Work Name', 'WORK NAME', 'Name of Work', 'Name of the Work', 'Description of Work', 'Project Name', 'Scheme Name', 'Item of Work', 'Particulars', 'Work', 'WORK_NAME'];
     const MAP_DATA_HEADER_ALIASES = {
         Work_Name: ['DNIT_Name', 'DNIT Name', 'Work Name', 'WORK NAME', 'Name of Work'],
         E_TENDERID: ['E_TenderID', 'Tender ID', 'TenderID', 'TENDER_ID'],
@@ -2871,6 +2871,10 @@
 
     function openMapDataModalFromMenu() {
         closeReportMenu();
+        if (!Array.isArray(masterData) || !masterData.length) {
+            showAppToast('Please wait for project data to load before opening Map Data.', 3200);
+            return;
+        }
         resetMapDataWizard();
         showSubPageModal(document.getElementById('mapDataModal'));
     }
@@ -3110,9 +3114,33 @@
         const sheet = workbook.Sheets[sheetName];
         const raw = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: true });
         if (!raw.length) throw new Error('Excel file is empty.');
-        const headerRow = raw[0].map(cell => String(cell ?? '').trim());
-        const headers = headerRow.map((header, index) => header || `Column ${columnIndexToLetter(index)}`);
-        const rows = raw.slice(1)
+
+        // Scan first 10 rows to detect actual header row past title banners
+        let headerRowIndex = 0;
+        for (let r = 0; r < Math.min(raw.length, 10); r++) {
+            const rowCells = (raw[r] || []).map(c => String(c ?? '').trim());
+            const hasKeyword = rowCells.some(c => {
+                const n = normalizeReportKey(c);
+                return n.includes('work') || n.includes('tender') || n.includes('dnit') || n.includes('name') || n.includes('sr');
+            });
+            if (hasKeyword && rowCells.filter(Boolean).length >= 2) {
+                headerRowIndex = r;
+                break;
+            }
+        }
+
+        const seenHeaders = {};
+        const headerRow = (raw[headerRowIndex] || []).map(cell => String(cell ?? '').trim());
+        const headers = headerRow.map((header, index) => {
+            const base = header || `Column ${columnIndexToLetter(index)}`;
+            if (!seenHeaders[base]) {
+                seenHeaders[base] = 1;
+                return base;
+            }
+            seenHeaders[base]++;
+            return `${base} (${seenHeaders[base]})`;
+        });
+        const rows = raw.slice(headerRowIndex + 1)
             .filter(row => Array.isArray(row) && row.some(cell => String(cell ?? '').trim() !== ''))
             .map(row => {
                 const record = {};
@@ -3131,7 +3159,19 @@
     function loadMapDataSavedRules() {
         try {
             const raw = localStorage.getItem(MAP_DATA_RULES_STORAGE_KEY);
-            return raw ? JSON.parse(raw) : { headerToField: {}, fillRules: {} };
+            if (!raw) return { headerToField: {}, fillRules: {} };
+            const parsed = JSON.parse(raw);
+            const validKeys = new Set(getAddFieldKeys());
+            const cleanedHeaderToField = {};
+            const cleanedFillRules = {};
+            Object.keys(parsed.headerToField || {}).forEach(h => {
+                const field = parsed.headerToField[h];
+                if (validKeys.has(field)) {
+                    cleanedHeaderToField[h] = field;
+                    if (parsed.fillRules?.[h]) cleanedFillRules[h] = parsed.fillRules[h];
+                }
+            });
+            return { headerToField: cleanedHeaderToField, fillRules: cleanedFillRules };
         } catch (e) {
             return { headerToField: {}, fillRules: {} };
         }
@@ -3152,8 +3192,7 @@
 
     function isDefaultRequiredMapField(fieldKey) {
         const normalized = normalizeReportKey(fieldKey);
-        if (normalized === 'etenderid' || normalized === 'tenderid') return true;
-        return normalized.includes('date') || normalized.includes('tpub') || normalized.includes('tbid');
+        return normalized === 'etenderid' || normalized === 'tenderid';
     }
 
     function canonicalMapDataKey(fieldKey, item) {
@@ -3219,9 +3258,14 @@
         summaryEl.classList.add('d-none');
         try {
             const parsed = await parseMapDataFile(file);
-            const matchKeyIndex = autoDetectWorkNameColumn(parsed.headers);
+            let matchKeyIndex = autoDetectWorkNameColumn(parsed.headers);
             if (matchKeyIndex < 0) {
-                throw new Error('Work name column not found. Expected headers like DNIT_Name or Work Name in row 1.');
+                // Fallback: pick first column that is not a serial number, or column 0
+                matchKeyIndex = parsed.headers.findIndex((h, idx) => {
+                    const n = normalizeReportKey(h);
+                    return !n.includes('sr') && !n.includes('sno') && idx < 5;
+                });
+                if (matchKeyIndex < 0) matchKeyIndex = 0;
             }
             mapDataState.fileName = file.name;
             mapDataState.headers = parsed.headers;
@@ -3259,14 +3303,37 @@
         if (step === 3) renderMapDataPreview();
     }
 
+    function updateMapDataMatchKey(colIndex) {
+        if (!mapDataState) return;
+        const idx = parseInt(colIndex, 10);
+        if (isNaN(idx) || idx < 0 || idx >= mapDataState.headers.length) return;
+        mapDataState.matchKeyIndex = idx;
+        mapDataState.matchKeyHeader = mapDataState.headers[idx];
+        mapDataState.mappings = buildMapDataMappings(mapDataState.headers, idx);
+        renderMapDataMappingUI();
+    }
+
     function renderMapDataMappingUI() {
         if (!mapDataState) return;
         const banner = document.getElementById('mapDataMatchKeyBanner');
         const list = document.getElementById('mapDataMappingList');
         const matchMapping = mapDataState.mappings.find(item => item.isMatchKey);
+        const colOptions = (mapDataState.headers || []).map((h, i) => {
+            const letter = columnIndexToLetter(i);
+            const sel = i === mapDataState.matchKeyIndex ? 'selected' : '';
+            return `<option value="${i}" ${sel}>Column ${letter} — ${escapeHtml(h)}</option>`;
+        }).join('');
         banner.innerHTML = `
-            <div class="fw-bold text-dark">Match key: Column ${matchMapping?.columnLetter || ''} · ${escapeHtml(mapDataState.matchKeyHeader)} → ${escapeHtml(getMapDataFieldLabel(matchMapping?.dashboardField || 'Work_Name'))}</div>
-            <div class="small text-secondary mt-1">${escapeHtml(mapDataState.fileName || '')} · Rows match by work name (exact, contains, or 80%+ similar). Empty sheet fields are filled from Excel; different existing values need a choice.</div>
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <div>
+                    <span class="fw-bold text-dark">Match Key Column:</span>
+                    <select class="form-select form-select-sm d-inline-block w-auto ms-2" onchange="updateMapDataMatchKey(this.value)">
+                        ${colOptions}
+                    </select>
+                </div>
+                <span class="small text-secondary">${escapeHtml(mapDataState.fileName || '')}</span>
+            </div>
+            <div class="small text-secondary mt-1">Rows match by Tender ID (if present) or Work Name (exact/fuzzy). Empty sheet fields are filled from Excel; different existing values need a choice.</div>
         `;
         list.innerHTML = mapDataState.mappings.map((mapping, index) => {
             const badgeClass = mapping.confidence;
@@ -3433,11 +3500,20 @@
         return `${rowIndex}::${key}`;
     }
 
+    function isAmountKey(key) {
+        const k = normalizeReportKey(key);
+        return k.includes('cost') || k.includes('amount') || k.includes('amt') || k.includes('expenditure') || k.includes('price');
+    }
+
     function getMapDataComparableValue(key, value) {
         if (!hasDisplayValue(value)) return '';
         if (isDateKey(key) || isReportDateKey(key)) {
             const date = parseReportDate(value);
             if (date) return `date:${toDateInputValue(date)}`;
+        }
+        if (isAmountKey(key)) {
+            const num = parseNumericAmount(value);
+            if (Number.isFinite(num)) return `num:${Math.round(num * 100) / 100}`;
         }
         return String(value).trim().replace(/\s+/g, ' ').toLowerCase();
     }
@@ -3547,6 +3623,18 @@
             if (item) {
                 const score = scoreWorkNameMatch(excelWorkName, getWorkName(item)).score;
                 return { item, score, layer: 'manual' };
+            }
+        }
+        const incomingTenderId = String(
+            incoming?.E_TENDERID ||
+            incoming?.E_TenderID ||
+            incoming?.tenderId ||
+            ''
+        ).trim();
+        if (incomingTenderId) {
+            const tenderMatch = findMapDataWorkBySelectKey(incomingTenderId);
+            if (tenderMatch) {
+                return { item: tenderMatch, score: 100, layer: 'tender_id' };
             }
         }
         return findWorkForMapData(excelWorkName);
@@ -3684,6 +3772,17 @@
         }).join('')}</div>`;
     }
 
+    function resolveAllMapDataConflicts(choice) {
+        if (!mapDataState?.previewResults) return;
+        if (!mapDataState.conflictChoices) mapDataState.conflictChoices = {};
+        mapDataState.previewResults.forEach(item => {
+            (item.conflicts || []).forEach(c => {
+                mapDataState.conflictChoices[c.conflictKey] = choice;
+            });
+        });
+        renderMapDataPreview();
+    }
+
     function renderMapDataPreview() {
         if (!mapDataState) return;
         const results = buildMapDataPreviewResults();
@@ -3693,6 +3792,13 @@
         const skipped = results.filter(item => item.action === 'skip').length;
         const updating = results.filter(item => item.action === 'update').length;
         const unresolvedConflicts = results.reduce((count, item) => count + (item.unresolvedConflicts || 0), 0);
+        const batchConflictControls = unresolvedConflicts > 0 ? `
+            <div class="d-flex align-items-center gap-2 mt-2 p-2 bg-light rounded border">
+                <span class="small fw-bold text-dark">Batch conflict action:</span>
+                <button type="button" class="btn btn-sm btn-outline-primary py-0" onclick="resolveAllMapDataConflicts('excel')">Accept all Excel values</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary py-0" onclick="resolveAllMapDataConflicts('existing')">Keep all Sheet values</button>
+            </div>
+        ` : '';
         document.getElementById('mapDataPreviewSummary').innerHTML = `
             <div class="row g-2">
                 <div class="col-md-3"><div class="report-option-card text-center"><div class="fw-bold text-success">${matched}</div><div class="small text-secondary">Matched</div></div></div>
@@ -3700,6 +3806,7 @@
                 <div class="col-md-3"><div class="report-option-card text-center"><div class="fw-bold ${unresolvedConflicts ? 'text-warning' : 'text-secondary'}">${unresolvedConflicts}</div><div class="small text-secondary">Need a choice</div></div></div>
                 <div class="col-md-3"><div class="report-option-card text-center"><div class="fw-bold text-dark">${updating}</div><div class="small text-secondary">Will update fields</div></div></div>
             </div>
+            ${batchConflictControls}
             ${skipped ? `<div class="small text-secondary mt-2">${skipped} row${skipped === 1 ? '' : 's'} skipped because the work name is empty.</div>` : ''}
         `;
         const applyBtn = document.getElementById('mapDataApplyBtn');
@@ -3708,11 +3815,15 @@
             applyBtn.title = unresolvedConflicts ? 'Choose the sheet or Excel value for every highlighted field first.' : '';
         }
         document.getElementById('mapDataPreviewBody').innerHTML = results.map(item => {
-            const actionLabel = item.action === 'update'
-                ? (item.note ? `Update (${item.note})` : 'Update')
-                : item.action === 'add' ? 'Add new' :
-                item.action === 'conflict' ? `Choose value (${item.unresolvedConflicts})` :
-                item.action === 'noop' ? `No update (${item.reason || 'empty'})` : 'Skip';
+            const actionLabel = item.error
+                ? `Failed: ${item.error}`
+                : item.applied
+                    ? 'Applied'
+                    : item.action === 'update'
+                        ? (item.note ? `Update (${item.note})` : 'Update')
+                        : item.action === 'add' ? 'Add new' :
+                        item.action === 'conflict' ? `Choose value (${item.unresolvedConflicts})` :
+                        item.action === 'noop' ? `No update (${item.reason || 'empty'})` : 'Skip';
             const scoreClass = item.score && item.score <= 92 && item.layer !== 'manual' ? 'score-low' : '';
             const fieldsText = item.conflicts?.length
                 ? `${renderMapDataConflictList(item)}${item.fieldLabels?.length ? `<div class="mt-2 text-secondary">Will update: ${escapeHtml(item.fieldLabels.join(', '))}</div>` : ''}`
@@ -3720,17 +3831,23 @@
                     ? escapeHtml(item.fieldLabels.join(', '))
                     : (item.action === 'add' ? escapeHtml((item.fieldLabels || []).join(', ') || '—') : '—'));
             const manualSelectKey = mapDataState.manualMatches?.[item.rowIndex] || (item.matchedItem ? getMapDataWorkSelectKey(item.matchedItem) : '');
-            const showManualPick = item.action === 'add' || (item.score && item.score <= 92);
+            const showManualPick = item.action === 'add' || item.action === 'conflict' || (item.candidates && item.candidates.length > 0);
             const matchedCell = showManualPick
                 ? renderMapDataWorkMatchOptions(item.rowIndex, item.candidates || [], manualSelectKey)
                 : escapeHtml(item.matchedName || '—');
+            const rowClass = [
+                scoreClass,
+                item.unresolvedConflicts ? 'needs-choice' : '',
+                item.error ? 'table-danger text-danger' : '',
+                item.applied ? 'table-success' : ''
+            ].filter(Boolean).join(' ');
             return `
-                <tr class="${[scoreClass, item.unresolvedConflicts ? 'needs-choice' : ''].filter(Boolean).join(' ')}">
+                <tr class="${rowClass}">
                     <td>${escapeHtml(item.excelWorkName.slice(0, 60))}${item.excelWorkName.length > 60 ? '…' : ''}</td>
                     <td>${matchedCell}</td>
                     <td>${item.score ? `${item.score}%` : '—'}${item.layer ? `<div class="text-secondary" style="font-size:0.7rem">${escapeHtml(item.layer)}</div>` : ''}</td>
                     <td class="small">${fieldsText}</td>
-                    <td class="small">${escapeHtml(actionLabel)}</td>
+                    <td class="small ${item.error ? 'fw-bold text-danger' : ''}">${escapeHtml(actionLabel)}</td>
                 </tr>
             `;
         }).join('');
@@ -3762,6 +3879,9 @@
                     skipped++;
                     continue;
                 }
+                if (i > 0 && (item.action === 'update' || item.action === 'add')) {
+                    await new Promise(r => setTimeout(r, 150));
+                }
                 if (item.action === 'update') {
                     const payload = buildMapDataUpdatePayload(item.matchedItem, item.fieldsToApply);
                     const existingIndex = getMapDataMatchedIndex(item.matchedItem);
@@ -3777,13 +3897,18 @@
                     }
                     const resp = await submitMapDataUpdate(item.matchedItem, item.fieldsToApply);
                     if (!isSuccessResponse(resp)) {
-                        if (previousItem && existingIndex >= 0) restoreLocalWorkAt(existingIndex, previousItem);
+                        if (previousItem && existingIndex >= 0) {
+                            restoreLocalWorkAt(existingIndex, previousItem);
+                        } else if (existingIndex < 0) {
+                            removeLocalWorkByTenderId(String(getTenderId(item.matchedItem) || getExcelTenderIdFromFields(item.fieldsToApply) || '').trim());
+                        }
                         const serverMsg = resp?.message || resp?.error || 'Update failed.';
                         if (usesMapDataRowIndexUpdate(item.matchedItem) && /unknown action/i.test(serverMsg)) {
                             throw new Error('Sheet update needs redeploy — copy merged code.gs (updateWorkByRowIndex) to Apps Script and deploy a new web app version.');
                         }
                         throw new Error(serverMsg);
                     }
+                    item.applied = true;
                     updated++;
                 } else if (item.action === 'add') {
                     const payload = normalizePayloadDates(mapPayloadToSheetKeys(item.fullPayload));
@@ -3795,6 +3920,7 @@
                         removeLocalWorkByTenderId(localTenderId || localInsert.tenderId, localInsert.item);
                         throw new Error(resp?.message || resp?.error || 'Add failed.');
                     }
+                    item.applied = true;
                     added++;
                 }
             } catch (err) {
@@ -3821,6 +3947,7 @@
             return;
         }
 
+        renderMapDataPreview();
         showAppToast(`Import complete: ${updated} updated, ${added} added, ${failed} failed.`, 4200);
         refreshDataInBackground();
     }
