@@ -790,7 +790,10 @@
                     <div id="mapDataMatchKeyBanner" class="map-data-match-key"></div>
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <div class="small text-secondary">Confirm each column mapping</div>
-                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="confirmAllHighConfidenceMapData()">Confirm all high-confidence</button>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="resetMapDataSavedRules()" title="Clear cached mappings from past uploads">Reset rules</button>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="confirmAllHighConfidenceMapData()">Confirm all high-confidence</button>
+                        </div>
                     </div>
                     <div id="mapDataMappingList"></div>
                     <div id="mapDataMappingError" class="text-danger small mt-2 d-none"></div>
@@ -1023,7 +1026,8 @@
         "Agreement Amount",
         "Revised_End Date(if any)",
         "Completion_Date",
-        "DLP"
+        "DLP",
+        "Expenditure"
     ];
     const REPORT_HEADER_LABELS = {
         "Work_Name": "Work Name",
@@ -1043,21 +1047,24 @@
         "Agreement Amount": "Agreement Amount",
         "Revised_End Date(if any)": "Revised End Date, If Any",
         "Completion_Date": "Completion Date",
-        "DLP": "DLP"
+        "DLP": "DLP",
+        "Expenditure": "Expenditure"
     };
     const REPORT_KEY_ALIASES = {
         "Allotement_Date": ["Allotment Date", "Allotted Date", "Alloted Date", "Allotment_Date"],
-        "Admin Approval_Date": ["Admin_Approval_Date", "Admin Approval Date", "Admin Approved Date"],
+        "Admin Approval_Date": ["Admin_Approval_Date", "Admin Approval Date", "Admin Approved Date", "Admin Approval", "Admin Date", "AA Date", "AA_Date", "A/A Date", "Admin Sanction Date", "Admin Sanction", "Administrative Approval Date", "Administrative Approval"],
+        "Tech_Approval_Date": ["Tech_Approval_Date", "Technical Approval Date", "Tech Approval Date", "Technical Approval", "Tech Approval", "Technical Sanction Date", "Tech Sanction Date", "Technical Sanction", "Tech Sanction", "TS Date", "T/S Date", "Tech Date", "Technical Date"],
         "Agreement Start Date": ["Agreement_Start_Date", "Agreement Start_Date", "AGREEMENT_START_DATE"],
         "Agreement End Date": ["Agreement_End_Date", "Agreement End_Date", "AGREEMENT_END_DATE"],
         "Revised_End Date(if any)": ["Revised End Date", "Revised_End_Date", "Revised End_Date", "REVISED_END_DATE", "Revised Agreement End Date"],
         "T_PUB_DATE": ["Tender Publish Date", "Publish Date", "Tender Publish_Date"],
         "T_BID_OPEN_DATE": ["Tender Bid Open Date", "Bid Open Date", "Tender Opening Date"],
         "Completion_Date": ["Completion Date", "Completed Date"],
-        "Estimate_Cost": ["Estimate Cost", "Estimated Cost"],
-        "DNIT_Cost": ["DNIT Cost", "DNIT COST"],
+        "Estimate_Cost": ["Estimate Cost", "Estimated Cost", "Estimate_Cost", "Estimated_Cost", "Estimate Amount", "Estimated Amount", "Estimate_Amount", "Estimated_Amount", "Est Cost", "Est Amount"],
+        "DNIT_Cost": ["DNIT Cost", "DNIT COST", "DNIT_Cost", "DNIT Amount", "DNIT_Amount", "DNIT AMOUNT"],
         "E_TENDERID": ["E_TenderID", "Tender ID", "TenderID"],
-        "Agency_Name": ["Agency Name", "AGENCY_NAME"]
+        "Agency_Name": ["Agency Name", "AGENCY_NAME"],
+        "Expenditure": ["Expenditure", "Expenditure (Rs.)", "Expenditure_Amount", "Expenditure Amount", "Expenditure_Cost", "Expenditure Cost", "Final Expenditure", "EXPENDITURE", "Expendeture", "Expendeture (Rs.)"]
     };
     const MAP_DATA_FUZZY_THRESHOLD = 85;
     const MAP_DATA_RULES_STORAGE_KEY = 'dadriworksMapDataRules';
@@ -1066,16 +1073,19 @@
     const MAP_DATA_WORK_NAME_HEADERS = ['DNIT_Name', 'DNIT Name', 'Work_Name', 'Work Name', 'WORK NAME', 'Name of Work', 'Name of the Work', 'Description of Work', 'Project Name', 'Scheme Name', 'Item of Work', 'Particulars', 'Work', 'WORK_NAME'];
     const MAP_DATA_HEADER_ALIASES = {
         Work_Name: ['DNIT_Name', 'DNIT Name', 'Work Name', 'WORK NAME', 'Name of Work'],
+        Estimate_Cost: ['Estimate Cost', 'Estimated Cost', 'Estimate_Cost', 'Estimated_Cost', 'Estimate Amount', 'Estimated Amount', 'Estimate_Amount', 'Estimated_Amount', 'Est Cost', 'Est Amount'],
+        'Admin Approval_Date': ['Admin_Approval_Date', 'Admin Approval Date', 'Admin Approved Date', 'Admin Approval', 'Admin Date', 'AA Date', 'AA_Date', 'A/A Date', 'Admin Sanction Date', 'Admin Sanction', 'Administrative Approval Date', 'Administrative Approval'],
+        'Tech_Approval_Date': ['Tech_Approval_Date', 'Technical Approval Date', 'Tech Approval Date', 'Technical Approval', 'Tech Approval', 'Technical Sanction Date', 'Tech Sanction Date', 'Technical Sanction', 'Tech Sanction', 'TS Date', 'T/S Date', 'Tech Date', 'Technical Date'],
+        DNIT_Cost: ['DNIT Cost', 'DNIT COST', 'DNIT_Cost', 'DNIT Amount', 'DNIT_Amount', 'DNIT AMOUNT'],
         E_TENDERID: ['E_TenderID', 'Tender ID', 'TenderID', 'TENDER_ID'],
         T_PUB_DATE: ['Tender Publish Date', 'Publish Date'],
         T_BIDSUB_START_DATE: ['Tender Bid Submission Start Date'],
         T_BIDSUB_END_DATE: ['Tender Bid Submission End Date'],
         T_BID_OPEN_DATE: ['Tender Bid Open Date', 'Bid Open Date'],
         Allotement_Date: ['Allotment Date', 'Allotted Date', 'Allotment_Date'],
-        DNIT_Cost: ['DNIT Cost', 'DNIT COST'],
-        Estimate_Cost: ['Estimate Cost', 'Estimated Cost'],
         Agency_Name: ['Agency Name', 'AGENCY_NAME'],
-        Completion_Date: ['Completion Date', 'Completed Date']
+        Completion_Date: ['Completion Date', 'Completed Date'],
+        Expenditure: ['Expenditure', 'Expenditure (Rs.)', 'Expenditure_Amount', 'Expenditure Amount', 'Expenditure_Cost', 'Expenditure Cost', 'Final Expenditure', 'EXPENDITURE', 'Expendeture', 'Expendeture (Rs.)']
     };
     let mapDataState = null;
     const MAX_UPLOAD_FILE_BYTES = 8 * 1024 * 1024;
@@ -1582,10 +1592,13 @@
         };
 
         if (type === 'completionCertificate') {
+            const expRaw = getReportValue(item, 'Expenditure');
+            const expNum = parseNumericAmount(expRaw);
+            const expInitial = expNum > 0 ? String(expNum) : (expRaw ? String(expRaw).replace(/[^0-9.]/g, '') : '');
             return {
                 ...common,
                 ESTIMATE_RS: formatPerformaRs(estimate),
-                EXPENDITURE_RS: '',
+                EXPENDITURE_RS: expInitial,
                 COMMENCEMENT_DATE: formatPerformaDateInput(commencement),
                 COMPLETION_DATE: formatPerformaDateInput(completion),
                 CERTIFICATE_DATE: formatPerformaDateInput(today)
@@ -1739,6 +1752,9 @@
             normalized.CERTIFICATE_DATE = formatPerformaDotDate(normalized.CERTIFICATE_DATE);
             normalized.PERIOD_FROM = normalized.COMMENCEMENT_DATE;
             normalized.PERIOD_TO = normalized.COMPLETION_DATE;
+            if (normalized.EXPENDITURE_RS) {
+                normalized.EXPENDITURE_RS = formatPerformaRs(normalized.EXPENDITURE_RS);
+            }
         }
         return normalized;
     }
@@ -1756,32 +1772,67 @@
         }
     }
 
-    async function syncCompletionDateFromPerforma(type, tenderId, item, data, statusEl) {
+    async function syncCompletionDetailsFromPerforma(type, tenderId, item, data, statusEl) {
         if (type !== 'completionCertificate') return;
 
+        const rawExpenditure = String(data?.EXPENDITURE_RS || '').trim();
+        const rawCompletion = String(data?.COMPLETION_DATE || '').trim();
+
+        const existingExp = String(getReportValue(item, 'Expenditure') || '').trim();
         const existingCompletion = String(getReportValue(item, 'Completion_Date') || '').trim();
-        const completionDate = String(data?.COMPLETION_DATE || '').trim();
-        if (hasDisplayValue(existingCompletion) || !completionDate) return;
 
-        const sheetDate = formatDateInputForSheet(completionDate);
-        if (!sheetDate) return;
+        const payload = {};
+        if (tenderId) payload.tenderId = tenderId;
+        if (item?.rowIndex) payload.rowIndex = item.rowIndex;
 
-        const payload = { tenderId, Completion_Date: sheetDate };
+        let hasChanges = false;
+
+        if (rawExpenditure && rawExpenditure !== existingExp) {
+            const expKey = canonicalMapDataKey('Expenditure', item || {}) || 'Expenditure';
+            payload[expKey] = rawExpenditure;
+            payload.Expenditure = rawExpenditure;
+            hasChanges = true;
+        }
+
+        if (rawCompletion) {
+            const sheetDate = formatDateInputForSheet(rawCompletion);
+            if (sheetDate && sheetDate !== existingCompletion) {
+                const compKey = canonicalMapDataKey('Completion_Date', item || {}) || 'Completion_Date';
+                payload[compKey] = sheetDate;
+                payload.Completion_Date = sheetDate;
+                hasChanges = true;
+            }
+        }
+
+        if (!hasChanges) return;
+
         upsertLocalWork(payload, { fallbackTenderId: tenderId });
-        if (statusEl) statusEl.innerText = 'Saving completion date...';
+        if (item) {
+            if (payload.Expenditure !== undefined) item.Expenditure = payload.Expenditure;
+            if (payload.Completion_Date !== undefined) item.Completion_Date = payload.Completion_Date;
+        }
+
+        if (statusEl) statusEl.innerText = 'Saving expenditure & completion details...';
 
         try {
-            const resp = await postJson({ action: 'updateWork', details: payload }, 25000);
-            if (!isSuccessResponse(resp)) {
-                throw new Error(resp?.message || resp?.error || 'Completion date sync failed.');
+            let resp;
+            if (tenderId) {
+                resp = await postJson({ action: 'updateWork', method: 'updateWork', details: payload }, 25000);
+            } else if (item?.rowIndex) {
+                resp = await postJson({ action: 'updateWorkByRowIndex', method: 'updateWorkByRowIndex', details: payload }, 25000);
             }
-            showAppToast('Completion date saved to work details.');
+            if (resp && !isSuccessResponse(resp)) {
+                throw new Error(resp?.message || resp?.error || 'Completion details sync failed.');
+            }
+            showAppToast('Expenditure synced to work details & master sheet.');
             refreshDataInBackground();
         } catch (e) {
-            console.error('Completion date sync failed', e);
-            showAppToast(e.message || 'Completion date sync failed.', 4200);
+            console.error('Completion sync failed', e);
+            showAppToast(e.message || 'Completion sync failed.', 4200);
         }
     }
+
+    const syncCompletionDateFromPerforma = syncCompletionDetailsFromPerforma;
 
     async function createPerformaDocxBlob(type, data) {
         await ensurePerformaDocxLibraries();
@@ -1951,7 +2002,7 @@
             }
             if (status) status.innerText = 'Creating Word document (.docx)...';
             try {
-                await syncCompletionDateFromPerforma(type, tenderId, item, data, status);
+                await syncCompletionDetailsFromPerforma(type, tenderId, item, data, status);
                 await finalizePerformaDownload(type, tenderId, data, status);
             } catch (e) {
                 console.error('Performa DOCX failed', e);
@@ -3216,19 +3267,27 @@
         return output;
     }
 
+    function resetMapDataSavedRules() {
+        localStorage.removeItem(MAP_DATA_RULES_STORAGE_KEY);
+        if (mapDataState?.headers) {
+            mapDataState.mappings = buildMapDataMappings(mapDataState.headers, mapDataState.matchKeyIndex);
+            renderMapDataMappingUI();
+        }
+        showAppToast('Saved column mapping rules reset to default.', 2500);
+    }
+
     function buildMapDataMappings(headers, matchKeyIndex) {
         const saved = loadMapDataSavedRules();
         return headers.map((header, index) => {
             const isMatchKey = index === matchKeyIndex;
-            const savedField = saved.headerToField[header];
-            const suggestion = isMatchKey
-                ? suggestMapDataField(header, true)
-                : (savedField
-                    ? { field: savedField, confidence: 'alias', score: 100 }
-                    : suggestMapDataField(header, false));
+            const suggestion = suggestMapDataField(header, isMatchKey);
+            const savedField = (!isMatchKey && saved.headerToField[header]) || '';
+            // Standard dictionary alias takes precedence over stale localStorage mappings
             const dashboardField = isMatchKey
                 ? suggestion.field
-                : (savedField || suggestion.field || '__skip__');
+                : (suggestion.confidence === 'exact' || suggestion.confidence === 'alias'
+                    ? suggestion.field
+                    : (savedField || suggestion.field || '__skip__'));
             const fillRule = isMatchKey
                 ? 'empty'
                 : (saved.fillRules[header] || (dashboardField !== '__skip__' && isDefaultRequiredMapField(dashboardField) ? 'required' : 'empty'));
@@ -3238,8 +3297,8 @@
                 columnLetter: columnIndexToLetter(index),
                 dashboardField,
                 fillRule,
-                confidence: isMatchKey ? 'exact' : suggestion.confidence,
-                score: suggestion.score,
+                confidence: isMatchKey ? 'exact' : (suggestion.confidence !== 'unknown' ? suggestion.confidence : (savedField ? 'alias' : 'unknown')),
+                score: suggestion.score || (savedField ? 100 : 0),
                 confirmed: autoConfirm && (isMatchKey || dashboardField !== '__skip__'),
                 isMatchKey
             };
@@ -4770,9 +4829,14 @@
         };
     }
 
+    function isExpenditureKey(key) {
+        const norm = String(key || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        return norm.includes('expenditure') || norm.includes('expendeture');
+    }
+
     function isCostKey(key) {
-        const keyLower = key.toLowerCase();
-        return keyLower.includes('cost') || keyLower.includes('amount');
+        const keyLower = String(key || '').toLowerCase();
+        return keyLower.includes('cost') || keyLower.includes('amount') || keyLower.includes('expenditure') || keyLower.includes('expendeture');
     }
 
     function isDateKey(key) {
@@ -4840,7 +4904,7 @@
         return [
             { name: "Tendered", rows: reportRows.tendered, columns: getReportColumnsThrough("T_BID_OPEN_DATE") },
             { name: "Allotted", rows: reportRows.allotted, columns: getReportColumnsThrough("Agreement End Date") },
-            { name: "Completed", rows: reportRows.completed, columns: getReportColumnsThrough("Completion_Date") },
+            { name: "Completed", rows: reportRows.completed, columns: getReportColumnsThrough("Expenditure") },
             { name: "In Progress", rows: reportRows.inProgress, columns: getReportColumnsThrough("Agreement End Date") }
         ];
     }
@@ -6264,6 +6328,8 @@
         const tID = getTenderId(item);
         const cardKey = getMapDataWorkSelectKey(item);
         const { badgeBg, badgeColor } = getStatusStyle(statusStr);
+        const expRaw = getReportValue(item, 'Expenditure');
+        const hasExp = hasDisplayValue(expRaw);
 
         const card = document.createElement('div');
         card.className = 'col-md-6 col-lg-4';
@@ -6286,6 +6352,12 @@
                             <span class="meta-icon date"><i class="fa-solid fa-calendar-check"></i></span>
                             <div class="meta-text">${getDurationHtml(item)}</div>
                         </div>
+
+                        ${hasExp ? `
+                        <div class="meta-row">
+                            <span class="meta-icon cost" style="background:#ecfdf5; color:#059669;"><i class="fa-solid fa-indian-rupee-sign"></i></span>
+                            <div class="meta-text text-truncate"><span class="text-secondary">Exp: </span><strong>${formatWorkAmount('Expenditure', expRaw)}</strong></div>
+                        </div>` : ''}
                     </div>
 
                     <div class="work-footer">
@@ -6348,16 +6420,25 @@
 
         const skip = ['work_name', 'work name', 'rowindex', 'computedstatus'];
 
-        for (let key in item) {
+        const itemKeys = Object.keys(item);
+        const displayKeys = [...itemKeys];
+        REPORT_SOURCE_COLUMNS.forEach(col => {
+            const hasCol = displayKeys.some(k => normalizeReportKey(k) === normalizeReportKey(col));
+            if (!hasCol) {
+                displayKeys.push(col);
+            }
+        });
+
+        for (let key of displayKeys) {
             if (skip.includes(key.toLowerCase())) continue;
 
-            const rawValue = item[key] !== undefined && item[key] !== null ? item[key] : "";
-            const isLocked = (rawValue !== "" && rawValue !== "-") ? "readonly" : "";
+            const rawValue = item[key] !== undefined && item[key] !== null ? item[key] : (isExpenditureKey(key) ? getReportValue(item, 'Expenditure') : "");
+            const isLocked = (rawValue !== "" && rawValue !== "-" && !isExpenditureKey(key)) ? "readonly" : "";
             const isDate = isDateKey(key);
             const { inputType, extraAttrs, inputValue } = getInputConfig(key, rawValue);
             let viewValue = '-';
             if (isCostKey(key)) {
-                viewValue = formatWorkAmount(key, item[key]);
+                viewValue = formatWorkAmount(key, rawValue);
             } else if (isDate) {
                 const dateObj = parseReportDate(rawValue);
                 viewValue = dateObj ? formatReportDateDisplay(dateObj) : escapeHtml(rawValue === "" ? '-' : rawValue);
@@ -6368,7 +6449,7 @@
             container.innerHTML += `
                 <div class="col-md-4 col-sm-6">
                     <div class="p-2">
-                        <div class="detail-label">${escapeHtml(key.replace(/_/g, ' '))}</div>
+                        <div class="detail-label">${escapeHtml(REPORT_HEADER_LABELS[key] || key.replace(/_/g, ' '))}</div>
                         <div class="detail-value field-view">${viewValue}</div>
                         <input
                             type="${inputType}"
@@ -6385,7 +6466,7 @@
 
         document.querySelectorAll('.field-view').forEach(el => el.classList.remove('hidden'));
         document.querySelectorAll('.field-edit').forEach(el => el.classList.add('hidden'));
-        document.getElementById('editToggleBtn').classList.add('hidden');
+        document.getElementById('editToggleBtn').classList.remove('hidden');
         document.getElementById('saveBtn').classList.add('hidden');
         document.getElementById('shareBtn').classList.add('hidden');
         document.getElementById('shareHeaderBtn').classList.remove('hidden');
@@ -6437,20 +6518,16 @@
     }
 
     function getAddFieldKeys() {
-        const fallbackKeys = [
-            "E_TENDERID",
-            "Work_Name",
-            "DNIT Cost",
-            "Agency_Name",
-            "Agreement Start Date",
-            "Agreement End Date",
-            "Allotted Amount",
-            "Allotment Date"
-        ];
+        const fallbackKeys = [ ...REPORT_SOURCE_COLUMNS ];
 
         const sourceKeys = masterData.length ? Object.keys(masterData[0]) : fallbackKeys;
+        const keysSet = new Set(sourceKeys);
+        REPORT_SOURCE_COLUMNS.forEach(col => {
+            const hasCol = Array.from(keysSet).some(k => normalizeReportKey(k) === normalizeReportKey(col));
+            if (!hasCol) keysSet.add(col);
+        });
         const skip = ['rowindex', 'computedstatus'];
-        return sourceKeys.filter(key => key && !skip.includes(key.toLowerCase()));
+        return Array.from(keysSet).filter(key => key && !skip.includes(key.toLowerCase()));
     }
 
     function isRequiredAddField(key) {

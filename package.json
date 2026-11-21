@@ -9,7 +9,7 @@
     "start": "node server.js",
     "build": "node -e \"console.log('Build successful')\"",
     "lint": "node -c server.js document-templates.js service-worker.js config.js",
-    "test": "node --test test/calculations.test.js"
+    "test": "node --test test/calculations.test.js test/map-data.test.js"
   },
   "dependencies": {
     "express": "^4.21.2"
