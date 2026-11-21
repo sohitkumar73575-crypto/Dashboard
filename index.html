@@ -2690,7 +2690,7 @@
 
     function isReportAmountKey(key) {
         const normalized = normalizeReportKey(key);
-        return normalized.includes('cost') || normalized.includes('amount');
+        return normalized.includes('cost') || normalized.includes('amount') || normalized.includes('expenditure') || normalized.includes('expendeture');
     }
 
     function parseExcelSerialDate(serialValue) {
@@ -4903,9 +4903,9 @@
     function getReportDefinitions(reportRows) {
         return [
             { name: "Tendered", rows: reportRows.tendered, columns: getReportColumnsThrough("T_BID_OPEN_DATE") },
-            { name: "Allotted", rows: reportRows.allotted, columns: getReportColumnsThrough("Agreement End Date") },
+            { name: "Allotted", rows: reportRows.allotted, columns: getReportColumnsThrough("Expenditure") },
             { name: "Completed", rows: reportRows.completed, columns: getReportColumnsThrough("Expenditure") },
-            { name: "In Progress", rows: reportRows.inProgress, columns: getReportColumnsThrough("Agreement End Date") }
+            { name: "In Progress", rows: reportRows.inProgress, columns: getReportColumnsThrough("Expenditure") }
         ];
     }
 
@@ -4967,6 +4967,17 @@
         });
     }
 
+    function formatReportGrandTotal(value) {
+        const amount = Number(value);
+        if (!Number.isFinite(amount) || amount <= 0) return "-";
+        const exact = formatIndianNumber(amount);
+        const lacs = (amount / 100000).toLocaleString('en-IN', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+        return `${RUPEE} ${exact} Say ${RUPEE} ${lacs} Lacs`;
+    }
+
     function getReportCellValue(item, sourceKey) {
         const value = getReportValue(item, sourceKey);
         if (isReportDateKey(sourceKey)) {
@@ -5004,7 +5015,7 @@
         if (key === "E_TENDERID" || normalizedHeader.includes("tender id")) return 24;
         if (normalizedHeader === "status") return 16;
         if (isReportDateKey(key)) return 18;
-        if (isReportAmountKey(key)) return 19;
+        if (isReportAmountKey(key)) return 28;
         if (normalizedHeader.includes("report type")) return 24;
         if (normalizedHeader.includes("count")) return 10;
         if (normalizedHeader.includes("release remarks")) return 34;
@@ -5015,6 +5026,7 @@
     function estimateXlsxRowHeight(row, columnMeta, rowIndex, options = {}) {
         if (rowIndex === 0) return 30;
         if ((options.headerRows || []).includes(rowIndex)) return 32;
+        if ((options.totalRows || []).includes(rowIndex)) return 28;
         if ((options.sectionRows || []).includes(rowIndex)) return 24;
         if ((options.noteRows || []).includes(rowIndex)) return 24;
 
@@ -5046,6 +5058,17 @@
             alignment: { horizontal: "center", vertical: "center", wrapText: true },
             border
         };
+        const totalStyle = {
+            font: { bold: true, color: { rgb: "000000" } },
+            fill: { fgColor: { rgb: "E2EFDA" } },
+            alignment: { vertical: "center", wrapText: true },
+            border: {
+                top: { style: "thin", color: { rgb: "000000" } },
+                bottom: { style: "double", color: { rgb: "000000" } },
+                left: { style: "thin", color: { rgb: "B7B7B7" } },
+                right: { style: "thin", color: { rgb: "B7B7B7" } }
+            }
+        };
         const sectionStyle = {
             font: { bold: true, color: { rgb: "FFFFFF" } },
             fill: { fgColor: { rgb: "0F766E" } },
@@ -5075,6 +5098,14 @@
                     style = titleStyle;
                 } else if ((options.headerRows || [1]).includes(r)) {
                     style = headerStyle;
+                } else if ((options.totalRows || []).includes(r)) {
+                    style = {
+                        ...totalStyle,
+                        alignment: {
+                            ...totalStyle.alignment,
+                            horizontal: c <= 1 ? "left" : (isReportAmountKey(meta.key) ? "right" : "center")
+                        }
+                    };
                 } else if ((options.sectionRows || []).includes(r)) {
                     style = sectionStyle;
                 } else if ((options.noteRows || []).includes(r)) {
@@ -5119,21 +5150,42 @@
             .filter(index => index >= 0);
         const hasMajorRows = majorRows.length > 0;
         const emptyRowIndex = 2;
-        const noteRowIndex = dataRows.length + 2;
+        const totalRowIndex = dataRows.length + 2;
+        const noteRowIndex = totalRowIndex + 1;
         const emptyMessage = `No work "${sheetTitle}" during the selected period`;
+
+        let totalRow = null;
+        if (rows.length) {
+            totalRow = ["Grand Total", ""];
+            columns.forEach((key, colIdx) => {
+                if (colIdx === 0) return;
+                if (isReportAmountKey(key)) {
+                    const total = rows.reduce((sum, item) => sum + parseWorkAmount(getReportValue(item, key), key), 0);
+                    totalRow.push(total > 0 ? formatReportGrandTotal(total) : "-");
+                } else {
+                    totalRow.push("");
+                }
+            });
+        }
+
         const aoa = rows.length
             ? (hasMajorRows
-                ? [[reportTitle], headers, ...dataRows, [MAJOR_WORK_NOTE]]
-                : [[reportTitle], headers, ...dataRows])
+                ? [[reportTitle], headers, ...dataRows, totalRow, [MAJOR_WORK_NOTE]]
+                : [[reportTitle], headers, ...dataRows, totalRow])
             : [[reportTitle], headers, [emptyMessage]];
         const ws = XLSX.utils.aoa_to_sheet(aoa);
         styleWorksheetRange(ws, columnMeta, aoa, {
             headerRows: [1],
+            totalRows: rows.length ? [totalRowIndex] : [],
             sectionRows: rows.length ? [] : [emptyRowIndex],
             noteRows: hasMajorRows ? [noteRowIndex] : [],
             majorRows,
             extraMerges: [
-                ...(rows.length ? [] : [{ s: { r: emptyRowIndex, c: 0 }, e: { r: emptyRowIndex, c: headers.length - 1 } }]),
+                ...(rows.length ? [
+                    { s: { r: totalRowIndex, c: 0 }, e: { r: totalRowIndex, c: 1 } }
+                ] : [
+                    { s: { r: emptyRowIndex, c: 0 }, e: { r: emptyRowIndex, c: headers.length - 1 } }
+                ]),
                 ...(hasMajorRows ? [{ s: { r: noteRowIndex, c: 0 }, e: { r: noteRowIndex, c: headers.length - 1 } }] : [])
             ]
         });
@@ -5156,7 +5208,10 @@
             getMajorWorkStatus(item, reportRows)
         ]);
         const hasMajorWorks = majorDataRows.length > 0;
-        const noteRowIndex = majorHeaderRow + 1 + majorDataRows.length;
+        const majorTotalEst = majorWorks.reduce((sum, item) => sum + parseWorkAmount(getReportValue(item, "Estimate_Cost"), "Estimate_Cost"), 0);
+        const majorTotalRowIndex = majorHeaderRow + 1 + majorDataRows.length;
+        const majorTotalRow = ["Grand Total", "", formatReportGrandTotal(majorTotalEst), "", "", ""];
+        const noteRowIndex = majorTotalRowIndex + 1;
         const aoa = [
             [reportTitle],
             ["Report Type", "Count"],
@@ -5166,6 +5221,7 @@
                 ["Major Works", "", "", "", "", ""],
                 ["Sr No.", "Work Name", "Estimate Cost", "E-Tender ID", "Agency Name", "Status"],
                 ...majorDataRows,
+                majorTotalRow,
                 [MAJOR_WORK_NOTE, "", "", "", "", ""]
             ] : [])
         ];
@@ -5179,18 +5235,20 @@
             { header: "Status", key: "status" }
         ], aoa, {
             headerRows: hasMajorWorks ? [1, majorHeaderRow] : [1],
+            totalRows: hasMajorWorks ? [majorTotalRowIndex] : [],
             sectionRows: hasMajorWorks ? [majorSectionRow] : [],
             noteRows: hasMajorWorks ? [noteRowIndex] : [],
             majorRows: hasMajorWorks ? majorDataRows.map((_, index) => majorHeaderRow + 1 + index) : [],
             titleMergeEndColumn: 1,
             getStyledColumnCount(rowIndex) {
                 if (rowIndex <= summaryRows.length + 1) return 2;
-                if (rowIndex === majorSectionRow || rowIndex === majorHeaderRow || rowIndex === noteRowIndex) return 6;
-                if (rowIndex > majorHeaderRow && rowIndex < noteRowIndex) return 6;
+                if (rowIndex === majorSectionRow || rowIndex === majorHeaderRow || rowIndex === majorTotalRowIndex || rowIndex === noteRowIndex) return 6;
+                if (rowIndex > majorHeaderRow && rowIndex < majorTotalRowIndex) return 6;
                 return 0;
             },
             extraMerges: hasMajorWorks ? [
                 { s: { r: majorSectionRow, c: 0 }, e: { r: majorSectionRow, c: 5 } },
+                { s: { r: majorTotalRowIndex, c: 0 }, e: { r: majorTotalRowIndex, c: 1 } },
                 { s: { r: noteRowIndex, c: 0 }, e: { r: noteRowIndex, c: 5 } }
             ] : []
         });
@@ -5266,7 +5324,7 @@
         if (key === "Agency_Name") return 45;
         if (key === "E_TENDERID") return 28;
         if (isReportDateKey(key)) return 22;
-        if (isReportAmountKey(key)) return 24;
+        if (isReportAmountKey(key)) return 28;
         return Math.max(18, Math.min(30, 300 / Math.max(totalDataColumns, 1)));
     }
 
@@ -5366,7 +5424,13 @@
                 const sourceKey = columnMeta ? columnMeta.sourceKey : key;
                 const raw = data.row && data.row.raw;
                 if (data.section === "body") {
-                    if (raw && raw.__major) data.cell.styles.fillColor = [255, 242, 204];
+                    if (raw && raw.__isTotal) {
+                        data.cell.styles.fillColor = [226, 239, 218];
+                        data.cell.styles.fontStyle = "bold";
+                        data.cell.styles.textColor = [0, 0, 0];
+                    } else if (raw && raw.__major) {
+                        data.cell.styles.fillColor = [255, 242, 204];
+                    }
                     data.cell.styles.halign = getPdfAlign(sourceKey);
                 }
             },
@@ -5421,7 +5485,8 @@
             headingX: summaryMargin
         });
 
-        const majorRows = getMajorWorks(context.reportRows).map((item, index) => ({
+        const majorWorks = getMajorWorks(context.reportRows);
+        const majorRows = majorWorks.map((item, index) => ({
             sr: index + 1,
             workName: getReportValue(item, "Work_Name"),
             estimateCost: getReportCellValue(item, "Estimate_Cost"),
@@ -5431,6 +5496,16 @@
             __major: true
         }));
         if (majorRows.length) {
+            const majorTotalEst = majorWorks.reduce((sum, item) => sum + parseWorkAmount(getReportValue(item, "Estimate_Cost"), "Estimate_Cost"), 0);
+            majorRows.push({
+                sr: "",
+                workName: "Grand Total",
+                estimateCost: formatReportGrandTotal(majorTotalEst),
+                tenderId: "",
+                agency: "",
+                status: "",
+                __isTotal: true
+            });
             y = drawPdfAutoTable(doc, "Major Works", [
                 { header: "Sr No.", dataKey: "sr", sourceKey: "sr" },
                 { header: "Work Name", dataKey: "workName", sourceKey: "Work_Name" },
@@ -5457,6 +5532,19 @@
                 def.columns.forEach(key => { row[key] = getReportCellValue(item, key); });
                 return row;
             });
+            if (rows.length) {
+                const totalRow = { sr: "", Work_Name: "Grand Total", __isTotal: true };
+                def.columns.forEach(key => {
+                    if (key === "Work_Name") return;
+                    if (isReportAmountKey(key)) {
+                        const total = def.rows.reduce((sum, item) => sum + parseWorkAmount(getReportValue(item, key), key), 0);
+                        totalRow[key] = total > 0 ? formatReportGrandTotal(total) : "-";
+                    } else {
+                        totalRow[key] = "";
+                    }
+                });
+                rows.push(totalRow);
+            }
             y = drawPdfAutoTable(doc, def.name, columns, rows, {
                 startY: y,
                 reportTitle: context.reportTitle,
@@ -6328,8 +6416,6 @@
         const tID = getTenderId(item);
         const cardKey = getMapDataWorkSelectKey(item);
         const { badgeBg, badgeColor } = getStatusStyle(statusStr);
-        const expRaw = getReportValue(item, 'Expenditure');
-        const hasExp = hasDisplayValue(expRaw);
 
         const card = document.createElement('div');
         card.className = 'col-md-6 col-lg-4';
@@ -6352,12 +6438,6 @@
                             <span class="meta-icon date"><i class="fa-solid fa-calendar-check"></i></span>
                             <div class="meta-text">${getDurationHtml(item)}</div>
                         </div>
-
-                        ${hasExp ? `
-                        <div class="meta-row">
-                            <span class="meta-icon cost" style="background:#ecfdf5; color:#059669;"><i class="fa-solid fa-indian-rupee-sign"></i></span>
-                            <div class="meta-text text-truncate"><span class="text-secondary">Exp: </span><strong>${formatWorkAmount('Expenditure', expRaw)}</strong></div>
-                        </div>` : ''}
                     </div>
 
                     <div class="work-footer">

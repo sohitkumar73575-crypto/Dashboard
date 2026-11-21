@@ -260,3 +260,130 @@ test('Completion Certificate sync payload creates synchronized work details and 
   assert.equal(updatedWork.Expenditure, '450000');
   assert.equal(updatedWork.Completion_Date, '12/11/2026');
 });
+
+// 11. Test Report Grand Total formatting and Development Works Report columns
+const RUPEE = String.fromCharCode(8377);
+
+function formatIndianNumber(value) {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return value || "";
+  const hasDecimals = Math.abs(amount % 1) > 0;
+  return amount.toLocaleString('en-IN', {
+    minimumFractionDigits: hasDecimals ? 2 : 0,
+    maximumFractionDigits: hasDecimals ? 2 : 0
+  });
+}
+
+function formatReportGrandTotal(value) {
+  const amount = Number(value);
+  if (!Number.isFinite(amount) || amount <= 0) return "-";
+  const exact = formatIndianNumber(amount);
+  const lacs = (amount / 100000).toLocaleString('en-IN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+  return `${RUPEE} ${exact} Say ${RUPEE} ${lacs} Lacs`;
+}
+
+function normalizeReportKey(key) {
+  return String(key || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function isReportAmountKey(key) {
+  const normalized = normalizeReportKey(key);
+  return normalized.includes('cost') || normalized.includes('amount') || normalized.includes('expenditure') || normalized.includes('expendeture');
+}
+
+const REPORT_SOURCE_COLUMNS = [
+  "Work_Name",
+  "Estimate_Cost",
+  "Admin Approval_Date",
+  "Tech_Approval_Date",
+  "DNIT_Cost",
+  "E_TENDERID",
+  "T_PUB_DATE",
+  "T_BIDSUB_START_DATE",
+  "T_BIDSUB_END_DATE",
+  "T_BID_OPEN_DATE",
+  "Agency_Name",
+  "Allotement_Date",
+  "Agreement Start Date",
+  "Agreement End Date",
+  "Agreement Amount",
+  "Revised_End Date(if any)",
+  "Completion_Date",
+  "DLP",
+  "Expenditure"
+];
+
+function getReportColumnsThrough(endKey) {
+  const endIndex = REPORT_SOURCE_COLUMNS.indexOf(endKey);
+  return REPORT_SOURCE_COLUMNS.slice(0, endIndex === -1 ? REPORT_SOURCE_COLUMNS.length : endIndex + 1);
+}
+
+function getReportDefinitions(reportRows) {
+  return [
+    { name: "Tendered", rows: reportRows.tendered, columns: getReportColumnsThrough("T_BID_OPEN_DATE") },
+    { name: "Allotted", rows: reportRows.allotted, columns: getReportColumnsThrough("Expenditure") },
+    { name: "Completed", rows: reportRows.completed, columns: getReportColumnsThrough("Expenditure") },
+    { name: "In Progress", rows: reportRows.inProgress, columns: getReportColumnsThrough("Expenditure") }
+  ];
+}
+
+test('formatReportGrandTotal formats exact number and lacs according to user specification', () => {
+  // Test case requested by user: 150687 -> ₹ 1,50,687 Say ₹ 1.51 Lacs
+  assert.equal(formatReportGrandTotal(150687), `${RUPEE} 1,50,687 Say ${RUPEE} 1.51 Lacs`);
+  // Additional cases
+  assert.equal(formatReportGrandTotal(928421), `${RUPEE} 9,28,421 Say ${RUPEE} 9.28 Lacs`);
+  assert.equal(formatReportGrandTotal(12500000), `${RUPEE} 1,25,00,000 Say ${RUPEE} 125.00 Lacs`);
+  assert.equal(formatReportGrandTotal(0), "-");
+  assert.equal(formatReportGrandTotal(-100), "-");
+});
+
+test('Development Works report includes Expenditure in Allotted, Completed, and In Progress definitions', () => {
+  const definitions = getReportDefinitions({ tendered: [], allotted: [], completed: [], inProgress: [] });
+  
+  const tenderedDef = definitions.find(d => d.name === "Tendered");
+  const allottedDef = definitions.find(d => d.name === "Allotted");
+  const completedDef = definitions.find(d => d.name === "Completed");
+  const inProgressDef = definitions.find(d => d.name === "In Progress");
+
+  assert.equal(tenderedDef.columns.includes("Expenditure"), false);
+  assert.equal(tenderedDef.columns.includes("Estimate_Cost"), true);
+  assert.equal(tenderedDef.columns.includes("DNIT_Cost"), true);
+
+  assert.equal(allottedDef.columns.includes("Expenditure"), true);
+  assert.equal(completedDef.columns.includes("Expenditure"), true);
+  assert.equal(inProgressDef.columns.includes("Expenditure"), true);
+
+  // Check all amount columns in Allotted/Completed/In Progress are recognized by isReportAmountKey
+  const amountCols = allottedDef.columns.filter(isReportAmountKey);
+  assert.deepEqual(amountCols, ["Estimate_Cost", "DNIT_Cost", "Agreement Amount", "Expenditure"]);
+});
+
+test('Section totals sum and format all amount columns correctly', () => {
+  const sampleRows = [
+    { Estimate_Cost: "1,00,000", DNIT_Cost: "90,000", "Agreement Amount": "85,000", Expenditure: "80,000" },
+    { Estimate_Cost: "50,687", DNIT_Cost: "45,000", "Agreement Amount": "42,000", Expenditure: "40,000" }
+  ];
+
+  const columns = ["Work_Name", "Estimate_Cost", "DNIT_Cost", "Agreement Amount", "Expenditure"];
+
+  const totals = {};
+  columns.forEach(col => {
+    if (isReportAmountKey(col)) {
+      const sum = sampleRows.reduce((acc, row) => acc + parseNumericAmount(row[col]), 0);
+      totals[col] = formatReportGrandTotal(sum);
+    }
+  });
+
+  // Estimate: 100000 + 50687 = 150687
+  assert.equal(totals["Estimate_Cost"], `${RUPEE} 1,50,687 Say ${RUPEE} 1.51 Lacs`);
+  // DNIT: 90000 + 45000 = 135000 -> 1.35 Lacs
+  assert.equal(totals["DNIT_Cost"], `${RUPEE} 1,35,000 Say ${RUPEE} 1.35 Lacs`);
+  // Agreement: 85000 + 42000 = 127000 -> 1.27 Lacs
+  assert.equal(totals["Agreement Amount"], `${RUPEE} 1,27,000 Say ${RUPEE} 1.27 Lacs`);
+  // Expenditure: 80000 + 40000 = 120000 -> 1.20 Lacs
+  assert.equal(totals["Expenditure"], `${RUPEE} 1,20,000 Say ${RUPEE} 1.20 Lacs`);
+});
+
